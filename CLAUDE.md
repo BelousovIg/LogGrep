@@ -35,6 +35,17 @@ them rather than reaching past the page object: scenarios are written as
 A test must never raise a dialog. `MainViewModel` only shows a message box when there is an
 application behind it, which is what keeps a failing scenario from hanging the run behind a modal
 window nobody is looking at.
+
+## Releases
+
+```powershell
+.\publish.ps1 -Version 1.1.0
+```
+
+Tests, publishes both builds, zips them into `artifacts/`. Uploading to a GitHub release is manual.
+There is no CI: this is a business account, and a personal public repository on it has no Actions
+minutes, so a workflow would be queued and refused before a runner ever picked it up. Do not add
+one back without checking that first.
 ## Building and checking
 
 ```powershell

@@ -22,19 +22,19 @@ LogGrep.exe "C:\...\Logs\WoWCombatLog-091526_120136.txt"
 
 ## Releases
 
-A tag is the whole trigger:
-
-```
-git tag v1.0.0
-git push origin v1.0.0
+```powershell
+.\publish.ps1 -Version 1.1.0
 ```
 
-`.github/workflows/release.yml` then builds on a Windows runner, which WPF requires, and attaches
-two archives to the release. The plain one needs the .NET 8 desktop runtime and weighs a few hundred
-kilobytes; the standalone one carries the runtime with it, about 155 MB unpacked, and runs on a
-machine with no .NET installed. The version in the archive names and in the assembly comes from the
-tag. Those runner minutes are free while the repository is public.
+Runs the tests, then writes two archives into `artifacts/` and stops. Uploading them to a GitHub
+release is a manual step, on purpose: this is built on a business account where a personal public
+repository has no Actions minutes at all, so a workflow that builds on a runner would never start.
 
+The plain archive needs the .NET 8 desktop runtime and weighs a few hundred kilobytes. The
+standalone one carries the runtime with it, about 155 MB unpacked, and runs on a machine with no
+.NET installed. The version given to the script goes into both the file names and the assembly.
+
+`-SkipTests` exists for a throwaway build and should not be used for anything anyone else will run.
 
 ## Tests
 
