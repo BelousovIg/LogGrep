@@ -55,3 +55,6 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# WoW combat logs (huge, never commit)
+WoWCombatLog-*.txt
