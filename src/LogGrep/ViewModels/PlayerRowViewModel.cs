@@ -1,3 +1,4 @@
+using System.Windows.Media;
 using LogGrep.Models;
 
 namespace LogGrep.ViewModels;
@@ -19,6 +20,9 @@ public sealed class PlayerRowViewModel
     public string ClassName => _stats.ClassName;
 
     public string SpecName => _stats.SpecName;
+
+    /// <summary>Class colour for the class cell, the palette WoW itself uses.</summary>
+    public Brush ClassBrush => ClassBrushes.For(_stats.ClassColor);
 
     /// <summary>Raw values behind the formatted cells, so the columns sort on numbers and times.</summary>
     public double DpsValue => Rate(_stats.Damage);

@@ -49,6 +49,34 @@ public static class Specs
         [73] = ("Warrior", "Protection"),
     };
 
+
+    /// <summary>
+    /// Blizzard's class colours, the same ones the game and the log sites paint class names with.
+    /// Keyed by class rather than by spec: every spec of a class shares one colour.
+    /// </summary>
+    private static readonly Dictionary<string, string> Colors = new(StringComparer.Ordinal)
+    {
+        ["Death Knight"] = "#C41E3A",
+        ["Demon Hunter"] = "#A330C9",
+        ["Druid"] = "#FF7C0A",
+        ["Evoker"] = "#33937F",
+        ["Hunter"] = "#AAD372",
+        ["Mage"] = "#3FC7EB",
+        ["Monk"] = "#00FF98",
+        ["Paladin"] = "#F48CBA",
+        ["Priest"] = "#FFFFFF",
+        ["Rogue"] = "#FFF468",
+        ["Shaman"] = "#0070DD",
+        ["Warlock"] = "#8788EE",
+        ["Warrior"] = "#C69B6D",
+    };
+
+    /// <summary>Empty when the log never said which spec the player was.</summary>
+    public static string ColorOf(int specId)
+        => Table.TryGetValue(specId, out var entry) && Colors.TryGetValue(entry.Class, out string? color)
+            ? color
+            : string.Empty;
+
     public static string ClassOf(int specId) => Table.TryGetValue(specId, out var entry) ? entry.Class : "—";
 
     public static string SpecOf(int specId) => Table.TryGetValue(specId, out var entry) ? entry.Spec : "—";

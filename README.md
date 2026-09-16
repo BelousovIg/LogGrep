@@ -35,6 +35,7 @@ LogGrep.exe "C:\...\Logs\WoWCombatLog-091526_120136.txt"
   DPS, HPS, damage taken per second, when they died as `m:ss` (`-:--` for a survivor, several
   deaths comma separated), and what had been hitting them over the last 10 seconds before each
   death. With more than one death the causes are bracketed per death; hover for the full list.
+  The class is painted in Blizzard's class colour, the palette the game and the log sites use.
 * Every column header **sorts** its table, and the sort holds for that whole level: ordering the
   players of one pull orders them the same way in the others. Numbers, durations, dates and death
   times sort on their values rather than on the text in the cell, so a 17 second pull lands below

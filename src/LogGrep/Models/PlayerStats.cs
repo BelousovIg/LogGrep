@@ -25,4 +25,7 @@ public sealed class PlayerStats
 
     public string ClassName => Specs.ClassOf(SpecId);
     public string SpecName => Specs.SpecOf(SpecId);
+
+    /// <summary>Blizzard's colour for this class, empty when the spec is unknown.</summary>
+    public string ClassColor => Specs.ColorOf(SpecId);
 }
