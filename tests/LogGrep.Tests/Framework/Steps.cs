@@ -179,12 +179,6 @@ public sealed class Then
         return this;
     }
 
-    public Then PullRosterReads(string expected)
-    {
-        _check.PullRosterReads(expected);
-        return this;
-    }
-
     public Then PlayersAreOrdered(params string[] expected)
     {
         _check.PlayersAreOrdered(expected);

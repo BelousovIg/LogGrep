@@ -45,8 +45,6 @@ public sealed class Verification
         => Assert.True(expected == _page.Players().Count,
             $"The pull should show {expected} players, it shows {_page.Players().Count}.");
 
-    public void PullRosterReads(string expected) => Assert.Equal(expected, _page.Pull.Roster);
-
     public void PlayersAreOrdered(params string[] expected)
         => Assert.Equal(expected, _page.Players().Select(p => p.Name).ToArray());
 

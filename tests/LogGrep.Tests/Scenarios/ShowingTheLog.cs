@@ -103,18 +103,6 @@ public sealed class ShowingTheLog : Scenario
     }
 
     [Fact]
-    public void The_roster_line_names_everyone_with_their_realm()
-    {
-        Given.IOpenedLog(ARaid().Pull("The Soulcoiler", Difficulty.Mythic, p => p.Lasting("1:40").Wipe()))
-             .And.IExpandedEncounter("The Soulcoiler");
-
-        When.ILookAtPull(1);
-
-        Then.PullRosterReads("Emberwild - Doomhammer, Nightblade - Doomhammer, " +
-                             "Rockjaw - Doomhammer, Sunwell - Doomhammer");
-    }
-
-    [Fact]
     public void Players_sort_by_the_column_that_was_clicked()
     {
         var log = ARaid().Pull("The Soulcoiler", Difficulty.Mythic, p => p

@@ -175,7 +175,7 @@
                                         <ColumnDefinition Width="{StaticResource ColCheck}" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullResult}" MinWidth="60" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullStart}" MinWidth="60" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullRoster}" MinWidth="150" />
+                                        <ColumnDefinition Width="*" MinWidth="40" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDuration}" MinWidth="60" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullPlayers}" MinWidth="60" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDps}" MinWidth="60" />
@@ -184,8 +184,6 @@
                                     <ctl:SortHeader Grid.Column="2" Column="Result" Title="RESULT"
                                                     Sort="{Binding Sorting.Pulls}" />
                                     <ctl:SortHeader Grid.Column="3" Column="Started" Title="STARTED"
-                                                    Sort="{Binding Sorting.Pulls}" />
-                                    <ctl:SortHeader Grid.Column="4" Column="Roster" Title="ROSTER"
                                                     Sort="{Binding Sorting.Pulls}" />
                                     <ctl:SortHeader Grid.Column="5" Column="Duration" Title="DURATION"
                                                     Sort="{Binding Sorting.Pulls}"
@@ -202,7 +200,6 @@
 
                                     <GridSplitter Grid.Column="2" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="3" Style="{StaticResource ColumnSplitter}" />
-                                    <GridSplitter Grid.Column="4" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="5" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="6" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="7" Style="{StaticResource ColumnSplitter}" />
@@ -220,7 +217,7 @@
                                                             <ColumnDefinition Width="{StaticResource ColCheck}" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullResult}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullStart}" MinWidth="60" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullRoster}" MinWidth="150" />
+                                                            <ColumnDefinition Width="*" MinWidth="40" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDuration}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullPlayers}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDps}" MinWidth="60" />
@@ -244,13 +241,6 @@
                                                         <TextBlock Grid.Column="3" Style="{StaticResource MutedText}"
                                                                    Text="{Binding StartText}" />
 
-                                                        <TextBlock Grid.Column="4"
-                                                                   Style="{StaticResource MutedText}"
-                                                                   Text="{Binding Roster}"
-                                                                   TextTrimming="CharacterEllipsis"
-                                                                   Margin="0,0,6,0"
-                                                                   ToolTip="{Binding RosterTooltip}"
-                                                                   ToolTipService.ShowDuration="60000" />
 
                                                         <TextBlock Grid.Column="5" Style="{StaticResource NumberText}"
                                                                    Text="{Binding DurationText}" />
@@ -330,10 +320,13 @@
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="150" />
                                                                         </Grid.ColumnDefinitions>
 
-                                                                        <TextBlock Grid.Column="1"
-                                                                                   Text="{Binding Name}"
-                                                                                   Margin="0,0,10,0"
-                                                                                   ToolTip="{Binding FullName}" />
+                                                                        <Button Grid.Column="1"
+                                                                                Style="{StaticResource NameButton}"
+                                                                                Content="{Binding Name}"
+                                                                                Margin="0,0,10,0"
+                                                                                Click="OnCopyPlayerName"
+                                                                                ToolTip="{Binding FullName}"
+                                                                                AutomationProperties.Name="Copy the full name" />
                                                                         <TextBlock Grid.Column="2" Style="{StaticResource MutedText}"
                                                                                    Text="{Binding ClassName}" Margin="0,0,10,0"
                                                                                    Foreground="{Binding ClassBrush}" />

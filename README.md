@@ -76,13 +76,14 @@ are the words a scenario is written in. Rewire the window and only the page obje
   and the smallest/largest group size seen across the attempts.
 * The **toggle** opens the list of pulls. It is enabled for raid bosses and for anything with more
   than one attempt; a keystone run is a single pull, so its toggle stays off.
-* Each pull lists its **roster** as "Name - Realm". The text is trimmed to the column width; hover
-  it for the full list.
 * Each pull has a **toggle** of its own that opens a table of everyone in the group: class, spec,
   DPS, HPS, damage taken per second, when they died as `m:ss` (`-:--` for a survivor, several
   deaths comma separated), and what had been hitting them over the last 10 seconds before each
   death. With more than one death the causes are bracketed per death; hover for the full list.
   The class is painted in Blizzard's class colour, the palette the game and the log sites use.
+  A name is a button: clicking it copies "Name - Realm" - the form the cell trims away and another
+  tool wants - and says "copied" in a bubble under the cursor, which fades out over a second. The
+  status bar carries the same message, and an error if the clipboard would not take it.
 * Every column header **sorts** its table, and the sort holds for that whole level: ordering the
   players of one pull orders them the same way in the others. Numbers, durations, dates and death
   times sort on their values rather than on the text in the cell, so a 17 second pull lands below

@@ -21,7 +21,6 @@ public sealed class Sorting
     {
         ["Result"] = new(row => ((PullViewModel)row).IsSuccess, DescendingFirst: true),
         ["Started"] = new(row => ((PullViewModel)row).Record.StartTime),
-        ["Roster"] = new(row => ((PullViewModel)row).Roster),
         ["Duration"] = new(row => ((PullViewModel)row).Record.Duration, DescendingFirst: true),
         ["Players"] = new(row => ((PullViewModel)row).Record.Participants, DescendingFirst: true),
         ["Dps"] = new(row => ((PullViewModel)row).Record.Dps, DescendingFirst: true),

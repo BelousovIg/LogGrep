@@ -525,6 +525,43 @@
         </Setter>
     </Style>
 
+
+
+    <!-- the player name cell: reads as text, behaves as a copy button -->
+    <Style x:Key="NameButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="Transparent">
+                        <TextBlock x:Name="Label"
+                                   Text="{TemplateBinding Content}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Left"
+                                   TextTrimming="CharacterEllipsis" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Label" Property="Foreground" Value="{StaticResource AccentBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!-- the "copied" bubble; same chrome as a tooltip, because it is one in spirit -->
+    <Style x:Key="ToastBubble" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Padding" Value="9,5" />
+        <Setter Property="TextElement.Foreground" Value="{StaticResource FgBrush}" />
+        <Setter Property="TextElement.FontSize" Value="12" />
+    </Style>
     <!-- ============ tooltip ============ -->
     <!-- The global TextBlock style paints text light, so on the stock light tooltip chrome it was
          unreadable. The wrapping override is here too: that same global style trims with an

@@ -10,7 +10,6 @@ public sealed class PullViewModel : ObservableObject
 {
     private bool _isSelected;
     private bool _isExpanded;
-    private string? _roster;
     private ListCollectionView? _playersView;
 
     public PullViewModel(PullRecord record, EncounterViewModel owner)
@@ -78,17 +77,10 @@ public sealed class PullViewModel : ObservableObject
 
     public string HpsText => Display.Rate(Record.Hps);
 
-    /// <summary>Every group member of this pull as "Name - Realm", comma separated.</summary>
-    public string Roster => _roster ??= string.Join(", ", Record.Players.Select(PlayerName.Format));
-
-    public string RosterTooltip => Record.Players.Count == 0
-        ? "No player names were found for this pull"
-        : string.Join(Environment.NewLine, Record.Players.Select(PlayerName.Format));
-
     private ListCollectionView CreatePlayersView()
     {
         var rows = Record.Roster
-            .Select(stats => new PlayerRowViewModel(stats, Record.Duration))
+            .Select(stats => new PlayerRowViewModel(stats, Record.Duration, Owner.Report))
             .ToList();
 
         return new ListCollectionView(rows) { CustomSort = Sorting.Players.Comparer };

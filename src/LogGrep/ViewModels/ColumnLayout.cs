@@ -22,7 +22,6 @@ public sealed class ColumnLayout : ObservableObject
 
     private GridLength _pullResult = new(80);
     private GridLength _pullStart = new(140);
-    private GridLength _pullRoster = Fill;
     private GridLength _pullDuration = new(100);
     private GridLength _pullPlayers = new(90);
     private GridLength _pullDps = new(110);
@@ -45,7 +44,6 @@ public sealed class ColumnLayout : ObservableObject
 
     public GridLength PullResult { get => _pullResult; set => Set(ref _pullResult, value); }
     public GridLength PullStart { get => _pullStart; set => Set(ref _pullStart, value); }
-    public GridLength PullRoster { get => _pullRoster; set => Set(ref _pullRoster, value); }
     public GridLength PullDuration { get => _pullDuration; set => Set(ref _pullDuration, value); }
     public GridLength PullPlayers { get => _pullPlayers; set => Set(ref _pullPlayers, value); }
     public GridLength PullDps { get => _pullDps; set => Set(ref _pullDps, value); }

@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Media;
 using LogGrep.Models;
 
@@ -8,11 +9,13 @@ public sealed class PlayerRowViewModel
 {
     private readonly PlayerStats _stats;
     private readonly double _seconds;
+    private readonly Action<string> _report;
 
-    public PlayerRowViewModel(PlayerStats stats, TimeSpan duration)
+    public PlayerRowViewModel(PlayerStats stats, TimeSpan duration, Action<string> report)
     {
         _stats = stats;
         _seconds = duration.TotalSeconds;
+        _report = report;
     }
 
     /// <summary>The character on its own; the realm lives in the tooltip.</summary>
@@ -82,4 +85,25 @@ public sealed class PlayerRowViewModel
         : string.Join(", ", death.Causes.Select(c => c.Label + " " + Display.Amount(c.Amount)));
 
     private double Rate(long total) => _seconds > 0.5 ? total / _seconds : 0;
+
+    /// <summary>
+    /// Puts "Name - Realm" on the clipboard - the form the cell trims away and the tooltip shows,
+    /// and the one another tool or a chat actually wants. Returns whether it worked, because the
+    /// window says "copied" over the cursor and that should not be a lie.
+    /// </summary>
+    public bool CopyName()
+    {
+        try
+        {
+            Clipboard.SetDataObject(FullName, copy: true);
+        }
+        catch (Exception ex)
+        {
+            _report("Could not copy to the clipboard: " + ex.Message);
+            return false;
+        }
+
+        _report("Copied " + FullName + " to the clipboard.");
+        return true;
+    }
 }

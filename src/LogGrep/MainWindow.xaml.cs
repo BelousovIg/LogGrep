@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
+using LogGrep.Controls;
 using LogGrep.Interop;
 using LogGrep.ViewModels;
 
@@ -34,6 +36,18 @@ public partial class MainWindow : Window
         if (path != null) Model.Load(path);
     }
 
+
+    /// <summary>
+    /// Copies the full name of the player that was clicked, and acknowledges it where the click
+    /// landed rather than in the status bar at the bottom - the eye is on the row, not down there.
+    /// </summary>
+    private void OnCopyPlayerName(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement cell || cell.DataContext is not PlayerRowViewModel player) return;
+        if (!player.CopyName()) return;
+
+        CopyToast.ShowAt(this, Mouse.GetPosition(this));
+    }
     private void OnDragOver(object sender, DragEventArgs e)
     {
         e.Effects = TryGetDroppedFile(e) != null ? DragDropEffects.Copy : DragDropEffects.None;
