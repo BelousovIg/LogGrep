@@ -182,6 +182,12 @@ than by creation time. Creation time is the half a copy resets, and ordering on 
 evening backwards - which the plan set out to avoid. It is still read, and so is the timestamp in
 the file name; a disagreement with either becomes a note rather than a silent reordering.
 
+A third overlap the plan did not name: the same log opened twice over. The same path twice is
+dropped before anything is read, because a second pass over a gigabyte teaches nothing. A copy of
+one file under a second name cannot be seen until both have been read, and it shows up as a file
+that contributed no attempt at all - which is said as "this file is a copy" rather than as a count
+of shared attempts, because that is what happened.
+
 Measured on the real folder: the 1.4 GB log opened with two of its own exports reads as 3 files and
 26 attempts rather than 28, the two shared attempts kept from the full log, and the findings stay at
 20 instead of doubling.

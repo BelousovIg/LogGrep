@@ -36,6 +36,9 @@ public sealed class LogSource
 
     public int Pulls { get; set; }
 
+    /// <summary>How many of those survived the joining - none, if this file is a copy of another.</summary>
+    public int Kept { get; set; }
+
     /// <summary>Where this file sits in the reading, so anything ordering attempts can follow it.</summary>
     public int Order { get; set; }
 

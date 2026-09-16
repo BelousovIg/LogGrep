@@ -40,6 +40,12 @@ public sealed class ReadingSeveralLogs : Scenario
             .At(20.Seconds()).BossDebuffs("Rockjaw", with: TankMechanic, times: 2)
             .Wipe());
 
+    /// <summary>One night, three attempts, each a different length so the order shows.</summary>
+    private static CombatLogBuilder ThreeAttempts() => ANight(Tuesday)
+        .Pull(Soulcoiler, Difficulty.Mythic, p => p.Lasting(1.Minutes()).Wipe())
+        .Pull(Soulcoiler, Difficulty.Mythic, p => p.Lasting(2.Minutes()).Wipe())
+        .Pull(Soulcoiler, Difficulty.Mythic, p => p.Lasting(3.Minutes()).Kill());
+
     /// <summary>And one where the healer took it too.</summary>
     private static CombatLogBuilder AndOneThatWentWrong(CombatLogBuilder log)
         => log.Pull(Soulcoiler, Difficulty.Mythic, p => p
@@ -163,7 +169,7 @@ public sealed class ReadingSeveralLogs : Scenario
         Then.LogsWereRead(2)
             .And.EncounterHasPulls(3)
             .And.PullsLasted(1.Minutes(), 2.Minutes(), 3.Minutes())
-            .And.ReadingNoted("counted once")
+            .And.ReadingNoted("holds the same 1 attempt as another of these files")
             .And.PullsCameFrom("WoWCombatLog-091526_195900.txt");
     }
 
@@ -183,6 +189,60 @@ public sealed class ReadingSeveralLogs : Scenario
 
         Then.PullsLasted(1.Minutes(), 2.Minutes())
             .And.ReadingNoted("is named for");
+    }
+
+    [Fact]
+    public void Files_that_overlap_in_the_middle_share_only_what_they_share()
+    {
+        // Logging restarted mid-evening, so the second file opens on an attempt the first one
+        // already has and then carries on past it. Neither file is a copy of the other; one attempt
+        // is in both.
+        var first = ANight(Tuesday)
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p.Lasting(1.Minutes()).Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p.Lasting(2.Minutes()).Wipe());
+
+        var second = ANight(Tuesday + 2.Minutes())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p.Lasting(2.Minutes()).Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p.Lasting(3.Minutes()).Kill());
+
+        Given.IOpenedLogs(first, second);
+
+        When.ILookAtEncounter(Soulcoiler);
+
+        Then.LogsWereRead(2)
+            .And.PullsLasted(1.Minutes(), 2.Minutes(), 3.Minutes())
+            .And.ReadingNoted("1 attempt was in more than one of these files and counted once.");
+    }
+
+    [Fact]
+    public void The_same_log_handed_over_twice_is_read_once()
+    {
+        // Two paths to one file. Reading it twice would cost a second pass over a gigabyte and then
+        // have to be undone at the other end.
+        var night = ThreeAttempts();
+
+        Given.IOpenedLogs(night, night);
+
+        When.ILookAtEncounter(Soulcoiler);
+
+        Then.LogsWereRead(1)
+            .And.EncounterHasPulls(3)
+            .And.NothingWasRemarkedOn();
+    }
+
+    [Fact]
+    public void A_copy_of_a_log_under_another_name_is_named_as_a_copy()
+    {
+        // The same night saved twice. Counting the attempts once is right, but saying "three
+        // attempts were shared" describes it poorly - a whole file was a duplicate.
+        Given.IOpenedLogs(ThreeAttempts(), ThreeAttempts().Called("a-copy-of-tuesday.txt"));
+
+        When.ILookAtEncounter(Soulcoiler);
+
+        Then.LogsWereRead(2)
+            .And.EncounterHasPulls(3)
+            .And.PullsCameFrom("WoWCombatLog-091526_195900.txt")
+            .And.ReadingNoted("holds the same 3 attempts as another of these files and nothing else.");
     }
 
     [Fact]

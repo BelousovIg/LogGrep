@@ -156,7 +156,14 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>The same, awaitable, which is how a test knows the scan has finished.</summary>
     public Task LoadAsync(params string[] paths)
     {
-        var present = paths.Where(_fileSystem.File.Exists).ToList();
+        // The same file named twice is one file. Reading it twice would cost a second pass over a
+        // gigabyte and then have to be undone at the other end, and nothing is learned by it.
+        var present = paths
+            .Where(_fileSystem.File.Exists)
+            .Select(_fileSystem.Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
         return IsBusy || present.Count == 0 ? Task.CompletedTask : ScanAsync(present);
     }
 

@@ -88,22 +88,34 @@ public sealed class Reading
             .ToList();
 
         var kept = new Dictionary<(string Group, DateTime At), PullRecord>();
-        int dropped = 0;
 
         foreach (var scan in richest)
         {
+            int survived = 0;
             foreach (var pull in scan.Pulls)
             {
-                var key = (pull.GroupKey, Second(pull.StartTime));
-                if (kept.TryAdd(key, pull)) continue;
-
-                dropped++;
+                if (kept.TryAdd((pull.GroupKey, Second(pull.StartTime)), pull)) survived++;
             }
+
+            scan.Source.Kept = survived;
         }
 
-        if (dropped > 0)
+        // A file that contributed nothing is a copy of another - the same night under a second
+        // name, or the same file reached by a second path. Saying "34 attempts were counted once"
+        // about that is technically true and useless; what happened is that a whole file was a
+        // duplicate, and that is what the person needs to hear.
+        var copies = ordered.Where(s => s.Pulls.Count > 0 && s.Source.Kept == 0).ToList();
+        foreach (var copy in copies)
         {
-            notes.Add($"{dropped} {(dropped == 1 ? "attempt was" : "attempts were")} in more than one of these " +
+            notes.Add($"{copy.Source.Name} holds the same {copy.Pulls.Count} " +
+                      $"{(copy.Pulls.Count == 1 ? "attempt" : "attempts")} as another of these files and " +
+                      "nothing else. It has been read once.");
+        }
+
+        int shared = ordered.Sum(s => s.Pulls.Count - s.Source.Kept) - copies.Sum(c => c.Pulls.Count);
+        if (shared > 0)
+        {
+            notes.Add($"{shared} {(shared == 1 ? "attempt was" : "attempts were")} in more than one of these " +
                       "files and counted once.");
         }
 
