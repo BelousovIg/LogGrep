@@ -74,6 +74,9 @@ the fight from `ENCOUNTER_START` to `ENCOUNTER_END` (or `CHALLENGE_MODE_START`/`
 * Class and spec come from the specialization ID in `COMBATANT_INFO`, read as the field just before
   the talent array: anchoring on the array keeps it right across log versions, which have added
   stats to that block more than once.
+  The ID table follows <https://warcraft.wiki.gg/wiki/SpecializationID>. An ID it does not know is
+  shown as `Spec <id>` rather than left blank, so a specialization added by a patch is visible
+  instead of silently turning into a dash.
 * Per-player damage and healing count pets and guardians towards their owner, whose GUID only the
   advanced parameter block carries.
 * Deaths come from `UNIT_DIED` and are timed against the start of the pull; the hits behind each
