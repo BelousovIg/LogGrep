@@ -336,6 +336,7 @@ So the join is by id first and by name second, and better still by what the log 
 that share a name inside one encounter are parts of one ability, and the app can learn that without
 being told. The names agree here where the ids do not, which is the one time a name is worth more
 than an id.
+
 **Also derivable, and worth having on its own:** how many players an ability lands on per cast. One
 is a mark, most of the group is raid-wide, a handful is a spread. Only a mark can produce "you took
 somebody else's mechanic"; a raid-wide ability can only produce "you took it when eighteen others
