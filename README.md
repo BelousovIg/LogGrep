@@ -35,6 +35,14 @@ LogGrep.exe "C:\...\Logs\WoWCombatLog-091526_120136.txt"
   DPS, HPS, damage taken per second, when they died as `m:ss` (`-:--` for a survivor, several
   deaths comma separated), and what had been hitting them over the last 10 seconds before each
   death. With more than one death the causes are bracketed per death; hover for the full list.
+* Every column header **sorts** its table, and the sort holds for that whole level: ordering the
+  players of one pull orders them the same way in the others. Numbers, durations, dates and death
+  times sort on their values rather than on the text in the cell, so a 17 second pull lands below
+  a 10 minute one instead of next to it. A blank - a player who never died - stays at the bottom
+  whichever way the arrow points. Clicking a header again reverses it; until one is clicked the
+  rows keep the order the log gave them.
+* Columns are **resized** by dragging the right edge of a header. A width belongs to the level, not
+  to one table, so every pull and every roster stays lined up with the header above it.
 * The encounter **checkbox is three-state**: all pulls selected, none, or some.
 * **Export** writes the selected pulls, either into one file (`as single file`) or one file per
   pull into a folder you pick. Per-pull names are
@@ -78,7 +86,8 @@ src/LogGrep/
   Parsing/     streaming scanner, allocation-free field splitter, timestamp parsing
   Models/      pull records, byte ranges, difficulty and specialization tables, per-player stats
   Export/      raw byte-range copier
-  ViewModels/  encounter/pull/player tree, tri-state selection, commands
+  ViewModels/  encounter/pull/player tree, sort state, shared column widths, commands
+  Controls/    sortable column header
   Themes/      dark theme
   Interop/     dark title bar (DWM)
 ```

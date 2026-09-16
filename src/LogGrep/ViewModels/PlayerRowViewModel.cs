@@ -20,12 +20,27 @@ public sealed class PlayerRowViewModel
 
     public string SpecName => _stats.SpecName;
 
-    public string DpsText => Display.Rate(Rate(_stats.Damage));
+    /// <summary>Raw values behind the formatted cells, so the columns sort on numbers and times.</summary>
+    public double DpsValue => Rate(_stats.Damage);
 
-    public string HpsText => Display.Rate(Rate(_stats.Healing));
+    public double HpsValue => Rate(_stats.Healing);
+
+    public double DtpsValue => Rate(_stats.DamageTaken);
+
+    /// <summary>Null for a survivor, which keeps them at the bottom whichever way the column points.</summary>
+    public TimeSpan? FirstDeath => _stats.Deaths.Count == 0 ? null : _stats.Deaths[0].At;
+
+    /// <summary>Heaviest ability behind the first death, so the column groups everyone killed by the same thing.</summary>
+    public string? TopCause => _stats.Deaths.Count == 0 || _stats.Deaths[0].Causes.Count == 0
+        ? null
+        : _stats.Deaths[0].Causes[0].Label;
+
+    public string DpsText => Display.Rate(DpsValue);
+
+    public string HpsText => Display.Rate(HpsValue);
 
     /// <summary>Damage taken per second, the other half of what a pull costs a player.</summary>
-    public string DtpsText => Display.Rate(Rate(_stats.DamageTaken));
+    public string DtpsText => Display.Rate(DtpsValue);
 
     public bool Died => _stats.Deaths.Count > 0;
 

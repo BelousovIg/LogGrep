@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Windows;
+using System.Windows.Data;
 using LogGrep.Export;
 using LogGrep.Models;
 using LogGrep.Parsing;
@@ -12,6 +14,7 @@ namespace LogGrep.ViewModels;
 public sealed class MainViewModel : ObservableObject
 {
     private readonly Dictionary<string, EncounterViewModel> _groups = new(StringComparer.Ordinal);
+    private readonly ListCollectionView _encountersView;
     private ScanResult? _scan;
     private CancellationTokenSource? _cancellation;
 
@@ -30,9 +33,20 @@ public sealed class MainViewModel : ObservableObject
         SelectNoneCommand = new RelayCommand(() => SetAll(false), () => !IsBusy && Encounters.Count > 0);
         ExpandAllCommand = new RelayCommand(() => SetExpanded(true), () => Encounters.Count > 0);
         CollapseAllCommand = new RelayCommand(() => SetExpanded(false), () => Encounters.Count > 0);
+
+        _encountersView = new ListCollectionView(Encounters);
+        Sorting.Encounters.Changed += (_, _) => _encountersView.CustomSort = Sorting.Encounters.Comparer;
+        Sorting.Pulls.Changed += (_, _) => ApplySorting();
+        Sorting.Players.Changed += (_, _) => ApplySorting();
     }
 
     public ObservableCollection<EncounterViewModel> Encounters { get; } = new();
+
+    /// <summary>Sort state of all three tables, handed down to the encounter and pull rows.</summary>
+    public Sorting Sorting { get; } = new();
+
+    /// <summary>What the encounter rows are bound to; the collection keeps the order of the log.</summary>
+    public ICollectionView EncountersView => _encountersView;
 
     public RelayCommand OpenCommand { get; }
     public RelayCommand ExportCommand { get; }
@@ -163,7 +177,7 @@ public sealed class MainViewModel : ObservableObject
 
         if (!_groups.TryGetValue(pull.GroupKey, out var encounter))
         {
-            encounter = new EncounterViewModel(pull, RaiseSelectionChanged, message => Status = message);
+            encounter = new EncounterViewModel(pull, Sorting, RaiseSelectionChanged, message => Status = message);
             _groups[pull.GroupKey] = encounter;
             Encounters.Add(encounter);
             RaiseCommandStates();
@@ -173,6 +187,12 @@ public sealed class MainViewModel : ObservableObject
     }
 
     private void Cancel() => _cancellation?.Cancel();
+
+    /// <summary>Pushes the pull and player sort into every table that has already been built.</summary>
+    private void ApplySorting()
+    {
+        foreach (var encounter in Encounters) encounter.ApplySorting();
+    }
 
     private void SetAll(bool selected)
     {
