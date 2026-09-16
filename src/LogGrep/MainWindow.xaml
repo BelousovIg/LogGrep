@@ -173,57 +173,157 @@
                                 <ItemsControl ItemsSource="{Binding Pulls}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="{StaticResource SubRowBrush}" CornerRadius="4"
-                                                    Height="32" Margin="0,0,0,2">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="{StaticResource ColPullIndent}" />
-                                                        <ColumnDefinition Width="{StaticResource ColCheck}" />
-                                                        <ColumnDefinition Width="{StaticResource ColPullResult}" />
-                                                        <ColumnDefinition Width="{StaticResource ColPullStart}" />
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="{StaticResource ColPullCopy}" />
-                                                        <ColumnDefinition Width="{StaticResource ColPullDuration}" />
-                                                        <ColumnDefinition Width="{StaticResource ColPullPlayers}" />
-                                                        <ColumnDefinition Width="{StaticResource ColPullDps}" />
-                                                        <ColumnDefinition Width="{StaticResource ColPullHps}" />
-                                                    </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <Border Background="{StaticResource SubRowBrush}" CornerRadius="4"
+                                                        Height="32" Margin="0,0,0,2">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="{StaticResource ColPullIndent}" />
+                                                            <ColumnDefinition Width="{StaticResource ColCheck}" />
+                                                            <ColumnDefinition Width="{StaticResource ColPullResult}" />
+                                                            <ColumnDefinition Width="{StaticResource ColPullStart}" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="{StaticResource ColPullCopy}" />
+                                                            <ColumnDefinition Width="{StaticResource ColPullDuration}" />
+                                                            <ColumnDefinition Width="{StaticResource ColPullPlayers}" />
+                                                            <ColumnDefinition Width="{StaticResource ColPullDps}" />
+                                                            <ColumnDefinition Width="{StaticResource ColPullHps}" />
+                                                        </Grid.ColumnDefinitions>
 
-                                                    <CheckBox Grid.Column="1" IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                                        <ToggleButton Grid.Column="0"
+                                                                      Style="{StaticResource ExpanderToggle}"
+                                                                      IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                                                      IsEnabled="{Binding HasPlayers}"
+                                                                      ToolTip="Show every player of this pull" />
 
-                                                    <TextBlock x:Name="ResultCell"
-                                                               Grid.Column="2"
-                                                               Text="{Binding ResultText}"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="{StaticResource DangerBrush}" />
+                                                        <CheckBox Grid.Column="1" IsChecked="{Binding IsSelected, Mode=TwoWay}" />
 
-                                                    <TextBlock Grid.Column="3" Style="{StaticResource MutedText}"
-                                                               Text="{Binding StartText}" />
+                                                        <TextBlock x:Name="ResultCell"
+                                                                   Grid.Column="2"
+                                                                   Text="{Binding ResultText}"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{StaticResource DangerBrush}" />
 
-                                                    <TextBlock Grid.Column="4"
-                                                               Style="{StaticResource MutedText}"
-                                                               Text="{Binding Roster}"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               Margin="0,0,6,0"
-                                                               ToolTip="{Binding RosterTooltip}"
-                                                               ToolTipService.ShowDuration="60000" />
+                                                        <TextBlock Grid.Column="3" Style="{StaticResource MutedText}"
+                                                                   Text="{Binding StartText}" />
 
-                                                    <Button Grid.Column="5"
-                                                            Style="{StaticResource IconButton}"
-                                                            Command="{Binding CopyRosterCommand}"
-                                                            AutomationProperties.Name="Copy roster"
-                                                            ToolTip="Copy the full roster to the clipboard" />
+                                                        <TextBlock Grid.Column="4"
+                                                                   Style="{StaticResource MutedText}"
+                                                                   Text="{Binding Roster}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   Margin="0,0,6,0"
+                                                                   ToolTip="{Binding RosterTooltip}"
+                                                                   ToolTipService.ShowDuration="60000" />
 
-                                                    <TextBlock Grid.Column="6" Style="{StaticResource NumberText}"
-                                                               Text="{Binding DurationText}" />
-                                                    <TextBlock Grid.Column="7" Style="{StaticResource NumberText}"
-                                                               Text="{Binding ParticipantsText}" />
-                                                    <TextBlock Grid.Column="8" Style="{StaticResource NumberText}"
-                                                               Text="{Binding DpsText}" />
-                                                    <TextBlock Grid.Column="9" Style="{StaticResource NumberText}"
-                                                               Text="{Binding HpsText}" />
-                                                </Grid>
-                                            </Border>
+                                                        <Button Grid.Column="5"
+                                                                Style="{StaticResource IconButton}"
+                                                                Command="{Binding CopyRosterCommand}"
+                                                                AutomationProperties.Name="Copy roster"
+                                                                ToolTip="Copy the full roster to the clipboard" />
+
+                                                        <TextBlock Grid.Column="6" Style="{StaticResource NumberText}"
+                                                                   Text="{Binding DurationText}" />
+                                                        <TextBlock Grid.Column="7" Style="{StaticResource NumberText}"
+                                                                   Text="{Binding ParticipantsText}" />
+                                                        <TextBlock Grid.Column="8" Style="{StaticResource NumberText}"
+                                                                   Text="{Binding DpsText}" />
+                                                        <TextBlock Grid.Column="9" Style="{StaticResource NumberText}"
+                                                                   Text="{Binding HpsText}" />
+                                                    </Grid>
+                                                </Border>
+
+                                                <!-- per player table of this pull -->
+                                                <StackPanel Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
+
+                                                    <Grid Height="24">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="{StaticResource ColRosterIndent}" />
+                                                            <ColumnDefinition Width="{StaticResource ColRosterName}" />
+                                                            <ColumnDefinition Width="{StaticResource ColRosterClass}" />
+                                                            <ColumnDefinition Width="{StaticResource ColRosterSpec}" />
+                                                            <ColumnDefinition Width="{StaticResource ColRosterDps}" />
+                                                            <ColumnDefinition Width="{StaticResource ColRosterHps}" />
+                                                            <ColumnDefinition Width="{StaticResource ColRosterDtps}" />
+                                                            <ColumnDefinition Width="{StaticResource ColRosterDied}" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <TextBlock Grid.Column="1" Style="{StaticResource HeaderText}" Text="PLAYER" />
+                                                        <TextBlock Grid.Column="2" Style="{StaticResource HeaderText}" Text="CLASS" />
+                                                        <TextBlock Grid.Column="3" Style="{StaticResource HeaderText}" Text="SPEC" />
+                                                        <TextBlock Grid.Column="4" Style="{StaticResource HeaderText}" Text="DPS"
+                                                                   HorizontalAlignment="Right" Margin="0,0,14,0" />
+                                                        <TextBlock Grid.Column="5" Style="{StaticResource HeaderText}" Text="HPS"
+                                                                   HorizontalAlignment="Right" Margin="0,0,14,0" />
+                                                        <TextBlock Grid.Column="6" Style="{StaticResource HeaderText}" Text="DTPS"
+                                                                   HorizontalAlignment="Right" Margin="0,0,14,0"
+                                                                   ToolTip="Damage taken per second" />
+                                                        <TextBlock Grid.Column="7" Style="{StaticResource HeaderText}" Text="DIED"
+                                                                   HorizontalAlignment="Right" Margin="0,0,14,0" />
+                                                        <TextBlock Grid.Column="8" Style="{StaticResource HeaderText}" Text="KILLED BY"
+                                                                   ToolTip="Damage taken over the last 10 seconds before each death" />
+                                                    </Grid>
+
+                                                    <ItemsControl ItemsSource="{Binding Players}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Background="{StaticResource InputBrush}" CornerRadius="3"
+                                                                        Height="26" Margin="0,0,0,1">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="{StaticResource ColRosterIndent}" />
+                                                                            <ColumnDefinition Width="{StaticResource ColRosterName}" />
+                                                                            <ColumnDefinition Width="{StaticResource ColRosterClass}" />
+                                                                            <ColumnDefinition Width="{StaticResource ColRosterSpec}" />
+                                                                            <ColumnDefinition Width="{StaticResource ColRosterDps}" />
+                                                                            <ColumnDefinition Width="{StaticResource ColRosterHps}" />
+                                                                            <ColumnDefinition Width="{StaticResource ColRosterDtps}" />
+                                                                            <ColumnDefinition Width="{StaticResource ColRosterDied}" />
+                                                                            <ColumnDefinition Width="*" />
+                                                                        </Grid.ColumnDefinitions>
+
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{Binding Name}"
+                                                                                   Margin="0,0,10,0"
+                                                                                   ToolTip="{Binding Name}" />
+                                                                        <TextBlock Grid.Column="2" Style="{StaticResource MutedText}"
+                                                                                   Text="{Binding ClassName}" Margin="0,0,10,0" />
+                                                                        <TextBlock Grid.Column="3" Style="{StaticResource MutedText}"
+                                                                                   Text="{Binding SpecName}" Margin="0,0,10,0" />
+                                                                        <TextBlock Grid.Column="4" Style="{StaticResource NumberText}"
+                                                                                   Text="{Binding DpsText}" />
+                                                                        <TextBlock Grid.Column="5" Style="{StaticResource NumberText}"
+                                                                                   Text="{Binding HpsText}" />
+                                                                        <TextBlock Grid.Column="6" Style="{StaticResource NumberText}"
+                                                                                   Text="{Binding DtpsText}" />
+                                                                        <TextBlock x:Name="DiedCell"
+                                                                                   Grid.Column="7"
+                                                                                   Style="{StaticResource NumberText}"
+                                                                                   Foreground="{StaticResource MutedBrush}"
+                                                                                   Text="{Binding DeathsText}" />
+                                                                        <TextBlock Grid.Column="8"
+                                                                                   Style="{StaticResource MutedText}"
+                                                                                   Text="{Binding CausesText}"
+                                                                                   TextTrimming="CharacterEllipsis"
+                                                                                   Margin="0,0,6,0"
+                                                                                   ToolTip="{Binding CausesTooltip}"
+                                                                                   ToolTipService.ShowDuration="60000" />
+                                                                    </Grid>
+                                                                </Border>
+
+                                                                <DataTemplate.Triggers>
+                                                                    <DataTrigger Binding="{Binding Died}" Value="True">
+                                                                        <Setter TargetName="DiedCell" Property="Foreground"
+                                                                                Value="{StaticResource DangerBrush}" />
+                                                                    </DataTrigger>
+                                                                </DataTemplate.Triggers>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+
+                                                    <Border Height="8" Background="Transparent" />
+                                                </StackPanel>
+                                            </StackPanel>
 
                                             <DataTemplate.Triggers>
                                                 <DataTrigger Binding="{Binding IsSuccess}" Value="True">

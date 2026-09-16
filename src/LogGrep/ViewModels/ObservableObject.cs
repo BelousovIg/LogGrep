@@ -55,6 +55,16 @@ public static class Display
         _ => "—",
     };
 
+    /// <summary>A raw total, scaled the same way as a rate.</summary>
+    public static string Amount(long value) => Rate(value);
+
+    /// <summary>Time inside a pull as "m:ss", the shape death times are read in.</summary>
+    public static string Clock(TimeSpan value)
+    {
+        if (value < TimeSpan.Zero) value = TimeSpan.Zero;
+        return (int)value.TotalMinutes + ":" + value.Seconds.ToString("00", Inv);
+    }
+
     public static string Duration(TimeSpan value)
     {
         if (value <= TimeSpan.Zero) return "—";

@@ -31,6 +31,9 @@ public sealed class PullRecord
     /// <summary>Raw "Name-Realm-Region" spellings of every group member seen during the fight, sorted.</summary>
     public IReadOnlyList<string> Players { get; set; } = Array.Empty<string>();
 
+    /// <summary>Per player damage, healing, damage taken and deaths, ordered by damage done.</summary>
+    public IReadOnlyList<PlayerStats> Roster { get; set; } = Array.Empty<PlayerStats>();
+
     public long Damage { get; set; }
     public long Healing { get; set; }
 

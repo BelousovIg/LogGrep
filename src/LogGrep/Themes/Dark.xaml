@@ -34,6 +34,16 @@
     <GridLength x:Key="ColPullDps">110</GridLength>
     <GridLength x:Key="ColPullHps">110</GridLength>
 
+    <!-- roster table, one row per group member inside a pull -->
+    <GridLength x:Key="ColRosterIndent">60</GridLength>
+    <GridLength x:Key="ColRosterName">170</GridLength>
+    <GridLength x:Key="ColRosterClass">100</GridLength>
+    <GridLength x:Key="ColRosterSpec">110</GridLength>
+    <GridLength x:Key="ColRosterDps">85</GridLength>
+    <GridLength x:Key="ColRosterHps">85</GridLength>
+    <GridLength x:Key="ColRosterDtps">85</GridLength>
+    <GridLength x:Key="ColRosterDied">100</GridLength>
+
     <!-- ============ text ============ -->
     <Style TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource FgBrush}" />

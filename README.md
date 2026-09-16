@@ -31,6 +31,10 @@ LogGrep.exe "C:\...\Logs\WoWCombatLog-091526_120136.txt"
   than one attempt; a keystone run is a single pull, so its toggle stays off.
 * Each pull lists its **roster** as "Name - Realm". The text is trimmed to the column width; hover
   it for the full list, or use the copy button next to it to put the whole roster on the clipboard.
+* Each pull has a **toggle** of its own that opens a table of everyone in the group: class, spec,
+  DPS, HPS, damage taken per second, when they died as `m:ss` (`-:--` for a survivor, several
+  deaths comma separated), and what had been hitting them over the last 10 seconds before each
+  death. With more than one death the causes are bracketed per death; hover for the full list.
 * The encounter **checkbox is three-state**: all pulls selected, none, or some.
 * **Export** writes the selected pulls, either into one file (`as single file`) or one file per
   pull into a folder you pick. Per-pull names are
@@ -58,15 +62,23 @@ the fight from `ENCOUNTER_START` to `ENCOUNTER_END` (or `CHALLENGE_MODE_START`/`
   not counted. Support events (`*_SUPPORT`) are skipped so augmentation damage is not counted twice.
 * The block of advanced unit-info fields grew from 17 to 19 entries in log version 22, so the
   parser locates its end by the position fields rather than a fixed offset.
+* Class and spec come from the specialization ID in `COMBATANT_INFO`, read as the field just before
+  the talent array: anchoring on the array keeps it right across log versions, which have added
+  stats to that block more than once.
+* Per-player damage and healing count pets and guardians towards their owner, whose GUID only the
+  advanced parameter block carries.
+* Deaths come from `UNIT_DIED` and are timed against the start of the pull; the hits behind each
+  one are read off a 10 second rolling window of damage the player took, cleared after a death so
+  a later one is not blamed on the previous.
 
 ## Layout
 
 ```
 src/LogGrep/
   Parsing/     streaming scanner, allocation-free field splitter, timestamp parsing
-  Models/      pull records, byte ranges, difficulty tables
+  Models/      pull records, byte ranges, difficulty and specialization tables, per-player stats
   Export/      raw byte-range copier
-  ViewModels/  encounter/pull tree, tri-state selection, commands
+  ViewModels/  encounter/pull/player tree, tri-state selection, commands
   Themes/      dark theme
   Interop/     dark title bar (DWM)
 ```

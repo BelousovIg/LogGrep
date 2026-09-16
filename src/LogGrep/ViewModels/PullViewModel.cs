@@ -8,7 +8,9 @@ namespace LogGrep.ViewModels;
 public sealed class PullViewModel : ObservableObject
 {
     private bool _isSelected;
+    private bool _isExpanded;
     private string? _roster;
+    private IReadOnlyList<PlayerRowViewModel>? _players;
 
     public PullViewModel(PullRecord record, EncounterViewModel owner)
     {
@@ -31,6 +33,23 @@ public sealed class PullViewModel : ObservableObject
             if (Set(ref _isSelected, value)) Owner.OnPullSelectionChanged();
         }
     }
+
+    /// <summary>Whether the per-player table under this attempt is open.</summary>
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set => Set(ref _isExpanded, value);
+    }
+
+    public bool HasPlayers => Record.Roster.Count > 0;
+
+    /// <summary>
+    /// The per-player table, built the first time it is shown. A log can hold hundreds of pulls
+    /// and most are never opened, so there is no point building all of them up front.
+    /// </summary>
+    public IReadOnlyList<PlayerRowViewModel> Players => _players ??= Record.Roster
+        .Select(stats => new PlayerRowViewModel(stats, Record.Duration))
+        .ToArray();
 
     /// <summary>Sets the flag without bubbling back up, used when the parent drives the change.</summary>
     internal void SetSelectedSilently(bool value)

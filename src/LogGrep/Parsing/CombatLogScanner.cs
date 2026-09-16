@@ -21,7 +21,19 @@ public sealed class CombatLogScanner
     private const int AffiliationOutsider = 0x00000008;
     private const int ControlPlayer = 0x00000100;
 
+    /// <summary>How far back a death looks for the hits that caused it.</summary>
+    private const double CauseWindowSeconds = 10;
+
+    /// <summary>Abilities listed per death; the long tail of chip damage is noise.</summary>
+    private const int MaxCauses = 6;
+
+    private const double SecondsPerDay = 24 * 60 * 60;
+
     private readonly FieldSplitter _fields = new();
+
+    /// <summary>Spell names repeat millions of times; each distinct one becomes a string once.</summary>
+    private readonly Dictionary<ulong, string> _labels = new();
+
     private ScanResult _result = null!;
     private OpenSegment? _open;
     private ByteRange _zoneChange = ByteRange.Empty;
@@ -37,6 +49,7 @@ public sealed class CombatLogScanner
         _zoneChange = ByteRange.Empty;
         _mapChange = ByteRange.Empty;
         _keystoneCounter = 0;
+        _labels.Clear();
 
         var info = new FileInfo(path);
         _result = new ScanResult { FilePath = path, FileSize = info.Length };
@@ -154,17 +167,16 @@ public sealed class CombatLogScanner
                 break;
 
             case EventKind.CombatantInfo:
-                if (_open != null)
-                {
-                    _fields.Split(line);
-                    string guid = _fields.Text(line, 1);
-                    if (guid.Length > 0) _open.Combatants.Add(guid);
-                }
+                OnCombatantInfo(line);
+                break;
+
+            case EventKind.UnitDied:
+                if (_open != null) OnUnitDied(line, eventStart);
                 break;
 
             case EventKind.Damage:
             case EventKind.Heal:
-                if (_open != null) Accumulate(line, kind, prefixParams);
+                if (_open != null) Accumulate(line, eventStart, kind, prefixParams);
                 break;
         }
     }
@@ -207,6 +219,7 @@ public sealed class CombatLogScanner
             Kind = kind,
             StartOffset = start,
             StartTime = startTime,
+            StartSeconds = LogTimestamp.SecondsOfDay(line, eventStart),
             LastTimestamp = startTime,
             Zone = _zoneChange,
             Map = _mapChange,
@@ -245,6 +258,7 @@ public sealed class CombatLogScanner
             Kind = ContentKind.MythicPlus,
             StartOffset = start,
             StartTime = startTime,
+            StartSeconds = LogTimestamp.SecondsOfDay(line, eventStart),
             LastTimestamp = startTime,
             Zone = _zoneChange,
             Map = _mapChange,
@@ -274,6 +288,20 @@ public sealed class CombatLogScanner
             ? reportedDuration
             : endTime > segment.StartTime ? endTime - segment.StartTime : TimeSpan.Zero;
 
+        var roster = segment.Players
+            .Select(entry => new PlayerStats
+            {
+                Name = entry.Value.Name,
+                SpecId = segment.Specs.TryGetValue(entry.Key, out int spec) ? spec : 0,
+                Damage = entry.Value.Damage,
+                Healing = entry.Value.Healing,
+                DamageTaken = entry.Value.DamageTaken,
+                Deaths = entry.Value.Deaths.ToArray(),
+            })
+            .OrderByDescending(p => p.Damage)
+            .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
         var pull = new PullRecord
         {
             GroupKey = segment.GroupKey,
@@ -287,7 +315,8 @@ public sealed class CombatLogScanner
             EndTime = endTime,
             Duration = duration,
             Participants = segment.Combatants.Count > 0 ? segment.Combatants.Count : segment.GroupSize,
-            Players = segment.PlayerNames.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray(),
+            Players = roster.Select(p => p.Name).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray(),
+            Roster = roster,
             Damage = segment.Damage,
             Healing = segment.Healing,
             StartOffset = segment.StartOffset,
@@ -300,16 +329,63 @@ public sealed class CombatLogScanner
         Report(new ScanProgress(_result.FileSize > 0 ? endOffset * 100.0 / _result.FileSize : 0, pull));
     }
 
-    /// <summary>Adds one damage or healing event to the open segment, if the source is in our group.</summary>
-    private void Accumulate(ReadOnlySpan<byte> line, EventKind kind, int prefixParams)
+    /// <summary>
+    /// The specialization is the field just before the talent array. Anchoring on the array
+    /// rather than a fixed index keeps this working across log versions, which have added
+    /// stats to the block more than once.
+    /// </summary>
+    private void OnCombatantInfo(ReadOnlySpan<byte> line)
+    {
+        if (_open == null) return;
+
+        _fields.Split(line);
+        var guid = _fields.Field(line, 1);
+        if (guid.IsEmpty) return;
+
+        _open.Combatants.Add(Encoding.UTF8.GetString(guid));
+
+        int limit = Math.Min(_fields.Count, 40);
+        for (int i = 3; i < limit; i++)
+        {
+            var field = _fields.Field(line, i);
+            if (field.Length == 0 || field[0] != (byte)'[') continue;
+
+            int spec = _fields.Int(line, i - 1);
+            if (spec > 0) _open.Specs[Hash(guid)] = spec;
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Records a death and the abilities that landed on the player just before it. The window is
+    /// cleared afterwards so that a later death is not blamed on the hits of the previous one.
+    /// </summary>
+    private void OnUnitDied(ReadOnlySpan<byte> line, int eventStart)
+    {
+        _fields.Split(line);
+        if (_fields.Count < 6) return;
+
+        var victim = PlayerAt(line, 5);
+        if (victim == null) return;
+
+        double at = LogTimestamp.SecondsOfDay(line, eventStart);
+        var elapsed = TimeSpan.Zero;
+        if (at >= 0 && _open!.StartSeconds >= 0)
+        {
+            double seconds = at - _open.StartSeconds;
+            if (seconds < 0) seconds += SecondsPerDay; // the pull ran across midnight
+            elapsed = TimeSpan.FromSeconds(seconds);
+        }
+
+        victim.Deaths.Add(new DeathRecord(elapsed, victim.Causes(at)));
+        victim.Hits.Clear();
+    }
+
+    /// <summary>Adds one damage or healing event to the open segment and to the players involved.</summary>
+    private void Accumulate(ReadOnlySpan<byte> line, int eventStart, EventKind kind, int prefixParams)
     {
         _fields.Split(line);
         if (_fields.Count < 10) return;
-
-        int sourceFlags = _fields.Hex(line, 3);
-        int affiliation = sourceFlags & AffiliationMask;
-        if (affiliation == 0 || affiliation == AffiliationOutsider) return;
-        if ((sourceFlags & ControlPlayer) == 0) return; // NPC damage, not ours
 
         int index = 9 + prefixParams;
         if (index >= _fields.Count) return;
@@ -320,6 +396,7 @@ public sealed class CombatLogScanner
         if (probe.Length == 0) return;
         bool advanced = char.IsAsciiLetter((char)probe[0])
             || (probe.Length == 16 && probe.IndexOfAnyExcept((byte)'0') < 0);
+        int advancedAt = advanced ? index : -1;
         if (advanced)
         {
             // The block grew between log versions (17 fields in 11.x, 19 in 12.x), so anchor on
@@ -341,12 +418,72 @@ public sealed class CombatLogScanner
             // amount, [baseAmount,] overhealing, absorbed, critical
             long overheal = payload >= 5 ? _fields.Long(line, index + 2) : _fields.Long(line, index + 1);
             amount -= overheal;
-            if (amount > 0) _open!.Healing += amount;
+            if (amount <= 0) return;
         }
-        else
+
+        int sourceFlags = _fields.Hex(line, 3);
+        int affiliation = sourceFlags & AffiliationMask;
+        if (affiliation != 0 && affiliation != AffiliationOutsider && (sourceFlags & ControlPlayer) != 0)
         {
-            _open!.Damage += amount;
+            var actor = Actor(line, advancedAt);
+            if (kind == EventKind.Heal)
+            {
+                _open!.Healing += amount;
+                if (actor != null) actor.Healing += amount;
+            }
+            else
+            {
+                _open!.Damage += amount;
+                if (actor != null) actor.Damage += amount;
+            }
         }
+
+        // Damage our players took, whoever dealt it - this is what the death breakdown is built from.
+        if (kind != EventKind.Damage) return;
+
+        var victim = PlayerAt(line, 5);
+        if (victim == null) return;
+
+        victim.DamageTaken += amount;
+
+        double at = LogTimestamp.SecondsOfDay(line, eventStart);
+        if (at >= 0) victim.Hit(at, prefixParams >= 3 ? Label(line, 10) : "Melee", amount);
+    }
+
+    /// <summary>
+    /// The group member behind an event. Pets and guardians name their owner in the advanced
+    /// block, which is the only place their damage can be pinned back on a player.
+    /// </summary>
+    private PlayerState? Actor(ReadOnlySpan<byte> line, int advancedAt)
+    {
+        var source = _fields.Field(line, 1);
+        if (source.StartsWith("Player-"u8)) return Lookup(source);
+
+        if (advancedAt < 0) return null;
+        var owner = _fields.Field(line, advancedAt + 1);
+        return owner.StartsWith("Player-"u8) ? Lookup(owner) : null;
+    }
+
+    private PlayerState? PlayerAt(ReadOnlySpan<byte> line, int index)
+    {
+        var guid = _fields.Field(line, index);
+        return guid.StartsWith("Player-"u8) ? Lookup(guid) : null;
+    }
+
+    private PlayerState? Lookup(ReadOnlySpan<byte> guid)
+        => _open!.Players.TryGetValue(Hash(guid), out var state) ? state : null;
+
+    private string Label(ReadOnlySpan<byte> line, int index)
+    {
+        var span = _fields.Field(line, index);
+        if (span.IsEmpty) return "Unknown";
+
+        ulong key = Hash(span);
+        if (_labels.TryGetValue(key, out string? text)) return text;
+
+        text = Encoding.UTF8.GetString(span);
+        _labels[key] = text;
+        return text;
     }
 
     /// <summary>
@@ -358,7 +495,7 @@ public sealed class CombatLogScanner
     private void TrackUnits(ReadOnlySpan<byte> line, int from)
     {
         // Once every reported group member has been seen there is nothing left to learn.
-        if (_open!.GroupSize > 0 && _open.PlayerNames.Count >= _open.GroupSize) return;
+        if (_open!.GroupSize > 0 && _open.Players.Count >= _open.GroupSize) return;
 
         var rest = line[from..];
         if (!rest.StartsWith("Player-"u8) && !rest.StartsWith("Creature-"u8) && !rest.StartsWith("Pet-"u8)
@@ -391,8 +528,8 @@ public sealed class CombatLogScanner
     }
 
     /// <summary>
-    /// Notes a group member's name the first time their GUID shows up. The GUID is only hashed,
-    /// so the hot path allocates nothing for the players we have already seen.
+    /// Notes a group member the first time their GUID shows up. The GUID is only hashed, so the
+    /// hot path allocates nothing for the players we have already seen.
     /// </summary>
     private void TrackPlayer(ReadOnlySpan<byte> line, int guidAt, int guidLength,
         int nameAt, int nameLength, int flagsAt, int flagsLength)
@@ -403,10 +540,13 @@ public sealed class CombatLogScanner
         int affiliation = FieldSplitter.ParseHex(line.Slice(flagsAt, flagsLength)) & AffiliationMask;
         if (affiliation == 0 || affiliation == AffiliationOutsider) return;
 
-        if (!_open!.PlayerIds.Add(Hash(id))) return;
+        ulong key = Hash(id);
+        if (_open!.Players.ContainsKey(key)) return;
 
         var name = FieldSplitter.Unquote(line.Slice(nameAt, nameLength));
-        if (!name.IsEmpty) _open.PlayerNames.Add(Encoding.UTF8.GetString(name));
+        if (name.IsEmpty) return;
+
+        _open.Players[key] = new PlayerState { Name = Encoding.UTF8.GetString(name) };
     }
 
     private static ulong Hash(ReadOnlySpan<byte> value)
@@ -443,6 +583,7 @@ public sealed class CombatLogScanner
         ChallengeStart,
         ChallengeEnd,
         CombatantInfo,
+        UnitDied,
         Damage,
         Heal,
     }
@@ -456,6 +597,9 @@ public sealed class CombatLogScanner
         prefixParams = 0;
         switch (name.Length)
         {
+            case 9:
+                if (name.SequenceEqual("UNIT_DIED"u8)) return EventKind.UnitDied;
+                break;
             case 10:
                 if (name.SequenceEqual("SPELL_HEAL"u8)) { prefixParams = 3; return EventKind.Heal; }
                 if (name.SequenceEqual("MAP_CHANGE"u8)) return EventKind.MapChange;
@@ -498,6 +642,50 @@ public sealed class CombatLogScanner
         return EventKind.Other;
     }
 
+    /// <summary>One hit a player took, kept only long enough to explain a death.</summary>
+    private readonly record struct Hit(double At, string Label, long Amount);
+
+    private sealed class PlayerState
+    {
+        public required string Name { get; init; }
+        public long Damage { get; set; }
+        public long Healing { get; set; }
+        public long DamageTaken { get; set; }
+        public List<DeathRecord> Deaths { get; } = new();
+
+        /// <summary>Rolling window of recent hits; anything older than the window is dropped on the spot.</summary>
+        public Queue<Hit> Hits { get; } = new();
+
+        public void Hit(double at, string label, long amount)
+        {
+            Hits.Enqueue(new Hit(at, label, amount));
+
+            double cutoff = at - CauseWindowSeconds;
+            while (Hits.Count > 0 && Hits.Peek().At < cutoff) Hits.Dequeue();
+        }
+
+        /// <summary>The heaviest abilities that landed inside the window, largest first.</summary>
+        public IReadOnlyList<DamageCause> Causes(double at)
+        {
+            if (Hits.Count == 0) return Array.Empty<DamageCause>();
+
+            double from = at - CauseWindowSeconds;
+            var totals = new Dictionary<string, long>(StringComparer.Ordinal);
+            foreach (var hit in Hits)
+            {
+                if (at >= 0 && hit.At < from) continue;
+                totals.TryGetValue(hit.Label, out long sum);
+                totals[hit.Label] = sum + hit.Amount;
+            }
+
+            return totals
+                .OrderByDescending(e => e.Value)
+                .Take(MaxCauses)
+                .Select(e => new DamageCause(e.Key, e.Value))
+                .ToArray();
+        }
+    }
+
     private sealed class OpenSegment
     {
         public required string GroupKey { get; init; }
@@ -510,12 +698,17 @@ public sealed class CombatLogScanner
         public ContentKind Kind { get; init; }
         public long StartOffset { get; init; }
         public DateTime StartTime { get; init; }
+
+        /// <summary>Seconds since midnight at the start line, the baseline every death time is measured from.</summary>
+        public double StartSeconds { get; init; }
         public DateTime LastTimestamp { get; set; }
         public ByteRange Zone { get; init; }
         public ByteRange Map { get; init; }
         public HashSet<string> Combatants { get; } = new(StringComparer.Ordinal);
-        public HashSet<ulong> PlayerIds { get; } = new();
-        public List<string> PlayerNames { get; } = new();
+        public Dictionary<ulong, PlayerState> Players { get; } = new();
+
+        /// <summary>Specialization per player GUID hash, learned from COMBATANT_INFO.</summary>
+        public Dictionary<ulong, int> Specs { get; } = new();
         public long Damage { get; set; }
         public long Healing { get; set; }
     }
