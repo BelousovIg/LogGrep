@@ -36,6 +36,9 @@ public partial class MainWindow : Window
         if (path != null) Model.Load(path);
     }
 
+    /// <summary>Opens the settings, which is where a key and the folder everything lives in are set.</summary>
+    private void OnOpenSettings(object sender, RoutedEventArgs e)
+        => new SettingsWindow { Owner = this }.ShowDialog();
 
     /// <summary>
     /// Copies the full name of the player that was clicked, and acknowledges it where the click
@@ -48,6 +51,7 @@ public partial class MainWindow : Window
 
         CopyToast.ShowAt(this, Mouse.GetPosition(this));
     }
+
     private void OnDragOver(object sender, DragEventArgs e)
     {
         e.Effects = TryGetDroppedFile(e) != null ? DragDropEffects.Copy : DragDropEffects.None;

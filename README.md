@@ -36,6 +36,19 @@ standalone one carries the runtime with it, about 155 MB unpacked, and runs on a
 
 `-SkipTests` exists for a throwaway build and should not be used for anything anyone else will run.
 
+
+## Settings
+
+`%APPDATA%\LogGrep` holds everything the app is told: `settings.json`, and later the `rules.txt`
+built from Blizzard's encounter journal. The dialog shows the folder and opens it.
+
+A Blizzard API client - an id and a secret from develop.battle.net - is what lets the app build
+those rules for itself. Nothing is built into the binary: a secret in a program that gets handed
+around belongs to whoever decompiles it, and they would spend the quota or earn the ban for
+everybody. A key entered here belongs to the person who entered it. It is encrypted for that Windows
+account before it is written, so the file is useless on another machine or to another user, and the
+dialog never shows it back - it only says whether one is stored.
+
 ## Tests
 
 ```
@@ -121,6 +134,9 @@ are the words a scenario is written in. Rewire the window and only the page obje
   rule carries the evidence it rests on, because a pattern drawn from nine applications deserves far
   less trust than one drawn from seventy. A rule that is wrong for your fight can be ignored, which
   drops it to the bottom rather than deleting it, and **Export findings** writes the list out as text.
+* **Settings** in the toolbar opens a dialog with two things in it: a Blizzard API client, and where
+  the app keeps what it is told. Both are optional - without a client the app uses the rules it
+  shipped with, and opening a log never touches the network either way.
 * **Export** writes the selected pulls, either into one file (`as single file`) or one file per
   pull into a folder you pick. Per-pull names are
   `<source log>_<Encounter>_<yyyy-MM-dd>_<HH-mm-ss>.txt`.
@@ -186,6 +202,7 @@ src/LogGrep/
   Parsing/     streaming scanner, allocation-free field splitter, timestamp parsing
   Models/      pull records, byte ranges, difficulty and specialization tables, per-player stats
   Analysis/    role ownership of mechanics, findings
+  Services/    settings, and where they are kept
   Export/      raw byte-range copier
   ViewModels/  encounter/pull/player tree, sort state, shared column widths, commands
   Controls/    sortable column header

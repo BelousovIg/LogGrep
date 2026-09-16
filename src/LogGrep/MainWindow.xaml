@@ -41,6 +41,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <Button Grid.Column="0"
@@ -64,6 +65,14 @@
                               ToolTip="Show mechanics that were taken by the wrong role" />
 
                 <Button Grid.Column="3"
+                        Content="Settings"
+                        Margin="0,0,12,0"
+                        MinWidth="96"
+                        Height="32"
+                        Click="OnOpenSettings"
+                        ToolTip="Where things are kept, and the Blizzard client the rules are built with" />
+
+                <Button Grid.Column="4"
                         Content="Cancel"
                         Command="{Binding CancelCommand}"
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
