@@ -20,7 +20,6 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
-        <ctl:InverseBoolToVisibility x:Key="NotBoolToVis" />
     </Window.Resources>
 
     <Grid>
@@ -41,7 +40,6 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <Button Grid.Column="0"
@@ -55,16 +53,7 @@
                          Text="{Binding LogPath, Mode=OneWay}"
                          ToolTip="{Binding LogPath}" />
 
-                <ToggleButton Grid.Column="2"
-                              Content="Findings"
-                              Margin="0,0,12,0"
-                              Padding="14,0"
-                              MinWidth="96"
-                              Height="32"
-                              IsChecked="{Binding ShowFindings, Mode=TwoWay}"
-                              ToolTip="Show mechanics that were taken by the wrong role" />
-
-                <Button Grid.Column="3"
+                <Button Grid.Column="2"
                         Content="Settings"
                         Margin="0,0,12,0"
                         MinWidth="96"
@@ -72,7 +61,7 @@
                         Click="OnOpenSettings"
                         ToolTip="Where things are kept, and the Blizzard client the rules are built with" />
 
-                <Button Grid.Column="4"
+                <Button Grid.Column="3"
                         Content="Cancel"
                         Command="{Binding CancelCommand}"
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
@@ -83,7 +72,6 @@
 
         <!-- ===== table header ===== -->
         <Border Grid.Row="2" Background="{StaticResource WindowBrush}" BorderBrush="{StaticResource LineBrush}"
-                Visibility="{Binding ShowFindings, Converter={StaticResource NotBoolToVis}}"
                 BorderThickness="0,0,0,1" Padding="16,0,16,0" Height="34">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -126,7 +114,6 @@
 
         <!-- ===== encounters ===== -->
         <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                      Visibility="{Binding ShowFindings, Converter={StaticResource NotBoolToVis}}"
                       Padding="16,0,16,0">
             <ItemsControl ItemsSource="{Binding EncountersView}">
                 <ItemsControl.ItemsPanel>
@@ -481,152 +468,11 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
-
-        <!-- ===== findings ===== -->
-        <Grid Grid.Row="3" Visibility="{Binding ShowFindings, Converter={StaticResource BoolToVis}}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-
-            <Border Grid.Row="0" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
-                    BorderThickness="0,0,0,1" Padding="16,12">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0"
-                               Style="{StaticResource MutedText}"
-                               Text="{Binding FindingsSummary}"
-                               TextWrapping="Wrap"
-                               Margin="0,0,16,0" />
-
-                    <Button Grid.Column="1"
-                            Content="Export findings"
-                            Style="{StaticResource PrimaryButton}"
-                            Command="{Binding ExportFindingsCommand}"
-                            ToolTip="Write the findings out as text" />
-                </Grid>
-            </Border>
-
-            <Border Grid.Row="1" Background="{StaticResource WindowBrush}" BorderBrush="{StaticResource LineBrush}"
-                    BorderThickness="0,0,0,1" Padding="16,0" Height="34">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="{StaticResource ColFindToggle}" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="{StaticResource ColFindEvidence}" />
-                        <ColumnDefinition Width="{StaticResource ColFindCount}" />
-                        <ColumnDefinition Width="{StaticResource ColFindIgnore}" />
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="1" Style="{StaticResource HeaderText}" Text="MECHANIC" />
-                    <TextBlock Grid.Column="2" Style="{StaticResource HeaderText}" Text="WHY"
-                               ToolTip="How the mechanic was recognised, and out of how many applications" />
-                    <TextBlock Grid.Column="3" Style="{StaticResource HeaderText}" Text="TOOK IT"
-                               HorizontalAlignment="Right" Margin="0,0,14,0" />
-                </Grid>
-            </Border>
-
-
-            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled" Padding="16,4,16,0">
-                <ItemsControl ItemsSource="{Binding RulesView}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel x:Name="RuleBlock" Margin="0,0,0,6">
-                                <Border Background="{StaticResource RowBrush}" CornerRadius="5" Height="40">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{StaticResource ColFindToggle}" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="{StaticResource ColFindEvidence}" />
-                                            <ColumnDefinition Width="{StaticResource ColFindCount}" />
-                                            <ColumnDefinition Width="{StaticResource ColFindIgnore}" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <ToggleButton Grid.Column="0"
-                                                      Style="{StaticResource ExpanderToggle}"
-                                                      IsChecked="{Binding IsExpanded, Mode=TwoWay}" />
-
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
-                                            <TextBlock Style="{StaticResource MutedText}" FontSize="11"
-                                                       Text="{Binding Encounter}" />
-                                        </StackPanel>
-
-                                        <TextBlock Grid.Column="2" Style="{StaticResource MutedText}"
-                                                   Text="{Binding Evidence}"
-                                                   TextTrimming="CharacterEllipsis" Margin="0,0,12,0"
-                                                   ToolTip="{Binding Evidence}" />
-
-                                        <TextBlock Grid.Column="3" Style="{StaticResource NumberText}"
-                                                   Text="{Binding CountText}" />
-
-                                        <Button Grid.Column="4"
-                                                Style="{StaticResource LinkButton}"
-                                                Content="{Binding IgnoreText}"
-                                                Command="{Binding IgnoreCommand}"
-                                                ToolTip="Silence this rule and drop it to the bottom" />
-                                    </Grid>
-                                </Border>
-        <!-- ===== footer ===== -->
-
-                                <ItemsControl ItemsSource="{Binding Findings}"
-                                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Background="{StaticResource SubRowBrush}" CornerRadius="4"
-                                                    Height="28" Margin="0,2,0,0">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="{StaticResource ColFindIndent}" />
-                                                        <ColumnDefinition Width="{StaticResource ColFindPlayer}" />
-                                                        <ColumnDefinition Width="{StaticResource ColFindClass}" />
-                                                        <ColumnDefinition Width="{StaticResource ColFindSpec}" />
-                                                        <ColumnDefinition Width="{StaticResource ColFindRole}" />
-                                                        <ColumnDefinition Width="{StaticResource ColFindPull}" />
-                                                        <ColumnDefinition Width="{StaticResource ColFindAt}" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-
-                                                    <TextBlock Grid.Column="1" Text="{Binding Player}"
-                                                               Margin="0,0,10,0" ToolTip="{Binding FullName}" />
-                                                    <TextBlock Grid.Column="2" Style="{StaticResource MutedText}"
-                                                               Text="{Binding ClassName}" Margin="0,0,10,0"
-                                                               Foreground="{Binding ClassBrush}" />
-                                                    <TextBlock Grid.Column="3" Style="{StaticResource MutedText}"
-                                                               Text="{Binding SpecName}" Margin="0,0,10,0" />
-                                                    <TextBlock Grid.Column="4" Style="{StaticResource MutedText}"
-                                                               Text="{Binding RoleName}" Margin="0,0,10,0" />
-                                                    <TextBlock Grid.Column="5" Style="{StaticResource MutedText}"
-                                                               Text="{Binding PullText}" Margin="0,0,10,0" />
-                                                    <TextBlock Grid.Column="6" Style="{StaticResource NumberText}"
-                                                               Text="{Binding AtText}" />
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-
-                            <DataTemplate.Triggers>
-                                <DataTrigger Binding="{Binding IsIgnored}" Value="True">
-                                    <Setter TargetName="RuleBlock" Property="Opacity" Value="0.4" />
-                                </DataTrigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </Grid>
         <Border Grid.Row="4" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
                 BorderThickness="0,1,0,0" Padding="16,12">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -645,14 +491,19 @@
                 <Button Grid.Column="3" Style="{StaticResource LinkButton}" Content="Collapse all"
                         Command="{Binding CollapseAllCommand}" />
 
-                <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Left" Margin="16,0,0,0">
+                <!-- What the detectors found goes out as one file per player, which is how anybody
+                     reads it: nobody wants the whole night, they want their own part of it. -->
+                <Button Grid.Column="4" Style="{StaticResource LinkButton}" Content="Save report"
+                        Command="{Binding ExportFindingsCommand}" ToolTip="{Binding FindingsSummary}" />
+
+                <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Left" Margin="16,0,0,0">
                     <TextBlock Style="{StaticResource MutedText}" Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
 
-                <TextBlock Grid.Column="5" Style="{StaticResource MutedText}" Text="{Binding SelectionText}"
+                <TextBlock Grid.Column="6" Style="{StaticResource MutedText}" Text="{Binding SelectionText}"
                            Margin="0,0,16,0" />
 
-                <StackPanel Grid.Column="6" Orientation="Horizontal">
+                <StackPanel Grid.Column="7" Orientation="Horizontal">
                     <CheckBox Content="as single file" IsChecked="{Binding AsSingleFile, Mode=TwoWay}"
                               Margin="0,0,16,0"
                               ToolTip="Write every selected pull into a single file" />

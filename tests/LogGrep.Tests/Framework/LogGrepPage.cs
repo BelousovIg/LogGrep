@@ -1,6 +1,7 @@
 using System.IO.Abstractions.TestingHelpers;
 using System.Windows.Threading;
 using LogGrep.Tests.Logs;
+using LogGrep.Analysis;
 using LogGrep.ViewModels;
 
 namespace LogGrep.Tests.Framework;
@@ -38,7 +39,11 @@ public sealed class LogGrepPage
 
     public IReadOnlyList<EncounterViewModel> Encounters => ViewModel.Encounters;
 
-    public IReadOnlyList<RuleViewModel> Rules => ViewModel.Rules;
+    public IReadOnlyList<Finding> Findings => ViewModel.Findings;
+
+    /// <summary>Findings whose headline names that spell, which is how a scenario asks about one.</summary>
+    public IReadOnlyList<Finding> FindingsFor(string spell)
+        => Findings.Where(f => f.Headline.StartsWith(spell, StringComparison.Ordinal)).ToList();
 
     public EncounterViewModel Encounter => _encounter ?? throw new InvalidOperationException(
         "No encounter is being looked at. Open one first.");
@@ -109,15 +114,6 @@ public sealed class LogGrepPage
         ViewModel.Sorting.Players.Toggle(column);
         foreach (var encounter in Encounters) encounter.ApplySorting();
     }
-
-    public void ShowFindings(bool on) => ViewModel.ShowFindings = on;
-
-    public RuleViewModel Rule(string spell)
-        => Rules.FirstOrDefault(r => r.Rule.Spell == spell)
-            ?? throw new InvalidOperationException(
-                $"Nothing was found for '{spell}'. Findings: {Names(Rules.Select(r => r.Rule.Spell))}");
-
-    public void IgnoreRule(string spell) => Rule(spell).IsIgnored = true;
 
     private static string Names(IEnumerable<string> values)
     {

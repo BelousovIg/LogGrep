@@ -16,6 +16,11 @@ public sealed class FindingMistakes : Scenario
     private const string Boss = "The Soulcoiler";
     private const string TankMechanic = "Possession Barrage";
 
+    /// <summary>The written fix for a tank mechanic - the one field of a finding nothing can derive.</summary>
+    private const string TankAdvice =
+        "This one follows the tank. On anybody else it means a swap went wrong, " +
+        "or you were the nearest thing to a tank when it picked.";
+
     /// <summary>Attempts it takes before the app is willing to call anything a rule.</summary>
     private const int Habit = 10;
 
@@ -42,7 +47,7 @@ public sealed class FindingMistakes : Scenario
     [Fact]
     public void A_mechanic_the_tanks_always_take_is_nobodys_mistake()
     {
-        Given.IOpenedLog(ANightThatWentRight()).And.IOpenedFindings();
+        Given.IOpenedLog(ANightThatWentRight());
 
         Then.NothingWasFound();
     }
@@ -56,7 +61,7 @@ public sealed class FindingMistakes : Scenario
             .At("1:30").BossDebuffs("Sunwell", with: TankMechanic)
             .Wipe());
 
-        Given.IOpenedLog(log).And.IOpenedFindings();
+        Given.IOpenedLog(log);
 
         Then.MechanicBelongsTo(TankMechanic, "tank")
             .And.TookMechanicOutOfTurn(TankMechanic, "Sunwell");
@@ -71,7 +76,7 @@ public sealed class FindingMistakes : Scenario
             .At("1:30").BossDebuffs("Sunwell", with: TankMechanic)
             .Wipe());
 
-        Given.IOpenedLog(log).And.IOpenedFindings();
+        Given.IOpenedLog(log);
 
         Then.MechanicEvidenceReads(TankMechanic, "22 of 23 hit a tank, over 11 attempts");
     }
@@ -87,7 +92,7 @@ public sealed class FindingMistakes : Scenario
             .At("1:00").BossDebuffs("Emberwild", with: "Creeping Rot", times: 2)
             .Wipe());
 
-        Given.IOpenedLog(log).And.IOpenedFindings();
+        Given.IOpenedLog(log);
 
         Then.MechanicWasNotFlagged("Creeping Rot")
             .And.NothingWasFound();
@@ -104,7 +109,7 @@ public sealed class FindingMistakes : Scenario
             .Pull(Boss, Difficulty.Mythic, p => p
                 .Lasting("3:00").At("1:30").BossDebuffs("Sunwell", with: TankMechanic).Wipe());
 
-        Given.IOpenedLog(log).And.IOpenedFindings();
+        Given.IOpenedLog(log);
 
         Then.NothingWasFound();
     }
@@ -120,7 +125,7 @@ public sealed class FindingMistakes : Scenario
             .At("1:30").BossDebuffs("Sunwell", with: TankMechanic)
             .Wipe());
 
-        Given.IOpenedLog(log).And.IOpenedFindings();
+        Given.IOpenedLog(log);
 
         Then.NothingWasFound();
     }
@@ -133,7 +138,7 @@ public sealed class FindingMistakes : Scenario
             .At("0:20").Buffs("Sunwell", target: "Rockjaw", with: "Power Word: Fortitude", times: 12)
             .Wipe());
 
-        Given.IOpenedLog(log).And.IOpenedFindings();
+        Given.IOpenedLog(log);
 
         Then.NothingWasFound();
     }
@@ -147,30 +152,70 @@ public sealed class FindingMistakes : Scenario
             .At("1:30").BossDebuffs("Sunwell", with: TankMechanic)
             .Wipe());
 
-        Given.IOpenedLog(log).And.IOpenedFindings();
+        Given.IOpenedLog(log);
 
         Then.FindingPointsAt(TankMechanic, "Sunwell", pull: "pull 11", at: "1:30");
     }
 
     [Fact]
-    public void The_heaviest_rule_comes_first_and_an_ignored_one_goes_last()
+    public void A_mistake_that_killed_somebody_outweighs_one_they_walked_away_from()
     {
-        Given.IOpenedLog(TwoMechanics()).And.IOpenedFindings();
+        // Same mechanic, same attempt, two people: what separates the two findings is what each
+        // one cost, and that is the only thing the order is allowed to rest on.
+        var log = ANightThatWentRight().Pull(Boss, Difficulty.Mythic, p => p
+            .Lasting("5:00")
+            .At("0:20").BossDebuffs("Rockjaw", with: TankMechanic, times: 2)
+            .At("1:30").BossDebuffs("Sunwell", with: TankMechanic)
+            .At("1:35").Kills("Sunwell", with: TankMechanic)
+            .At("2:00").BossDebuffs("Nightblade", with: TankMechanic)
+            .Wipe());
 
-        Then.RulesAreOrdered(TankMechanic, "Hollowing Strikes");
+        Given.IOpenedLog(log);
 
-        When.IIgnoreRule(TankMechanic);
-
-        Then.RulesAreOrdered("Hollowing Strikes", TankMechanic)
-            .And.RuleIsIgnored(TankMechanic, true);
+        Then.FindingsAreOrderedByCost()
+            .And.FindingCost(TankMechanic, "Sunwell", "Possession Barrage killed you at 1:35")
+            .And.FindingCost(TankMechanic, "Nightblade", "survived it");
     }
 
     [Fact]
-    public void The_summary_counts_the_mistakes_and_the_mechanics()
+    public void A_death_long_after_the_mechanic_is_not_laid_at_its_door()
     {
-        Given.IOpenedLog(TwoMechanics()).And.IOpenedFindings();
+        // A minute later is a different story, and a finding that claims otherwise is worse than
+        // no finding at all - it sends somebody to look at the wrong moment.
+        var log = ANightThatWentRight().Pull(Boss, Difficulty.Mythic, p => p
+            .Lasting("5:00")
+            .At("0:20").BossDebuffs("Rockjaw", with: TankMechanic, times: 2)
+            .At("1:30").BossDebuffs("Sunwell", with: TankMechanic)
+            .At("2:30").Kills("Sunwell")
+            .Wipe());
 
-        Then.FindingsRead("across 2 mechanics");
+        Given.IOpenedLog(log);
+
+        Then.FindingCost(TankMechanic, "Sunwell", "survived it");
+    }
+
+    [Fact]
+    public void A_finding_says_what_to_do_about_it()
+    {
+        var log = ANightThatWentRight().Pull(Boss, Difficulty.Mythic, p => p
+            .Lasting("3:00")
+            .At("0:20").BossDebuffs("Rockjaw", with: TankMechanic, times: 2)
+            .At("1:30").BossDebuffs("Sunwell", with: TankMechanic)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.FindingAdvises(TankMechanic, TankAdvice);
+    }
+
+    [Fact]
+    public void The_summary_counts_the_mistakes_and_the_people_who_made_them()
+    {
+        // Three mistakes over two mechanics, but the summary counts people rather than mechanics:
+        // detectors other than this one have no mechanic to count, and a person always has a name.
+        Given.IOpenedLog(TwoMechanics());
+
+        Then.FindingsRead("3 mistakes across 3 players.");
     }
 
     [Fact]
@@ -242,8 +287,10 @@ public sealed class FindingMistakes : Scenario
 
         Then.PlayerMistakesRead("0:31 Hollowing Strikes - tank mechanic; 2:51 Possession Barrage - tank mechanic")
             .And.PlayerMistakesTooltipReads(
-                "0:31  Hollowing Strikes\n      went to a healer; 22 of 23 hit a tank, over 11 attempts",
-                "2:51  Possession Barrage\n      went to a healer; 22 of 23 hit a tank, over 11 attempts");
+                "0:31 Hollowing Strikes - tank mechanic\n      went to a healer; 22 of 23 hit a " +
+                "tank, over 11 attempts\n      survived it\n      " + TankAdvice,
+                "2:51 Possession Barrage - tank mechanic\n      went to a healer; 22 of 23 hit a " +
+                "tank, over 11 attempts\n      survived it\n      " + TankAdvice);
     }
 
     [Fact]

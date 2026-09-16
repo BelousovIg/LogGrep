@@ -1,3 +1,5 @@
+using LogGrep.Analysis;
+using LogGrep.Models;
 using LogGrep.ViewModels;
 
 namespace LogGrep.Tests.Framework;
@@ -105,35 +107,56 @@ public sealed class Verification
     public void FindingsRead(string expected) => Assert.Contains(expected, _page.ViewModel.FindingsSummary);
 
     public void NothingWasFound()
-        => Assert.True(_page.Rules.Count == 0,
+        => Assert.True(_page.Findings.Count == 0,
             "Nothing should have been found, but these were: " +
-            string.Join(", ", _page.Rules.Select(r => r.Rule.Spell)));
+            string.Join(", ", _page.Findings.Select(f => f.Line)));
 
     public void MechanicBelongsTo(string spell, string role)
-        => Assert.Equal(role, LogGrep.Models.Specs.NameOf(_page.Rule(spell).Rule.Owner));
+    {
+        var found = First(spell);
+        Assert.Equal(spell + " - " + role + " mechanic", found.Headline);
+    }
 
     public void MechanicEvidenceReads(string spell, string expected)
-        => Assert.Equal(expected, _page.Rule(spell).Rule.Evidence);
+        => Assert.Contains(expected, First(spell).Evidence, StringComparison.Ordinal);
 
     public void TookMechanicOutOfTurn(string spell, params string[] expected)
-        => Assert.Equal(expected, _page.Rule(spell).Findings.Select(f => f.Player).Distinct().ToArray());
+        => Assert.Equal(expected,
+            _page.FindingsFor(spell).Select(f => PlayerName.Character(f.Player)).Distinct().ToArray());
 
     public void MechanicWasNotFlagged(string spell)
-        => Assert.True(_page.Rules.All(r => r.Rule.Spell != spell),
-            $"'{spell}' should not have been flagged, but it was.");
+        => Assert.True(_page.FindingsFor(spell).Count == 0, $"'{spell}' should not have been flagged, but was.");
 
     public void FindingPointsAt(string spell, string player, string pull, string at)
     {
-        var finding = _page.Rule(spell).Findings.FirstOrDefault(f => f.Player == player)
+        var found = _page.FindingsFor(spell)
+            .FirstOrDefault(f => PlayerName.Character(f.Player) == player)
             ?? throw new InvalidOperationException($"'{player}' was not reported for '{spell}'.");
 
-        Assert.Equal(pull, finding.PullText);
-        Assert.Equal(at, finding.AtText);
+        Assert.Equal(pull, "pull " + found.PullNumber);
+        Assert.Equal(at, Display.Clock(found.At));
     }
 
-    public void RulesAreOrdered(params string[] expected)
-        => Assert.Equal(expected, _page.ViewModel.RulesView.Cast<RuleViewModel>().Select(r => r.Rule.Spell).ToArray());
+    /// <summary>What a finding cost is what sorts the list, so the order is worth checking.</summary>
+    public void FindingsAreOrderedByCost()
+    {
+        var weights = _page.Findings.Select(f => f.Cost.Weight).ToList();
+        Assert.True(weights.SequenceEqual(weights.OrderByDescending(w => w)),
+            "Findings should come heaviest first, and came in this order: " + string.Join(", ", weights));
+    }
 
-    public void RuleIsIgnored(string spell, bool expected)
-        => Assert.True(expected == _page.Rule(spell).IsIgnored, $"'{spell}' ignored should be {expected}.");
+    public void FindingCost(string spell, string player, string expected)
+    {
+        var found = _page.FindingsFor(spell).First(f => PlayerName.Character(f.Player) == player);
+        Assert.Equal(expected, found.Cost.Text);
+    }
+
+    public void FindingAdvises(string spell, string expected)
+        => Assert.Contains(expected, First(spell).Advice, StringComparison.Ordinal);
+
+    private Finding First(string spell)
+        => _page.FindingsFor(spell).FirstOrDefault()
+           ?? throw new InvalidOperationException(
+               $"Nothing was found for '{spell}'. Findings: " +
+               string.Join(", ", _page.Findings.Select(f => f.Line)));
 }

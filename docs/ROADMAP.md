@@ -120,13 +120,20 @@ different problems, and the `2/3` column already hints at the distinction.
 
 Each ends with something usable. None is a rewrite of what exists.
 
-### 1. A finding worth reading
+### 1. A finding worth reading — done
 
 Give the finding its four fields: category, evidence, estimated cost, written fix. Turn
 `MechanicAnalyzer` into a rule engine with pluggable detectors rather than one function, because
 everything after this adds detectors. Replace the findings panel with the per-player report.
 
 Ends with: the same mechanics findings, ranked by what they cost, each with a sentence of advice.
+
+What it came out as: `Finding` carries all four fields and `Cost` carries the weight the list sorts
+on, a death outweighing any amount of damage. `IDetector` is the seam - `Findings.In` runs every
+detector over every encounter and sorts what comes back against each other, so detector two needs
+no new plumbing. The panel is gone; the report lives in the roster, one row per player, with the
+four fields under the tooltip and `Save report` in the footer writing it out per player. Measured on
+the 1.4 GB log: 26 attempts, 20 findings, 15 of which cost a death.
 
 ### 2. Several logs, one evening
 

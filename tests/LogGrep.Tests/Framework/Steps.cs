@@ -44,12 +44,6 @@ public sealed class Given
         _act.LookAtPlayer(name);
         return this;
     }
-
-    public Given IOpenedFindings()
-    {
-        _act.OpenFindings();
-        return this;
-    }
 }
 
 /// <summary>The one thing the scenario is about.</summary>
@@ -94,18 +88,6 @@ public sealed class When
     public When ISortPlayersBy(string column)
     {
         _act.SortPlayersBy(column);
-        return this;
-    }
-
-    public When IOpenFindings()
-    {
-        _act.OpenFindings();
-        return this;
-    }
-
-    public When IIgnoreRule(string spell)
-    {
-        _act.IgnoreRule(spell);
         return this;
     }
 }
@@ -299,15 +281,23 @@ public sealed class Then
         return this;
     }
 
-    public Then RulesAreOrdered(params string[] spells)
+
+    /// <summary>The order the report is read in, which is the order the findings are given in.</summary>
+    public Then FindingsAreOrderedByCost()
     {
-        _check.RulesAreOrdered(spells);
+        _check.FindingsAreOrderedByCost();
         return this;
     }
 
-    public Then RuleIsIgnored(string spell, bool expected)
+    public Then FindingCost(string spell, string player, string expected)
     {
-        _check.RuleIsIgnored(spell, expected);
+        _check.FindingCost(spell, player, expected);
+        return this;
+    }
+
+    public Then FindingAdvises(string spell, string expected)
+    {
+        _check.FindingAdvises(spell, expected);
         return this;
     }
 }

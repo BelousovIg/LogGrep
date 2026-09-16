@@ -20,7 +20,6 @@ public sealed class MainViewModel : ObservableObject
 {
     private readonly Dictionary<string, EncounterViewModel> _groups = new(StringComparer.Ordinal);
     private readonly ListCollectionView _encountersView;
-    private readonly ListCollectionView _rulesView;
     private readonly Dispatcher _dispatcher = Dispatcher.CurrentDispatcher;
     private readonly IFileSystem _fileSystem;
     private readonly LogExporter _exporter;
@@ -32,7 +31,6 @@ public sealed class MainViewModel : ObservableObject
     private double _progress;
     private bool _isBusy;
     private bool _asSingleFile = true;
-    private bool _showFindings;
 
     /// <summary>The real disk. Tests hand in a fake one instead.</summary>
     public MainViewModel() : this(new FileSystem())
@@ -51,10 +49,9 @@ public sealed class MainViewModel : ObservableObject
         SelectNoneCommand = new RelayCommand(() => SetAll(false), () => !IsBusy && Encounters.Count > 0);
         ExpandAllCommand = new RelayCommand(() => SetExpanded(true), () => Encounters.Count > 0);
         CollapseAllCommand = new RelayCommand(() => SetExpanded(false), () => Encounters.Count > 0);
-        ExportFindingsCommand = new RelayCommand(ExportFindings, () => !IsBusy && Rules.Count > 0);
+        ExportFindingsCommand = new RelayCommand(ExportFindings, () => !IsBusy && Findings.Count > 0);
 
         _encountersView = new ListCollectionView(Encounters);
-        _rulesView = new ListCollectionView(Rules) { CustomSort = new RuleOrder() };
         Sorting.Encounters.Changed += (_, _) => _encountersView.CustomSort = Sorting.Encounters.Comparer;
         Sorting.Pulls.Changed += (_, _) => ApplySorting();
         Sorting.Players.Changed += (_, _) => ApplySorting();
@@ -68,30 +65,21 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>What the encounter rows are bound to; the collection keeps the order of the log.</summary>
     public ICollectionView EncountersView => _encountersView;
 
-    /// <summary>Mechanics taken by the wrong role, grouped by the rule that caught them.</summary>
-    public ObservableCollection<RuleViewModel> Rules { get; } = new();
+    /// <summary>
+    /// Everything the detectors found, heaviest first. It is the whole list rather than a view of
+    /// it, because what a person is shown is their own share of it and the rows work that out for
+    /// themselves.
+    /// </summary>
+    public IReadOnlyList<Finding> Findings { get; private set; } = Array.Empty<Finding>();
 
-    /// <summary>Rules in order of weight, with the ignored ones pushed to the bottom.</summary>
-    public ICollectionView RulesView => _rulesView;
-
-    /// <summary>Whether the window is showing the findings instead of the pulls.</summary>
-    public bool ShowFindings
-    {
-        get => _showFindings;
-        set
-        {
-            if (Set(ref _showFindings, value)) ExportFindingsCommand.RaiseCanExecuteChanged();
-        }
-    }
-
-    public bool HasFindings => Rules.Count > 0;
+    public bool HasFindings => Findings.Count > 0;
 
     public string FindingsSummary
     {
         get
         {
-            if (_scan == null) return "Open a log to look for mechanics taken by the wrong role.";
-            if (Rules.Count == 0)
+            if (_scan == null) return "Open a log to look for mistakes.";
+            if (Findings.Count == 0)
             {
                 return "Nothing found. A mechanic only shows whose it is once it has been applied " +
                        "often enough, so a short attempt finds nothing - and so does one where the " +
@@ -99,10 +87,9 @@ public sealed class MainViewModel : ObservableObject
                        "majority within that single sample. More attempts of the same fight help.";
             }
 
-            int players = Rules.Sum(r => r.Findings.Count);
-            return players + (players == 1 ? " time a mechanic" : " times a mechanic") +
-                   " was taken by the wrong role, across " + Rules.Count +
-                   (Rules.Count == 1 ? " mechanic." : " mechanics.");
+            int players = Findings.Select(f => f.Player).Distinct().Count();
+            return Findings.Count + (Findings.Count == 1 ? " mistake" : " mistakes") +
+                   " across " + players + (players == 1 ? " player." : " players.");
         }
     }
 
@@ -187,7 +174,7 @@ public sealed class MainViewModel : ObservableObject
     {
         Encounters.Clear();
         _groups.Clear();
-        Rules.Clear();
+        Findings = Array.Empty<Finding>();
         _scan = null;
         LogPath = path;
         Progress = 0;
@@ -398,20 +385,13 @@ public sealed class MainViewModel : ObservableObject
     /// </summary>
     private void BuildFindings(IReadOnlyList<PullRecord> pulls)
     {
-        Rules.Clear();
+        Findings = Analysis.Findings.In(pulls);
 
-        var findings = MechanicAnalyzer.Analyse(pulls);
-
-        foreach (var group in findings.GroupBy(f => f.Rule))
-        {
-            Rules.Add(new RuleViewModel(group.Key, group, () => _rulesView.Refresh()));
-        }
-
-        // The same findings, pushed down the tree so every row can show its own share of them.
-        var byPull = findings.ToLookup(f => f.Pull);
+        // Pushed down the tree so every row can show its own share of them.
+        var byPull = Findings.ToLookup(f => f.Pull);
         foreach (var encounter in Encounters) encounter.ApplyMistakes(byPull);
 
-        _rulesView.Refresh();
+        OnPropertyChanged(nameof(Findings));
         OnPropertyChanged(nameof(HasFindings));
         OnPropertyChanged(nameof(FindingsSummary));
         ExportFindingsCommand.RaiseCanExecuteChanged();
@@ -423,7 +403,7 @@ public sealed class MainViewModel : ObservableObject
     /// </summary>
     private void ExportFindings()
     {
-        if (_scan is not { } scan || Rules.Count == 0) return;
+        if (_scan is not { } scan || Findings.Count == 0) return;
 
         var dialog = new SaveFileDialog
         {
@@ -437,20 +417,19 @@ public sealed class MainViewModel : ObservableObject
         if (dialog.ShowDialog() != true) return;
 
         var text = new StringBuilder();
-        text.AppendLine("Mechanics taken by the wrong role");
-        text.AppendLine("Log: " + scan.FilePath);
+        text.AppendLine("Mistakes found in " + scan.FilePath);
         text.AppendLine();
 
-        foreach (RuleViewModel rule in _rulesView)
+        foreach (var player in Findings.GroupBy(f => f.Player).OrderByDescending(g => g.Sum(f => f.Cost.Weight)))
         {
-            if (rule.IsIgnored) continue;
+            text.AppendLine(PlayerName.Format(player.Key));
 
-            text.AppendLine(rule.Encounter + " — " + rule.Title);
-            text.AppendLine("  " + rule.Evidence);
-            foreach (var finding in rule.Findings)
+            foreach (var finding in player)
             {
-                text.AppendLine("  " + finding.Player + " (" + finding.ClassName + " " + finding.SpecName +
-                                ", " + finding.RoleName + ") — " + finding.PullText + " at " + finding.AtText);
+                text.AppendLine("  " + finding.Line + "  (pull " + finding.PullNumber + ")");
+                text.AppendLine("    " + finding.Evidence);
+                text.AppendLine("    " + finding.Cost.Text);
+                text.AppendLine("    " + finding.Advice);
             }
 
             text.AppendLine();
@@ -465,23 +444,6 @@ public sealed class MainViewModel : ObservableObject
         {
             Status = "Export error: " + ex.Message;
             Complain(ex.Message, "Export failed");
-        }
-    }
-
-    /// <summary>Heaviest rules first; an ignored one drops to the bottom instead of disappearing.</summary>
-    private sealed class RuleOrder : IComparer
-    {
-        public int Compare(object? x, object? y)
-        {
-            if (x is not RuleViewModel left || y is not RuleViewModel right) return 0;
-
-            if (left.IsIgnored != right.IsIgnored) return left.IsIgnored ? 1 : -1;
-
-            int byCount = right.Findings.Count.CompareTo(left.Findings.Count);
-            if (byCount != 0) return byCount;
-
-            int byShare = right.Rule.Share.CompareTo(left.Rule.Share);
-            return byShare != 0 ? byShare : string.Compare(left.Title, right.Title, StringComparison.Ordinal);
         }
     }
 

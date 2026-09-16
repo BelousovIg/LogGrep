@@ -28,10 +28,6 @@ public sealed class TestMethods
 
     public void SortPlayersBy(string column) => _page.SortPlayersBy(column);
 
-    public void OpenFindings() => _page.ShowFindings(true);
-
-    public void IgnoreRule(string spell) => _page.IgnoreRule(spell);
-
     /// <summary>Opens an encounter and one of its pulls in one go, which most scenarios want.</summary>
     public void OpenPull(string encounter, int number)
     {

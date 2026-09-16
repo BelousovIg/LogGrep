@@ -56,7 +56,8 @@ public sealed class PlayerRowViewModel
         : string.Join("; ", _mistakes.Select(Describe));
 
     /// <summary>
-    /// The same list, one to a block, with the reasoning behind each. The name of a spell says
+    /// The same list, one to a block, with all four fields of the finding under it: what happened,
+    /// why it counts, what it cost, and what to do about it. The name of a spell says
     /// what was taken and nothing about why that was wrong, and the app cannot explain a boss - but
     /// it can explain itself, and "8 of 9 hit a tank" is the whole of its case. Seeing the size of
     /// that sample is the point: a rule drawn from one attempt is worth arguing with.
@@ -65,13 +66,13 @@ public sealed class PlayerRowViewModel
         ? "This player took nothing that was not theirs"
         : string.Join(Environment.NewLine + Environment.NewLine, _mistakes.Select(Explain));
 
-    private static string Describe(Finding mistake)
-        => Display.Clock(mistake.At) + " " + mistake.Rule.Spell + " - " +
-           Specs.NameOf(mistake.Rule.Owner) + " mechanic";
+    private static string Describe(Finding mistake) => mistake.Line;
 
     private static string Explain(Finding mistake)
-        => Display.Clock(mistake.At) + "  " + mistake.Rule.Spell + Environment.NewLine +
-           "      went to " + Specs.PersonOf(mistake.Role) + "; " + mistake.Rule.Evidence;
+        => mistake.Line + Environment.NewLine +
+           "      " + mistake.Evidence + Environment.NewLine +
+           "      " + mistake.Cost.Text + Environment.NewLine +
+           "      " + mistake.Advice;
 
     /// <summary>Raw values behind the formatted cells, so the columns sort on numbers and times.</summary>
     public double DpsValue => Rate(_stats.Damage);
