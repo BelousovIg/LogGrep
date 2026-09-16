@@ -151,7 +151,7 @@ public sealed class Verification
     /// breakdown is whether what killed you was yours to avoid.
     /// </summary>
     public void PlayerWasKilledByAvoidableDamage(Ability spell)
-        => Assert.True(_page.Player.CausesText.Contains("avoidable " + spell.NameOf(), StringComparison.Ordinal),
+        => Assert.True(_page.Player.CausesText.Contains("(avoidable) " + spell.NameOf(), StringComparison.Ordinal),
             $"'{spell.NameOf()}' should have been marked avoidable in the death of " +
             $"'{_page.Player.Name}'. What is shown: {_page.Player.CausesText}");
 

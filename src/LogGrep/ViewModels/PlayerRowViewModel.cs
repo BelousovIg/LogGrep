@@ -144,7 +144,7 @@ public sealed class PlayerRowViewModel
     private string Causes(DeathRecord death) => death.Causes.Count == 0
         ? "no damage logged"
         : string.Join(", ", death.Causes.Select(
-            c => (Avoidable(c.Label) ? "avoidable " : string.Empty) + c.Label + " " + Display.Amount(c.Amount)));
+            c => (Avoidable(c.Label) ? "(avoidable) " : string.Empty) + c.Label + " " + Display.Amount(c.Amount)));
 
     /// <summary>
     /// Whether the app worked out, from this run of attempts, that most of the group takes none of
