@@ -48,6 +48,12 @@ LogGrep.exe "C:\...\Logs\WoWCombatLog-091526_120136.txt"
 * Columns are **resized** by dragging the right edge of a header. A width belongs to the level, not
   to one table, so every pull and every roster stays lined up with the header above it.
 * The encounter **checkbox is three-state**: all pulls selected, none, or some.
+* **Findings** in the toolbar switches to the mechanics that were taken by the wrong role. Nothing
+  about any boss is written into the app: a debuff is recognised as belonging to a role by how it
+  behaved across the attempts of that fight, which is the only approach that survives a patch. Each
+  rule carries the evidence it rests on, because a pattern drawn from nine applications deserves far
+  less trust than one drawn from seventy. A rule that is wrong for your fight can be ignored, which
+  drops it to the bottom rather than deleting it, and **Export findings** writes the list out as text.
 * **Export** writes the selected pulls, either into one file (`as single file`) or one file per
   pull into a folder you pick. Per-pull names are
   `<source log>_<Encounter>_<yyyy-MM-dd>_<HH-mm-ss>.txt`.
@@ -85,6 +91,16 @@ the fight from `ENCOUNTER_START` to `ENCOUNTER_END` (or `CHALLENGE_MODE_START`/`
 * Deaths come from `UNIT_DIED` and are timed against the start of the pull; the hits behind each
   one are read off a 10 second rolling window of damage the player took, cleared after a death so
   a later one is not blamed on the previous.
+* A mechanic is read from `SPELL_AURA_APPLIED`, keeping only debuffs a hostile source put on a group
+  member. A boss debuff picks its target, which is exactly what says who took a mechanic, while the
+  raid-wide damage that follows says nothing about it: one spell on this log applies to a single
+  player and then damages the whole raid 5928 times. The filter turns twelve thousand aura events
+  per pull into a few hundred.
+* A role is credited with a spell when it took at least 85% of the applications, there were at least
+  8 of them, and that share is at least 1.5x the share of the group that role makes up. The last
+  test is what stops a raid-wide debuff from reading as a damage mechanic merely because most of a
+  raid is damage - and it is why a tank mechanic, with tanks at a tenth of the group, stands out so
+  clearly.
 
 ## Layout
 
@@ -92,6 +108,7 @@ the fight from `ENCOUNTER_START` to `ENCOUNTER_END` (or `CHALLENGE_MODE_START`/`
 src/LogGrep/
   Parsing/     streaming scanner, allocation-free field splitter, timestamp parsing
   Models/      pull records, byte ranges, difficulty and specialization tables, per-player stats
+  Analysis/    role ownership of mechanics, findings
   Export/      raw byte-range copier
   ViewModels/  encounter/pull/player tree, sort state, shared column widths, commands
   Controls/    sortable column header

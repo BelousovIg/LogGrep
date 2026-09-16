@@ -174,6 +174,10 @@ public sealed class CombatLogScanner
                 if (_open != null) OnUnitDied(line, eventStart);
                 break;
 
+            case EventKind.AuraApplied:
+                if (_open != null) OnAuraApplied(line, eventStart);
+                break;
+
             case EventKind.Damage:
             case EventKind.Heal:
                 if (_open != null) Accumulate(line, eventStart, kind, prefixParams);
@@ -317,6 +321,7 @@ public sealed class CombatLogScanner
             Participants = segment.Combatants.Count > 0 ? segment.Combatants.Count : segment.GroupSize,
             Players = roster.Select(p => p.Name).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray(),
             Roster = roster,
+            Debuffs = segment.Debuffs.ToArray(),
             Damage = segment.Damage,
             Healing = segment.Healing,
             StartOffset = segment.StartOffset,
@@ -369,16 +374,46 @@ public sealed class CombatLogScanner
         if (victim == null) return;
 
         double at = LogTimestamp.SecondsOfDay(line, eventStart);
-        var elapsed = TimeSpan.Zero;
-        if (at >= 0 && _open!.StartSeconds >= 0)
-        {
-            double seconds = at - _open.StartSeconds;
-            if (seconds < 0) seconds += SecondsPerDay; // the pull ran across midnight
-            elapsed = TimeSpan.FromSeconds(seconds);
-        }
 
-        victim.Deaths.Add(new DeathRecord(elapsed, victim.Causes(at)));
+        victim.Deaths.Add(new DeathRecord(Elapsed(at), victim.Causes(at)));
         victim.Hits.Clear();
+    }
+
+    /// <summary>
+    /// Records a hostile debuff landing on a group member. Buffs, and anything a group member cast,
+    /// are skipped on purpose: a boss debuff picks its target, which is exactly what says who took
+    /// a mechanic, while the hundreds of heals and procs flying around say nothing about that and
+    /// would bury it. On a raid pull the filter turns twelve thousand aura events into a few hundred.
+    /// </summary>
+    private void OnAuraApplied(ReadOnlySpan<byte> line, int eventStart)
+    {
+        _fields.Split(line);
+        if (_fields.Count < 13) return;
+
+        // The aura type sits right after the spell school.
+        if (!_fields.Field(line, 12).SequenceEqual("DEBUFF"u8)) return;
+
+        int affiliation = _fields.Hex(line, 3) & AffiliationMask;
+        if (affiliation != 0 && affiliation != AffiliationOutsider) return; // one of ours cast it
+
+        var victim = PlayerAt(line, 5);
+        if (victim == null) return;
+
+        _open!.Debuffs.Add(new AuraHit(
+            _fields.Int(line, 9),
+            Label(line, 10),
+            victim.Name,
+            Elapsed(LogTimestamp.SecondsOfDay(line, eventStart))));
+    }
+
+    /// <summary>Time since the pull started, which is what deaths and debuffs are both stamped with.</summary>
+    private TimeSpan Elapsed(double at)
+    {
+        if (at < 0 || _open!.StartSeconds < 0) return TimeSpan.Zero;
+
+        double seconds = at - _open.StartSeconds;
+        if (seconds < 0) seconds += SecondsPerDay; // the pull ran across midnight
+        return TimeSpan.FromSeconds(seconds);
     }
 
     /// <summary>Adds one damage or healing event to the open segment and to the players involved.</summary>
@@ -584,6 +619,7 @@ public sealed class CombatLogScanner
         ChallengeEnd,
         CombatantInfo,
         UnitDied,
+        AuraApplied,
         Damage,
         Heal,
     }
@@ -626,6 +662,7 @@ public sealed class CombatLogScanner
             case 18:
                 if (name.SequenceEqual("COMBAT_LOG_VERSION"u8)) return EventKind.CombatLogVersion;
                 if (name.SequenceEqual("CHALLENGE_MODE_END"u8)) return EventKind.ChallengeEnd;
+                if (name.SequenceEqual("SPELL_AURA_APPLIED"u8)) return EventKind.AuraApplied;
                 break;
             case 19:
                 if (name.SequenceEqual("SPELL_PERIODIC_HEAL"u8)) { prefixParams = 3; return EventKind.Heal; }
@@ -706,6 +743,9 @@ public sealed class CombatLogScanner
         public ByteRange Map { get; init; }
         public HashSet<string> Combatants { get; } = new(StringComparer.Ordinal);
         public Dictionary<ulong, PlayerState> Players { get; } = new();
+
+        /// <summary>Hostile debuffs that landed on group members, in the order they were applied.</summary>
+        public List<AuraHit> Debuffs { get; } = new();
 
         /// <summary>Specialization per player GUID hash, learned from COMBATANT_INFO.</summary>
         public Dictionary<ulong, int> Specs { get; } = new();

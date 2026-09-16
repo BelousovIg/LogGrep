@@ -1,68 +1,76 @@
 namespace LogGrep.Models;
 
+/// <summary>What a specialization does in a group. Mechanics are assigned by role, not by class.</summary>
+public enum Role
+{
+    Damage,
+    Tank,
+    Healer,
+}
+
 /// <summary>
-/// Maps the specialization ID reported by COMBATANT_INFO to a class and a spec name.
-/// The log never spells the class out, so this table is the only way to get one.
+/// Maps the specialization ID reported by COMBATANT_INFO to a class, a spec name and a role.
+/// The log never spells any of these out, so this table is the only way to get them.
 /// IDs follow https://warcraft.wiki.gg/wiki/SpecializationID; the "Initial" entries are what a
 /// character that has not picked a specialization yet reports.
 /// </summary>
 public static class Specs
 {
-    private static readonly Dictionary<int, (string Class, string Spec)> Table = new()
+    private static readonly Dictionary<int, (string Class, string Spec, Role Role)> Table = new()
     {
-        [250] = ("Death Knight", "Blood"),
-        [251] = ("Death Knight", "Frost"),
-        [252] = ("Death Knight", "Unholy"),
-        [1455] = ("Death Knight", "Initial"),
-        [577] = ("Demon Hunter", "Havoc"),
-        [581] = ("Demon Hunter", "Vengeance"),
-        [1480] = ("Demon Hunter", "Devourer"),
-        [1456] = ("Demon Hunter", "Initial"),
-        [102] = ("Druid", "Balance"),
-        [103] = ("Druid", "Feral"),
-        [104] = ("Druid", "Guardian"),
-        [105] = ("Druid", "Restoration"),
-        [1447] = ("Druid", "Initial"),
-        [1467] = ("Evoker", "Devastation"),
-        [1468] = ("Evoker", "Preservation"),
-        [1473] = ("Evoker", "Augmentation"),
-        [1465] = ("Evoker", "Initial"),
-        [253] = ("Hunter", "Beast Mastery"),
-        [254] = ("Hunter", "Marksmanship"),
-        [255] = ("Hunter", "Survival"),
-        [1448] = ("Hunter", "Initial"),
-        [62] = ("Mage", "Arcane"),
-        [63] = ("Mage", "Fire"),
-        [64] = ("Mage", "Frost"),
-        [1449] = ("Mage", "Initial"),
-        [268] = ("Monk", "Brewmaster"),
-        [269] = ("Monk", "Windwalker"),
-        [270] = ("Monk", "Mistweaver"),
-        [1450] = ("Monk", "Initial"),
-        [65] = ("Paladin", "Holy"),
-        [66] = ("Paladin", "Protection"),
-        [70] = ("Paladin", "Retribution"),
-        [1451] = ("Paladin", "Initial"),
-        [256] = ("Priest", "Discipline"),
-        [257] = ("Priest", "Holy"),
-        [258] = ("Priest", "Shadow"),
-        [1452] = ("Priest", "Initial"),
-        [259] = ("Rogue", "Assassination"),
-        [260] = ("Rogue", "Outlaw"),
-        [261] = ("Rogue", "Subtlety"),
-        [1453] = ("Rogue", "Initial"),
-        [262] = ("Shaman", "Elemental"),
-        [263] = ("Shaman", "Enhancement"),
-        [264] = ("Shaman", "Restoration"),
-        [1444] = ("Shaman", "Initial"),
-        [265] = ("Warlock", "Affliction"),
-        [266] = ("Warlock", "Demonology"),
-        [267] = ("Warlock", "Destruction"),
-        [1454] = ("Warlock", "Initial"),
-        [71] = ("Warrior", "Arms"),
-        [72] = ("Warrior", "Fury"),
-        [73] = ("Warrior", "Protection"),
-        [1446] = ("Warrior", "Initial"),
+        [250] = ("Death Knight", "Blood", Role.Tank),
+        [251] = ("Death Knight", "Frost", Role.Damage),
+        [252] = ("Death Knight", "Unholy", Role.Damage),
+        [1455] = ("Death Knight", "Initial", Role.Damage),
+        [577] = ("Demon Hunter", "Havoc", Role.Damage),
+        [581] = ("Demon Hunter", "Vengeance", Role.Tank),
+        [1480] = ("Demon Hunter", "Devourer", Role.Damage),
+        [1456] = ("Demon Hunter", "Initial", Role.Damage),
+        [102] = ("Druid", "Balance", Role.Damage),
+        [103] = ("Druid", "Feral", Role.Damage),
+        [104] = ("Druid", "Guardian", Role.Tank),
+        [105] = ("Druid", "Restoration", Role.Healer),
+        [1447] = ("Druid", "Initial", Role.Damage),
+        [1467] = ("Evoker", "Devastation", Role.Damage),
+        [1468] = ("Evoker", "Preservation", Role.Healer),
+        [1473] = ("Evoker", "Augmentation", Role.Damage),
+        [1465] = ("Evoker", "Initial", Role.Damage),
+        [253] = ("Hunter", "Beast Mastery", Role.Damage),
+        [254] = ("Hunter", "Marksmanship", Role.Damage),
+        [255] = ("Hunter", "Survival", Role.Damage),
+        [1448] = ("Hunter", "Initial", Role.Damage),
+        [62] = ("Mage", "Arcane", Role.Damage),
+        [63] = ("Mage", "Fire", Role.Damage),
+        [64] = ("Mage", "Frost", Role.Damage),
+        [1449] = ("Mage", "Initial", Role.Damage),
+        [268] = ("Monk", "Brewmaster", Role.Tank),
+        [269] = ("Monk", "Windwalker", Role.Damage),
+        [270] = ("Monk", "Mistweaver", Role.Healer),
+        [1450] = ("Monk", "Initial", Role.Damage),
+        [65] = ("Paladin", "Holy", Role.Healer),
+        [66] = ("Paladin", "Protection", Role.Tank),
+        [70] = ("Paladin", "Retribution", Role.Damage),
+        [1451] = ("Paladin", "Initial", Role.Damage),
+        [256] = ("Priest", "Discipline", Role.Healer),
+        [257] = ("Priest", "Holy", Role.Healer),
+        [258] = ("Priest", "Shadow", Role.Damage),
+        [1452] = ("Priest", "Initial", Role.Damage),
+        [259] = ("Rogue", "Assassination", Role.Damage),
+        [260] = ("Rogue", "Outlaw", Role.Damage),
+        [261] = ("Rogue", "Subtlety", Role.Damage),
+        [1453] = ("Rogue", "Initial", Role.Damage),
+        [262] = ("Shaman", "Elemental", Role.Damage),
+        [263] = ("Shaman", "Enhancement", Role.Damage),
+        [264] = ("Shaman", "Restoration", Role.Healer),
+        [1444] = ("Shaman", "Initial", Role.Damage),
+        [265] = ("Warlock", "Affliction", Role.Damage),
+        [266] = ("Warlock", "Demonology", Role.Damage),
+        [267] = ("Warlock", "Destruction", Role.Damage),
+        [1454] = ("Warlock", "Initial", Role.Damage),
+        [71] = ("Warrior", "Arms", Role.Damage),
+        [72] = ("Warrior", "Fury", Role.Damage),
+        [73] = ("Warrior", "Protection", Role.Tank),
+        [1446] = ("Warrior", "Initial", Role.Damage),
     };
 
     /// <summary>
@@ -98,4 +106,14 @@ public static class Specs
     public static string SpecOf(int specId) => Table.TryGetValue(specId, out var entry)
         ? entry.Spec
         : specId > 0 ? "Spec " + specId : "—";
+
+    /// <summary>An unknown spec counts as damage, the role all but a dozen specs have.</summary>
+    public static Role RoleOf(int specId) => Table.TryGetValue(specId, out var entry) ? entry.Role : Role.Damage;
+
+    public static string NameOf(Role role) => role switch
+    {
+        Role.Tank => "tank",
+        Role.Healer => "healer",
+        _ => "damage",
+    };
 }

@@ -9,6 +9,13 @@ public readonly record struct DamageCause(string Label, long Amount);
 /// </summary>
 public sealed record DeathRecord(TimeSpan At, IReadOnlyList<DamageCause> Causes);
 
+
+/// <summary>
+/// One hostile debuff landing on a group member. This is where a pull records who took which
+/// mechanic: raid-wide damage says nothing, but the debuff picks its target.
+/// </summary>
+public readonly record struct AuraHit(int SpellId, string Spell, string Player, TimeSpan At);
+
 /// <summary>What one group member did during a single pull.</summary>
 public sealed class PlayerStats
 {

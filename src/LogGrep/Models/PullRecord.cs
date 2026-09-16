@@ -34,6 +34,9 @@ public sealed class PullRecord
     /// <summary>Per player damage, healing, damage taken and deaths, ordered by damage done.</summary>
     public IReadOnlyList<PlayerStats> Roster { get; set; } = Array.Empty<PlayerStats>();
 
+    /// <summary>Hostile debuffs that landed on group members, in the order they were applied.</summary>
+    public IReadOnlyList<AuraHit> Debuffs { get; set; } = Array.Empty<AuraHit>();
+
     public long Damage { get; set; }
     public long Healing { get; set; }
 
