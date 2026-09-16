@@ -58,3 +58,8 @@ nunit-*.xml
 
 # WoW combat logs (huge, never commit)
 WoWCombatLog-*.txt
+
+# The [Ll]ogs/ rule above is meant for a folder of output. The generator that writes the
+# combat log for the tests lives in one, and without this the test project does not build
+# from a fresh clone.
+!tests/LogGrep.Tests/Logs/
