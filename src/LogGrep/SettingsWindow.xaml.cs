@@ -35,5 +35,12 @@ public partial class SettingsWindow : Window
         if (Model.Save(Secret.Password)) DialogResult = true;
     }
 
+
+    /// <summary>
+    /// Saves and then builds, in that order and behind one button: somebody who has just typed a
+    /// key expects the thing next to it to use it, not to be told to save first.
+    /// </summary>
+    private async void OnBuildRules(object sender, RoutedEventArgs e)
+        => await Model.BuildRulesAsync(Secret.Password);
     private void OnCancel(object sender, RoutedEventArgs e) => DialogResult = false;
 }

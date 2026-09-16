@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.IO.Abstractions;
 using LogGrep.Services;
 
 namespace LogGrep.ViewModels;
@@ -11,19 +12,24 @@ namespace LogGrep.ViewModels;
 public sealed class SettingsViewModel : ObservableObject
 {
     private readonly SettingsService _settings;
+    private readonly IFileSystem _fileSystem;
     private readonly AppSettings _current;
     private string _clientId;
+    private string _region;
+    private bool _isBusy;
     private string _status = string.Empty;
 
-    public SettingsViewModel() : this(new SettingsService())
+    public SettingsViewModel() : this(new SettingsService(), new FileSystem())
     {
     }
 
-    public SettingsViewModel(SettingsService settings)
+    public SettingsViewModel(SettingsService settings, IFileSystem? fileSystem = null)
     {
         _settings = settings;
+        _fileSystem = fileSystem ?? new FileSystem();
         _current = settings.Load();
         _clientId = _current.ClientId;
+        _region = _current.Region;
 
         OpenFolderCommand = new RelayCommand(OpenFolder);
     }
@@ -61,6 +67,7 @@ public sealed class SettingsViewModel : ObservableObject
     public bool Save(string secret)
     {
         _current.ClientId = ClientId.Trim();
+        _current.Region = Region.Trim().ToLowerInvariant();
         if (secret.Length > 0) _current.ProtectedClientSecret = SettingsService.Protect(secret);
 
         try
@@ -77,6 +84,61 @@ public sealed class SettingsViewModel : ObservableObject
         return true;
     }
 
+
+    /// <summary>Which region the journal is read from. Wrong here means an empty answer, not an error.</summary>
+    public string Region
+    {
+        get => _region;
+        set => Set(ref _region, value);
+    }
+
+    public bool IsBusy
+    {
+        get => _isBusy;
+        private set
+        {
+            if (Set(ref _isBusy, value)) OnPropertyChanged(nameof(CanBuild));
+        }
+    }
+
+    public bool CanBuild => !IsBusy;
+
+    /// <summary>
+    /// Saves what is in the dialog and then builds the rules from the journal. The two are one
+    /// action because somebody who has just typed a key expects the button beside it to use it.
+    /// </summary>
+    public async Task BuildRulesAsync(string secret)
+    {
+        if (!Save(secret)) return;
+
+        string key = SettingsService.Unprotect(_current.ProtectedClientSecret);
+        if (_current.ClientId.Length == 0 || key.Length == 0)
+        {
+            Status = "Enter a client id and secret first.";
+            return;
+        }
+
+        IsBusy = true;
+        Status = "Asking Blizzard…";
+
+        try
+        {
+            using var api = new BlizzardApi(_current.ClientId, key, _current.Region);
+            var builder = new RuleBuilder(_fileSystem, api);
+            var report = await builder.BuildAsync(_settings.RulesPath, new Progress<string>(s => Status = s),
+                CancellationToken.None);
+
+            Status = report.Summary;
+        }
+        catch (Exception ex)
+        {
+            Status = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
     private void OpenFolder()
     {
         try

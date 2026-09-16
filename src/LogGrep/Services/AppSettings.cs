@@ -11,6 +11,9 @@ public sealed class AppSettings
     /// <summary>Client id of a Blizzard API client, from develop.battle.net. Not secret.</summary>
     public string ClientId { get; set; } = string.Empty;
 
+    /// <summary>Which region the journal is read from; it decides the namespace the API wants.</summary>
+    public string Region { get; set; } = "eu";
+
     /// <summary>The client secret, encrypted for this Windows account and base64 encoded.</summary>
     public string ProtectedClientSecret { get; set; } = string.Empty;
 

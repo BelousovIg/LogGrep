@@ -49,6 +49,15 @@ everybody. A key entered here belongs to the person who entered it. It is encryp
 account before it is written, so the file is useless on another machine or to another user, and the
 dialog never shows it back - it only says whether one is stored.
 
+
+The **Build rules from the journal** button in that dialog reads Blizzard's encounter journal for
+the newest expansion and writes `rules.txt` beside the settings: spell id, name, the role of the
+section it sat under, and Blizzard's own description of it. Nothing reads that file yet - it is the
+seed for the mechanics rules, and the log will be what checks it.
+
+It also saves the first encounter it read as `rules-sample.json`. The exact shape of a journal
+response could not be verified without a key, so the walk takes what it finds rather than insisting,
+and the sample is there to settle any disagreement between what was expected and what arrived.
 ## Tests
 
 ```

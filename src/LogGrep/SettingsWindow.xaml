@@ -22,6 +22,10 @@
         <TextBlock Text="Client id" Margin="0,0,0,4" />
         <TextBox Text="{Binding ClientId, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
 
+        <TextBlock Text="Region" Margin="0,0,0,4" />
+        <TextBox Text="{Binding Region, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"
+                 ToolTip="eu, us, kr or tw - it decides which copy of the journal is read" />
+
         <TextBlock Text="Client secret" Margin="0,0,0,4" />
         <PasswordBox x:Name="Secret" Margin="0,0,0,4" />
         <TextBlock Style="{StaticResource MutedText}" Text="{Binding SecretState}" Margin="0,0,0,4" />
@@ -64,9 +68,17 @@
         <TextBlock Style="{StaticResource MutedText}" Text="{Binding Status}" TextWrapping="Wrap"
                    Margin="0,16,0,0" />
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-            <Button Content="Cancel" MinWidth="90" Margin="0,0,10,0" Click="OnCancel" />
-            <Button Content="Save" MinWidth="90" Style="{StaticResource PrimaryButton}" Click="OnSave" />
-        </StackPanel>
+        <Grid Margin="0,20,0,0">
+            <Button HorizontalAlignment="Left"
+                    Content="Build rules from the journal"
+                    IsEnabled="{Binding CanBuild}"
+                    Click="OnBuildRules"
+                    ToolTip="Saves what is here, then reads the journal and writes the rules file" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancel" MinWidth="90" Margin="0,0,10,0" Click="OnCancel" />
+                <Button Content="Save" MinWidth="90" Style="{StaticResource PrimaryButton}" Click="OnSave" />
+            </StackPanel>
+        </Grid>
     </StackPanel>
 </Window>
