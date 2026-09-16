@@ -39,9 +39,12 @@ LogGrep.exe "C:\...\Logs\WoWCombatLog-091526_120136.txt"
 * Every column header **sorts** its table, and the sort holds for that whole level: ordering the
   players of one pull orders them the same way in the others. Numbers, durations, dates and death
   times sort on their values rather than on the text in the cell, so a 17 second pull lands below
-  a 10 minute one instead of next to it. A blank - a player who never died - stays at the bottom
-  whichever way the arrow points. Clicking a header again reverses it; until one is clicked the
-  rows keep the order the log gave them.
+  a 10 minute one instead of next to it. Clicking a header again reverses it; until one is clicked
+  the rows keep the order the log gave them.
+* A blank cell sinks to the bottom whichever way the arrow points, except in the death column,
+  where a survivor counts as having outlasted everyone rather than as a blank. Reversed, that
+  column lists everyone still standing first, by name, and then the dead from the last one
+  backwards.
 * Columns are **resized** by dragging the right edge of a header. A width belongs to the level, not
   to one table, so every pull and every roster stays lined up with the header above it.
 * The encounter **checkbox is three-state**: all pulls selected, none, or some.

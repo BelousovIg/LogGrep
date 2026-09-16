@@ -2,8 +2,22 @@ using System.Collections;
 
 namespace LogGrep.ViewModels;
 
-/// <summary>How one column is read for sorting, and which direction its first click picks.</summary>
-public sealed record SortColumn(Func<object, IComparable?> Key, bool DescendingFirst = false);
+/// <summary>
+/// How one column is read for sorting.
+/// </summary>
+/// <param name="Key">The value rows are compared on.</param>
+/// <param name="DescendingFirst">Which way the column points on its first click.</param>
+/// <param name="BlanksLast">
+/// Whether a row with no value sinks to the bottom whichever way the column points. Left off, a
+/// blank instead counts as the highest value there is, which is what the death column wants: a
+/// player who never died outlasted everyone, so reversing the column brings the survivors up.
+/// </param>
+/// <param name="Tiebreak">Read when the key ties. Always ascending, so names stay A to Z.</param>
+public sealed record SortColumn(
+    Func<object, IComparable?> Key,
+    bool DescendingFirst = false,
+    bool BlanksLast = true,
+    Func<object, IComparable?>? Tiebreak = null);
 
 /// <summary>
 /// Sorting for one level of the tree. It is shared by every table of that level, so ordering the
@@ -52,23 +66,19 @@ public sealed class SortState : ObservableObject
             Descending = definition.DescendingFirst;
         }
 
-        Comparer = new RowComparer(definition.Key, Descending ? -1 : 1);
+        Comparer = new RowComparer(definition, Descending ? -1 : 1);
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>
-    /// Compares two rows on one column. Rows with nothing to compare - a player who never died,
-    /// say - sink to the bottom whichever way the column is pointing, because a blank is not a
-    /// small value.
-    /// </summary>
+    /// <summary>Compares two rows on one column, falling back to the tiebreak when they match.</summary>
     private sealed class RowComparer : IComparer
     {
-        private readonly Func<object, IComparable?> _key;
+        private readonly SortColumn _column;
         private readonly int _sign;
 
-        public RowComparer(Func<object, IComparable?> key, int sign)
+        public RowComparer(SortColumn column, int sign)
         {
-            _key = key;
+            _column = column;
             _sign = sign;
         }
 
@@ -76,13 +86,37 @@ public sealed class SortState : ObservableObject
         {
             if (x == null || y == null) return 0;
 
-            var left = _key(x);
-            var right = _key(y);
+            var left = _column.Key(x);
+            var right = _column.Key(y);
+
+            int result;
+            if (left == null || right == null)
+            {
+                result = left == null ? right == null ? 0 : 1 : -1;
+
+                // A pinned blank ignores the direction and always sinks; a ranked one rides
+                // along with it, sitting above everything once the column is reversed.
+                if (result != 0 && _column.BlanksLast) return result;
+            }
+            else
+            {
+                result = left.CompareTo(right);
+            }
+
+            if (result != 0) return _sign * result;
+
+            return _column.Tiebreak == null ? 0 : Break(x, y);
+        }
+
+        private int Break(object x, object y)
+        {
+            var left = _column.Tiebreak!(x);
+            var right = _column.Tiebreak(y);
 
             if (left == null) return right == null ? 0 : 1;
             if (right == null) return -1;
 
-            return _sign * left.CompareTo(right);
+            return left.CompareTo(right);
         }
     }
 }

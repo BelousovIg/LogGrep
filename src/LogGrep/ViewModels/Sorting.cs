@@ -37,8 +37,14 @@ public sealed class Sorting
         ["Hps"] = new(row => ((PlayerRowViewModel)row).HpsValue, DescendingFirst: true),
         ["Dtps"] = new(row => ((PlayerRowViewModel)row).DtpsValue, DescendingFirst: true),
 
-        // A survivor has no time and no killing blow, so both of these leave them at the bottom.
-        ["Died"] = new(row => ((PlayerRowViewModel)row).FirstDeath),
+        // A survivor counts as the latest death there is rather than as a blank, so reversing the
+        // column lists everyone who lived through the pull first, by name, and then the dead from
+        // the last one backwards.
+        ["Died"] = new(row => ((PlayerRowViewModel)row).FirstDeath,
+            BlanksLast: false,
+            Tiebreak: row => ((PlayerRowViewModel)row).Name),
+
+        // A survivor has no killing blow at all, so they stay at the bottom here either way.
         ["Causes"] = new(row => ((PlayerRowViewModel)row).TopCause),
     });
 }

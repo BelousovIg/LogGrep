@@ -285,7 +285,7 @@
                                                         <ctl:SortHeader Grid.Column="7" Column="Died" Title="DIED"
                                                                         Sort="{Binding Sorting.Players}"
                                                                         HorizontalContentAlignment="Right" Padding="0,0,14,0"
-                                                                        ToolTip="Sorted by the first death; survivors stay last" />
+                                                                        ToolTip="Sorted by the first death. Reversed, survivors come first by name, then the latest deaths" />
                                                         <ctl:SortHeader Grid.Column="8" Column="Causes" Title="KILLED BY"
                                                                         Sort="{Binding Sorting.Players}"
                                                                         ToolTip="Damage taken over the last 10 seconds before each death" />
