@@ -207,6 +207,14 @@ public sealed class CombatLogScanner
                 if (_open != null) OnAuraApplied(line, eventStart);
                 break;
 
+            case EventKind.CastSuccess:
+                if (_open != null) OnCastSuccess(line, eventStart);
+                break;
+
+            case EventKind.Interrupt:
+                if (_open != null) OnInterrupt(line, eventStart);
+                break;
+
             case EventKind.Damage:
             case EventKind.Heal:
                 if (_open != null) Accumulate(line, eventStart, kind, prefixParams);
@@ -355,6 +363,7 @@ public sealed class CombatLogScanner
             Roster = roster,
             Debuffs = segment.Debuffs.ToArray(),
             Blows = segment.Blows.Values.ToArray(),
+            Casts = segment.Casts.ToArray(),
             Damage = segment.Damage,
             Healing = segment.Healing,
             StartOffset = segment.StartOffset,
@@ -418,6 +427,45 @@ public sealed class CombatLogScanner
     /// a mechanic, while the hundreds of heals and procs flying around say nothing about that and
     /// would bury it. On a raid pull the filter turns twelve thousand aura events into a few hundred.
     /// </summary>
+
+    /// <summary>
+    /// An enemy cast that went off. Only the enemy's casts matter here - what the group casts is
+    /// its own business, and nobody interrupts it.
+    /// </summary>
+    private void OnCastSuccess(ReadOnlySpan<byte> line, int eventStart)
+    {
+        _fields.Split(line);
+        if (_fields.Count < 11) return;
+
+        int sourceFlags = _fields.Hex(line, 3);
+        int affiliation = sourceFlags & AffiliationMask;
+        if (affiliation != 0 && affiliation != AffiliationOutsider && (sourceFlags & ControlPlayer) != 0) return;
+
+        int spellId = _fields.Int(line, 9);
+        if (spellId <= 0) return;
+
+        _open!.Casts.Add(new CastRecord(spellId, Label(line, 10), Stopped: false, string.Empty,
+            Elapsed(LogTimestamp.SecondsOfDay(line, eventStart))));
+    }
+
+    /// <summary>
+    /// A cast somebody cut short. The spell that was stopped is the extra spell at the end of the
+    /// line, not the kick itself - the kick is the same three or four spells all night.
+    /// </summary>
+    private void OnInterrupt(ReadOnlySpan<byte> line, int eventStart)
+    {
+        _fields.Split(line);
+        if (_fields.Count < 14) return;
+
+        int spellId = _fields.Int(line, 12);
+        if (spellId <= 0) return;
+
+        var by = PlayerAt(line, 1);
+        if (by == null) return;
+
+        _open!.Casts.Add(new CastRecord(spellId, Label(line, 13), Stopped: true, by.Name,
+            Elapsed(LogTimestamp.SecondsOfDay(line, eventStart))));
+    }
     private void OnAuraApplied(ReadOnlySpan<byte> line, int eventStart)
     {
         _fields.Split(line);
@@ -673,6 +721,8 @@ public sealed class CombatLogScanner
         AuraApplied,
         Damage,
         Heal,
+        CastSuccess,
+        Interrupt,
     }
 
     /// <summary>
@@ -709,11 +759,13 @@ public sealed class CombatLogScanner
                 break;
             case 15:
                 if (name.SequenceEqual("ENCOUNTER_START"u8)) return EventKind.EncounterStart;
+                if (name.SequenceEqual("SPELL_INTERRUPT"u8)) return EventKind.Interrupt;
                 break;
             case 18:
                 if (name.SequenceEqual("COMBAT_LOG_VERSION"u8)) return EventKind.CombatLogVersion;
                 if (name.SequenceEqual("CHALLENGE_MODE_END"u8)) return EventKind.ChallengeEnd;
                 if (name.SequenceEqual("SPELL_AURA_APPLIED"u8)) return EventKind.AuraApplied;
+                if (name.SequenceEqual("SPELL_CAST_SUCCESS"u8)) return EventKind.CastSuccess;
                 break;
             case 19:
                 if (name.SequenceEqual("SPELL_PERIODIC_HEAL"u8)) { prefixParams = 3; return EventKind.Heal; }
@@ -797,6 +849,9 @@ public sealed class CombatLogScanner
 
         /// <summary>Hostile debuffs that landed on group members, in the order they were applied.</summary>
         public List<AuraHit> Debuffs { get; } = new();
+
+        /// <summary>Enemy casts that went off or were cut short, in the order they happened.</summary>
+        public List<CastRecord> Casts { get; } = new();
 
         /// <summary>One entry per enemy spell and person it landed on, keyed so it stays one entry.</summary>
         public Dictionary<(int Spell, string Player), Blow> Blows { get; } = new();

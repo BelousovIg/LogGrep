@@ -265,6 +265,12 @@ public sealed class Then
         return this;
     }
 
+    public Then InterruptWasMissed(Ability spell)
+    {
+        _check.InterruptWasMissed(spell);
+        return this;
+    }
+
     public Then MistakeCost(Ability spell, string player, string expected)
     {
         _check.MistakeCost(spell, player, expected);

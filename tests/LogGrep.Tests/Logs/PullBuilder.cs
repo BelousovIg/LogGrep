@@ -83,6 +83,31 @@ public sealed class PullBuilder
         return this;
     }
 
+    /// <summary>A cast by the boss that nobody stopped.</summary>
+    public PullBuilder BossCasts(Ability spell)
+    {
+        _log.Line(_start + _at,
+            $"SPELL_CAST_SUCCESS,{_log.Units(_log.BossName, _log.BossName)},{(int)spell}," +
+            $"\"{spell.NameOf()}\",0x1");
+        return this;
+    }
+
+    /// <summary>
+    /// A cast that was cut short. It begins and is stopped - a cast that is interrupted never
+    /// succeeds, so there is no SPELL_CAST_SUCCESS for it, and writing one would be writing a log
+    /// the game never produces. The kick itself is a spell of its own.
+    /// </summary>
+    public PullBuilder Interrupts(string source, Ability spell)
+    {
+        _log.Line(_start + _at,
+            $"SPELL_CAST_START,{_log.Units(_log.BossName, _log.BossName)},{(int)spell}," +
+            $"\"{spell.NameOf()}\",0x1");
+        _log.Line(_start + _at,
+            $"SPELL_INTERRUPT,{_log.Units(source, _log.BossName)},{(int)Ability.Kick}," +
+            $"\"{Ability.Kick.NameOf()}\",0x1,{(int)spell},\"{spell.NameOf()}\",0x1");
+        return this;
+    }
+
     /// <summary>A plain melee swing, which carries no spell id and so no way to stand elsewhere.</summary>
     public PullBuilder BossSwingsAt(string target, long amount)
     {

@@ -23,6 +23,12 @@ public readonly record struct AuraHit(int SpellId, string Spell, string Player, 
 /// </summary>
 public readonly record struct Blow(int SpellId, string Spell, string Player, long Amount, int Times, TimeSpan First);
 
+/// <summary>
+/// An enemy cast that either went off or was cut short. <see cref="By"/> names whoever stopped it,
+/// and is empty when nobody did.
+/// </summary>
+public readonly record struct CastRecord(int SpellId, string Spell, bool Stopped, string By, TimeSpan At);
+
 /// <summary>What one group member did during a single pull.</summary>
 public sealed class PlayerStats
 {

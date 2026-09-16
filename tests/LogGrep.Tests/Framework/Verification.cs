@@ -197,6 +197,10 @@ public sealed class Verification
     public void DamageWasAvoidable(Ability spell)
         => Assert.Equal(spell.NameOf() + " - avoidable", First(spell).Headline);
 
+
+    /// <summary>A cast that went off where this group usually stops it.</summary>
+    public void InterruptWasMissed(Ability spell)
+        => Assert.Equal(spell.NameOf() + " - interrupt missed", First(spell).Headline);
     public void MistakeCost(Ability spell, string player, string expected)
         => Assert.Equal(expected, Found(spell, player).Cost.Text);
 

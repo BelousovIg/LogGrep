@@ -40,6 +40,9 @@ public sealed class PullRecord
     /// <summary>Enemy damage that landed on group members, one entry per spell and person.</summary>
     public IReadOnlyList<Blow> Blows { get; set; } = Array.Empty<Blow>();
 
+    /// <summary>Enemy casts, and whether each one went off or was stopped.</summary>
+    public IReadOnlyList<CastRecord> Casts { get; set; } = Array.Empty<CastRecord>();
+
     public long Damage { get; set; }
     public long Healing { get; set; }
 

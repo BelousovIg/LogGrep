@@ -27,10 +27,16 @@ public enum Ability
     /// <summary>Damage from long enough before a death that it should not be blamed for it.</summary>
     OldPoke = 3106,
 
+    /// <summary>What a rogue or a monk stops a cast with; the same spell all night.</summary>
+    Kick = 3107,
+
     PossessionBarrage = 3201,
     HollowingStrikes = 3202,
     CreepingRot = 3203,
     PowerWordFortitude = 3204,
+
+    /// <summary>A cast the group is expected to stop.</summary>
+    GrimIncantation = 3205,
 }
 
 /// <summary>The bosses the scenarios fight, under the encounter id the log records them with.</summary>

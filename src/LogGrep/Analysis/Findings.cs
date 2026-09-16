@@ -12,7 +12,7 @@ namespace LogGrep.Analysis;
 public static class Findings
 {
     public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls)
-        => In(pulls, new MechanicDetector(), new AvoidableDamageDetector());
+        => In(pulls, new MechanicDetector(), new AvoidableDamageDetector(), new InterruptDetector());
 
     public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls, params IDetector[] detectors)
     {
