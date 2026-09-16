@@ -55,6 +55,21 @@ public sealed class FindingMissedInterrupts : Scenario
     }
 
     [Fact]
+    public void A_run_too_short_to_be_a_habit_says_nothing()
+    {
+        // Eight kicks and a miss. A group that has stopped something eight times has not yet shown
+        // that stopping it is what they do.
+        var log = ANightOfCleanKicks(times: 8).Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(40.Seconds()).BossCasts(Incantation)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.NothingWasFound();
+    }
+
+    [Fact]
     public void A_cast_nobody_ever_stops_is_not_a_missed_interrupt()
     {
         // Unstoppable, or not worth stopping. Either way the log has no opinion about it, and an
