@@ -20,7 +20,6 @@ drivers hand WPF a hardware surface that never paints and leave a blank white wi
 LogGrep.exe "C:\...\Logs\WoWCombatLog-091526_120136.txt"
 ```
 
-
 ## Releases
 
 A tag is the whole trigger:
