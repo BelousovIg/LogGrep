@@ -131,6 +131,31 @@ public sealed class FindingMissedInterrupts : Scenario
     }
 
     [Fact]
+    public void The_person_doing_most_of_the_stopping_is_named()
+    {
+        // Not evenly shared: eight of the twelve are the rogue's. That is enough to say whose it
+        // usually is without pretending to know a rotation.
+        var log = ARaid()
+            .Pulls(8, Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(3.Minutes())
+                .At(40.Seconds()).Interrupts("Nightblade", Incantation)
+                .Wipe())
+            .Pulls(4, Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(3.Minutes())
+                .At(40.Seconds()).Interrupts("Stormfist", Incantation)
+                .Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(3.Minutes())
+                .At(40.Seconds()).BossCasts(Incantation)
+                .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.TookMechanicOutOfTurn(Incantation, "Nightblade")
+            .And.MechanicEvidenceReads(Incantation, "12 of 13 were stopped, 8 of them by you");
+    }
+
+    [Fact]
     public void What_the_group_itself_casts_is_never_counted()
     {
         // Only the enemy's casts are anybody's to stop.
