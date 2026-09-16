@@ -55,9 +55,9 @@ the newest expansion and writes `rules.txt` beside the settings: spell id, name,
 section it sat under, and Blizzard's own description of it. Nothing reads that file yet - it is the
 seed for the mechanics rules, and the log will be what checks it.
 
-It also saves the first encounter it read as `rules-sample.json`. The exact shape of a journal
-response could not be verified without a key, so the walk takes what it finds rather than insisting,
-and the sample is there to settle any disagreement between what was expected and what arrived.
+A debug build also keeps the journal as it arrived, under `journal/`, so the parse can be changed
+and the rules rebuilt without asking Blizzard again. A release build keeps none of it: nobody using
+the app has a reason to carry a hundred files of raw JSON.
 ## Tests
 
 ```

@@ -1,7 +1,7 @@
-using System.IO;
 using System.IO.Abstractions;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace LogGrep.Services;
 
@@ -9,176 +9,127 @@ namespace LogGrep.Services;
 public sealed record BuildReport(string Expansion, int Encounters, int Abilities, int WithRole, string Path)
 {
     public string Summary => Abilities == 0
-        ? $"{Expansion}: read {Encounters} encounters and found no abilities carrying a spell id. " +
-          "The sample saved beside the rules file says what the journal actually returned."
+        ? $"{Expansion}: read {Encounters} encounters and found no abilities. The saved journal says what arrived."
         : $"{Expansion}: {Abilities} abilities from {Encounters} encounters, {WithRole} of them with a role.";
 }
 
 /// <summary>
-/// Builds the rules file from Blizzard's encounter journal.
+/// Turns the saved journal into the rules file. It reads from disk and never from the network, so
+/// the parse can be changed and the rules rebuilt as often as it takes.
 ///
-/// The shape of a section is known - id, title, body_text, and sections inside it - but whether a
-/// spell id rides along, and whether abilities are grouped under a role, could not be checked
-/// without a key. So the walk takes what it finds rather than insisting on a shape, the counts come
-/// back in the report, and the first encounter is saved raw beside the rules: a disagreement with
-/// reality is then one file away from being fixed rather than a mystery.
+/// The journal keeps two things apart. Abilities are sections carrying a spell id, titled by name.
+/// Roles are prose: sections called Tanks, Healers or Damage Dealers, whose text names abilities in
+/// square brackets. So the role is recovered by reading those sentences, which is also where the
+/// advice comes from - and note that an ability turns up under several roles, because the journal
+/// is saying who should care rather than who it lands on. Which of the two it is, the log decides.
 /// </summary>
 public sealed class RuleBuilder
 {
-    private static readonly (string Word, string Role)[] RoleWords =
-    {
-        ("tank", "tank"),
-        ("healer", "healer"),
-        ("heal", "healer"),
-        ("damage dealer", "damage"),
-        ("dps", "damage"),
-    };
+    private static readonly Regex RoleTitle = new(@"^(tanks?|healers?|damage dealers?|dps)$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex Mention = new(@"\[([^\]]+)\]", RegexOptions.Compiled);
 
     private readonly IFileSystem _fileSystem;
-    private readonly IJournalSource _journal;
 
-    public RuleBuilder(IFileSystem fileSystem, IJournalSource journal)
+    public RuleBuilder(IFileSystem fileSystem) => _fileSystem = fileSystem;
+
+    /// <summary>Takes the encounters as they arrived, whether from the network or from disk.</summary>
+    public BuildReport Build(string expansion, IEnumerable<JsonElement> bodies, string rulesPath)
     {
-        _fileSystem = fileSystem;
-        _journal = journal;
-    }
+        var encounters = new List<Encounter>();
 
-    /// <summary>Where the raw first encounter is kept, for when the parse and the journal disagree.</summary>
-    public static string SamplePathFor(string rulesPath)
-        => Path.ChangeExtension(rulesPath, null) + "-sample.json";
-
-    public async Task<BuildReport> BuildAsync(string rulesPath, IProgress<string>? progress, CancellationToken ct)
-    {
-        var expansion = await NewestExpansionAsync(ct).ConfigureAwait(false);
-        progress?.Report("Reading " + expansion.Name + "…");
-
-        var instances = await InstancesOfAsync(expansion.Id, ct).ConfigureAwait(false);
-        var abilities = new List<Ability>();
-        int encounters = 0;
-        bool sampled = false;
-
-        foreach (var instance in instances)
+        foreach (var body in bodies)
         {
-            ct.ThrowIfCancellationRequested();
-            progress?.Report(instance.Name + "…");
-
-            foreach (var encounter in await EncountersOfAsync(instance.Id, ct).ConfigureAwait(false))
-            {
-                ct.ThrowIfCancellationRequested();
-
-                var body = await _journal.GetAsync("/data/wow/journal-encounter/" + encounter.Id, ct)
-                    .ConfigureAwait(false);
-
-                if (!sampled)
-                {
-                    Save(SamplePathFor(rulesPath), body.ToString());
-                    sampled = true;
-                }
-
-                encounters++;
-                if (body.TryGetProperty("sections", out var sections))
-                {
-                    Collect(sections, encounter.Name, role: null, abilities);
-                }
-            }
+            var encounter = Read(body);
+            if (encounter.Abilities.Count > 0) encounters.Add(encounter);
         }
 
-        Save(rulesPath, Render(expansion.Name, abilities));
+        Save(rulesPath, Render(expansion, encounters));
 
-        return new BuildReport(
-            expansion.Name, encounters, abilities.Count,
-            abilities.Count(a => a.Role.Length > 0), rulesPath);
+        var all = encounters.SelectMany(e => e.Abilities.Values).ToList();
+        return new BuildReport(expansion, encounters.Count, all.Count,
+            all.Count(a => a.Roles.Count > 0), rulesPath);
     }
 
-    /// <summary>
-    /// Walks the section tree, carrying down the nearest title that named a role. An ability is a
-    /// section that turned out to have a spell id on it; anything else is prose on the way past.
-    /// </summary>
-    private static void Collect(JsonElement sections, string encounter, string? role, List<Ability> found)
+    private static Encounter Read(JsonElement body)
+    {
+        var encounter = new Encounter(Journal.Text(body, "name"));
+        if (!body.TryGetProperty("sections", out var sections)) return encounter;
+
+        Collect(sections, encounter);
+        Attribute(sections, encounter);
+        return encounter;
+    }
+
+    /// <summary>Anything carrying a spell id is an ability, however deep it sits.</summary>
+    private static void Collect(JsonElement sections, Encounter encounter)
     {
         if (sections.ValueKind != JsonValueKind.Array) return;
 
         foreach (var section in sections.EnumerateArray())
         {
-            string title = Text(section, "title");
-            string here = RoleIn(title) ?? role ?? string.Empty;
-
-            if (SpellId(section) is { } id)
+            if (section.TryGetProperty("spell", out var spell)
+                && spell.TryGetProperty("id", out var id)
+                && id.TryGetInt32(out int spellId))
             {
-                found.Add(new Ability(id, title.Length > 0 ? title : "Spell " + id, here,
-                    encounter, Text(section, "body_text")));
+                string name = Journal.Text(section, "title");
+                if (name.Length == 0) name = Journal.Text(spell, "name");
+                encounter.Abilities.TryAdd(spellId, new Ability(spellId, name));
             }
 
-            if (section.TryGetProperty("sections", out var inner)) Collect(inner, encounter, here, found);
+            if (section.TryGetProperty("sections", out var inner)) Collect(inner, encounter);
         }
     }
 
-    private static int? SpellId(JsonElement section)
-        => section.TryGetProperty("spell", out var spell) && spell.TryGetProperty("id", out var id)
-           && id.TryGetInt32(out int value)
-            ? value
-            : null;
-
-    private static string? RoleIn(string title)
+    /// <summary>
+    /// Reads the role sections and hands each mentioned ability that role, along with the sentence
+    /// it was mentioned in - which is the closest thing to advice anybody gets for free.
+    /// </summary>
+    private static void Attribute(JsonElement sections, Encounter encounter)
     {
-        foreach (var (word, role) in RoleWords)
-        {
-            if (title.Contains(word, StringComparison.OrdinalIgnoreCase)) return role;
-        }
+        if (sections.ValueKind != JsonValueKind.Array) return;
 
-        return null;
+        foreach (var section in sections.EnumerateArray())
+        {
+            string title = Journal.Text(section, "title").Trim();
+            if (RoleTitle.IsMatch(title)) Mentions(Journal.Text(section, "body_text"), Role(title), encounter);
+
+            if (section.TryGetProperty("sections", out var inner)) Attribute(inner, encounter);
+        }
     }
 
-    private static string Text(JsonElement element, string name)
-        => element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString() ?? string.Empty
-            : string.Empty;
-
-    private async Task<(int Id, string Name)> NewestExpansionAsync(CancellationToken ct)
+    private static void Mentions(string body, string role, Encounter encounter)
     {
-        var index = await _journal.GetAsync("/data/wow/journal-expansion/index", ct).ConfigureAwait(false);
-        if (!index.TryGetProperty("tiers", out var tiers) || tiers.ValueKind != JsonValueKind.Array)
+        foreach (string sentence in body.Split("$bullet;", StringSplitOptions.RemoveEmptyEntries))
         {
-            throw new InvalidOperationException("The expansion index did not list any tiers.");
+            string clean = Tidy(sentence);
+            if (clean.Length == 0) continue;
+
+            foreach (Match mention in Mention.Matches(sentence))
+            {
+                var ability = encounter.Abilities.Values
+                    .FirstOrDefault(a => string.Equals(a.Name, mention.Groups[1].Value,
+                        StringComparison.OrdinalIgnoreCase));
+
+                if (ability == null) continue;
+
+                ability.Roles.Add(role);
+                if (!ability.Notes.Contains(clean, StringComparer.Ordinal)) ability.Notes.Add(clean);
+            }
         }
-
-        var newest = tiers.EnumerateArray()
-            .Select(t => (Id: t.GetProperty("id").GetInt32(), Name: Text(t, "name")))
-            .OrderByDescending(t => t.Id)
-            .FirstOrDefault();
-
-        if (newest.Id == 0) throw new InvalidOperationException("The expansion index was empty.");
-        return newest;
     }
 
-    private async Task<List<(int Id, string Name)>> InstancesOfAsync(int expansion, CancellationToken ct)
+    private static string Role(string title)
     {
-        var body = await _journal.GetAsync("/data/wow/journal-expansion/" + expansion, ct).ConfigureAwait(false);
-        var instances = new List<(int, string)>();
-
-        foreach (string group in new[] { "raids", "dungeons" })
-        {
-            if (!body.TryGetProperty(group, out var list) || list.ValueKind != JsonValueKind.Array) continue;
-
-            instances.AddRange(list.EnumerateArray()
-                .Select(i => (i.GetProperty("id").GetInt32(), Text(i, "name"))));
-        }
-
-        return instances;
+        string lower = title.ToLowerInvariant();
+        if (lower.StartsWith("tank", StringComparison.Ordinal)) return "tank";
+        return lower.StartsWith("healer", StringComparison.Ordinal) ? "healer" : "damage";
     }
 
-    private async Task<List<(int Id, string Name)>> EncountersOfAsync(int instance, CancellationToken ct)
-    {
-        var body = await _journal.GetAsync("/data/wow/journal-instance/" + instance, ct).ConfigureAwait(false);
-        if (!body.TryGetProperty("encounters", out var list) || list.ValueKind != JsonValueKind.Array)
-        {
-            return new List<(int, string)>();
-        }
-
-        return list.EnumerateArray()
-            .Select(e => (e.GetProperty("id").GetInt32(), Text(e, "name")))
-            .ToList();
-    }
+    /// <summary>Strips the brackets the journal marks ability names with, and squeezes the spacing.</summary>
+    private static string Tidy(string sentence)
+        => Regex.Replace(Mention.Replace(sentence, "$1"), @"\s+", " ").Trim();
 
     private void Save(string path, string content)
     {
@@ -191,22 +142,27 @@ public sealed class RuleBuilder
     /// Plain text on purpose. Somebody with a correction should be able to open this in Notepad,
     /// and JSON is where a stray comma turns a correction into a broken file.
     /// </summary>
-    private static string Render(string expansion, List<Ability> abilities)
+    private static string Render(string expansion, List<Encounter> encounters)
     {
         var text = new StringBuilder();
         text.AppendLine("# Mechanics from Blizzard's encounter journal: " + expansion);
-        text.AppendLine("# id, name, role. The indented lines are Blizzard's own description.");
-        text.AppendLine("# Everything here is checked against the log, and muted where the two disagree.");
+        text.AppendLine("# id, name, and the roles the journal says should care - not who it lands on.");
+        text.AppendLine("# Which of the two it is, the log decides; where the two disagree, the log wins.");
 
-        foreach (var encounter in abilities.GroupBy(a => a.Encounter))
+        foreach (var encounter in encounters.OrderBy(e => e.Name, StringComparer.Ordinal))
         {
             text.AppendLine();
-            text.AppendLine("# " + encounter.Key);
+            text.AppendLine("# " + encounter.Name);
 
-            foreach (var ability in encounter.DistinctBy(a => a.SpellId).OrderBy(a => a.SpellId))
+            foreach (var ability in encounter.Abilities.Values.OrderBy(a => a.SpellId))
             {
-                text.AppendLine($"{ability.SpellId}  {ability.Name}  {(ability.Role.Length > 0 ? ability.Role : "-")}");
-                foreach (string line in Wrap(ability.Description)) text.AppendLine("    " + line);
+                string roles = ability.Roles.Count > 0 ? string.Join(",", ability.Roles) : "-";
+                text.AppendLine($"{ability.SpellId}  {ability.Name}  {roles}");
+
+                foreach (string note in ability.Notes)
+                {
+                    foreach (string line in Wrap(note)) text.AppendLine("    " + line);
+                }
             }
         }
 
@@ -215,7 +171,7 @@ public sealed class RuleBuilder
 
     private static IEnumerable<string> Wrap(string text, int width = 96)
     {
-        string flat = text.Replace("\r", " ").Replace("\n", " ").Trim();
+        string flat = text;
 
         while (flat.Length > width)
         {
@@ -229,6 +185,30 @@ public sealed class RuleBuilder
         if (flat.Length > 0) yield return flat;
     }
 
-    private readonly record struct Ability(
-        int SpellId, string Name, string Role, string Encounter, string Description);
+    private sealed class Encounter
+    {
+        public Encounter(string name) => Name = name;
+
+        public string Name { get; }
+
+        public Dictionary<int, Ability> Abilities { get; } = new();
+    }
+
+    private sealed class Ability
+    {
+        public Ability(int spellId, string name)
+        {
+            SpellId = spellId;
+            Name = name;
+        }
+
+        public int SpellId { get; }
+
+        public string Name { get; }
+
+        /// <summary>Sorted so that "damage,tank" reads the same way every time it is written.</summary>
+        public SortedSet<string> Roles { get; } = new(StringComparer.Ordinal);
+
+        public List<string> Notes { get; } = new();
+    }
 }

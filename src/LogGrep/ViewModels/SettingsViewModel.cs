@@ -124,11 +124,18 @@ public sealed class SettingsViewModel : ObservableObject
         try
         {
             using var api = new BlizzardApi(_current.ClientId, key, _current.Region);
-            var builder = new RuleBuilder(_fileSystem, api);
-            var report = await builder.BuildAsync(_settings.RulesPath, new Progress<string>(s => Status = s),
-                CancellationToken.None);
 
-            Status = report.Summary;
+            // A debug build keeps what arrives so the parse can be changed without asking Blizzard
+            // again. A release build has no reason to leave a hundred files of raw JSON behind.
+            bool keepRaw = false;
+#if DEBUG
+            keepRaw = true;
+#endif
+            var cache = new JournalCache(_fileSystem, _settings.JournalFolder, keepRaw);
+            var (expansion, encounters) = await cache.FetchAsync(
+                api, new Progress<string>(s => Status = s), CancellationToken.None);
+
+            Status = new RuleBuilder(_fileSystem).Build(expansion, encounters, _settings.RulesPath).Summary;
         }
         catch (Exception ex)
         {

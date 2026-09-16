@@ -1,4 +1,5 @@
 using System.IO.Abstractions.TestingHelpers;
+using System.Text.Json;
 using LogGrep.Services;
 using LogGrep.Tests.Logs;
 
@@ -6,16 +7,40 @@ namespace LogGrep.Tests.Scenarios;
 
 /// <summary>
 /// Turning Blizzard's encounter journal into the rules file. The journal here is written by the
-/// test: the real one needs a key, and nothing in this suite goes near the network.
+/// test, in the shape a real response turned out to have: abilities are sections carrying a spell
+/// id, and the roles live in prose under Overview, naming abilities in square brackets.
 ///
-/// A caveat worth keeping in view - the shape of these pages is what the journal is *believed* to
-/// return, drawn from a published model and a forum thread rather than from a response anybody
-/// here has seen. That is why the builder saves its first encounter raw: when the belief and the
-/// journal differ, the difference is in a file rather than in a guess.
+/// Nothing in this suite reaches the network. Fetching needs a key, and a key belongs to whoever
+/// registered it.
 /// </summary>
 public sealed class BuildingTheRules
 {
+    private const string Folder = @"C:\fake\LogGrep\journal";
     private const string Rules = @"C:\fake\LogGrep\rules.txt";
+
+    private const string LuAshal = """
+        {
+          "id": 2600,
+          "name": "Lu'ashal",
+          "sections": [
+            { "id": 1, "title": "Overview", "body_text": "Lu'ashal assails foes in a holy frenzy.",
+              "sections": [
+                { "id": 2, "title": "Tanks",
+                  "body_text": "$bullet; [Dawnfire Breath] inflicts heavy damage in a cone at the primary target." },
+                { "id": 3, "title": "Healers",
+                  "body_text": "$bullet; [Dawncrazed Halo] inflicts moderate damage around afflicted players." },
+                { "id": 4, "title": "Damage Dealers",
+                  "body_text": "$bullet; [Dawncrazed Halo] inflicts moderate damage around afflicted players." }
+              ] },
+            { "id": 5, "title": "Radiant Flare", "spell": { "id": 1258427, "name": "Radiant Flare" },
+              "sections": [
+                { "id": 6, "title": "Radiant Ember", "spell": { "id": 1258426, "name": "Radiant Ember" } }
+              ] },
+            { "id": 7, "title": "Dawncrazed Halo", "spell": { "id": 1276436, "name": "Dawncrazed Halo" } },
+            { "id": 8, "title": "Dawnfire Breath", "spell": { "id": 1276247, "name": "Dawnfire Breath" } }
+          ]
+        }
+        """;
 
     private static AJournal AJournalWith(string encounter) => new AJournal()
         .Page("/data/wow/journal-expansion/index",
@@ -23,119 +48,95 @@ public sealed class BuildingTheRules
         .Page("/data/wow/journal-expansion/505",
             """{ "raids": [ { "id": 1300, "name": "The Sunken Vault" } ], "dungeons": [] }""")
         .Page("/data/wow/journal-instance/1300",
-            """{ "encounters": [ { "id": 2600, "name": "The Soulcoiler" } ] }""")
+            """{ "encounters": [ { "id": 2600, "name": "Lu'ashal" } ] }""")
         .Page("/data/wow/journal-encounter/2600", encounter);
 
-    private const string TwoAbilitiesUnderRoles = """
-        {
-          "id": 2600,
-          "name": "The Soulcoiler",
-          "sections": [
-            { "id": 1, "title": "Overview", "body_text": "The fight runs in three phases." },
-            { "id": 2, "title": "Tank", "sections": [
-                { "id": 3, "title": "Possession Barrage", "body_text": "Marks the current tank.",
-                  "spell": { "id": 1284103, "name": "Possession Barrage" } } ] },
-            { "id": 4, "title": "Healer", "sections": [
-                { "id": 5, "title": "Creeping Rot", "body_text": "Rot spreads between players.",
-                  "spell": { "id": 1284491, "name": "Creeping Rot" } } ] }
-          ]
-        }
-        """;
-
-    [Fact]
-    public async Task The_newest_expansion_is_the_one_that_gets_read()
+    private static async Task<(MockFileSystem Disk, string Expansion, List<JsonElement> Encounters)> AFetch(
+        string encounter = LuAshal, bool keepRaw = true)
     {
         var disk = new MockFileSystem();
+        var (expansion, encounters) = await new JournalCache(disk, Folder, keepRaw)
+            .FetchAsync(AJournalWith(encounter), null, CancellationToken.None);
 
-        var report = await new RuleBuilder(disk, AJournalWith(TwoAbilitiesUnderRoles))
-            .BuildAsync(Rules, null, CancellationToken.None);
+        return (disk, expansion, encounters);
+    }
+
+    private static async Task<string> RulesFrom(string encounter = LuAshal)
+    {
+        var (disk, expansion, encounters) = await AFetch(encounter);
+        new RuleBuilder(disk).Build(expansion, encounters, Rules);
+        return disk.File.ReadAllText(Rules);
+    }
+
+    [Fact]
+    public async Task The_newest_expansion_is_the_one_that_gets_fetched()
+    {
+        var (disk, expansion, encounters) = await AFetch();
+
+        Assert.Equal("Midnight", expansion);
+        Assert.Single(encounters);
+        Assert.True(disk.File.Exists(@"C:\fake\LogGrep\journal\2600.json"));
+    }
+
+    [Fact]
+    public async Task A_build_that_keeps_nothing_leaves_nothing_behind()
+    {
+        // What a release build does: the rules come out, the raw journal does not stay.
+        var (disk, expansion, encounters) = await AFetch(keepRaw: false);
+
+        var report = new RuleBuilder(disk).Build(expansion, encounters, Rules);
+
+        Assert.Equal(4, report.Abilities);
+        Assert.False(disk.Directory.Exists(Folder), "A release build should not have kept the journal.");
+    }
+
+    [Fact]
+    public async Task What_was_kept_is_enough_to_rebuild_from_without_asking_again()
+    {
+        var (disk, _, _) = await AFetch();
+
+        // Nothing is handed to the builder but what is on disk.
+        var cache = new JournalCache(disk, Folder, keepRaw: true);
+        var report = new RuleBuilder(disk).Build(cache.Expansion, cache.Saved(), Rules);
 
         Assert.Equal("Midnight", report.Expansion);
-        Assert.Equal(1, report.Encounters);
+        Assert.Equal(4, report.Abilities);
     }
 
     [Fact]
-    public async Task An_ability_takes_the_role_of_the_section_it_sits_under()
+    public async Task An_ability_nested_under_another_is_still_found()
+        => Assert.Contains("1258426  Radiant Ember", await RulesFrom(), StringComparison.Ordinal);
+
+    [Fact]
+    public async Task An_ability_the_tank_section_names_is_a_tank_mechanic()
+        => Assert.Contains("1276247  Dawnfire Breath  tank", await RulesFrom(), StringComparison.Ordinal);
+
+    [Fact]
+    public async Task An_ability_two_sections_name_carries_both_roles()
     {
-        var disk = new MockFileSystem();
-
-        await new RuleBuilder(disk, AJournalWith(TwoAbilitiesUnderRoles))
-            .BuildAsync(Rules, null, CancellationToken.None);
-
-        string written = disk.File.ReadAllText(Rules);
-
-        Assert.Contains("1284103  Possession Barrage  tank", written, StringComparison.Ordinal);
-        Assert.Contains("1284491  Creeping Rot  healer", written, StringComparison.Ordinal);
-        Assert.Contains("# The Soulcoiler", written, StringComparison.Ordinal);
+        // The journal says who should care, not who it lands on - so both is a real answer.
+        Assert.Contains("1276436  Dawncrazed Halo  damage,healer", await RulesFrom(), StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task Blizzards_own_description_is_carried_across()
+    public async Task The_sentence_it_was_named_in_comes_across_without_the_brackets()
     {
-        var disk = new MockFileSystem();
+        string rules = await RulesFrom();
 
-        await new RuleBuilder(disk, AJournalWith(TwoAbilitiesUnderRoles))
-            .BuildAsync(Rules, null, CancellationToken.None);
-
-        Assert.Contains("    Marks the current tank.", disk.File.ReadAllText(Rules), StringComparison.Ordinal);
+        Assert.Contains("Dawnfire Breath inflicts heavy damage in a cone at the primary target.", rules,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("$bullet;", rules, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task Prose_with_no_spell_behind_it_is_not_a_rule()
+    public async Task An_ability_nobody_mentions_is_kept_with_no_role()
     {
-        var disk = new MockFileSystem();
+        var (disk, expansion, encounters) = await AFetch();
 
-        var report = await new RuleBuilder(disk, AJournalWith(TwoAbilitiesUnderRoles))
-            .BuildAsync(Rules, null, CancellationToken.None);
+        var report = new RuleBuilder(disk).Build(expansion, encounters, Rules);
 
-        // Three sections carry text; only the two with a spell id are abilities.
-        Assert.Equal(2, report.Abilities);
-        Assert.DoesNotContain("Overview", disk.File.ReadAllText(Rules), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task An_ability_under_no_role_is_kept_and_marked_as_such()
-    {
-        const string unsorted = """
-            { "sections": [
-                { "id": 1, "title": "Shadow Bolt", "body_text": "Hits somebody.",
-                  "spell": { "id": 999, "name": "Shadow Bolt" } } ] }
-            """;
-
-        var disk = new MockFileSystem();
-
-        var report = await new RuleBuilder(disk, AJournalWith(unsorted)).BuildAsync(Rules, null, CancellationToken.None);
-
-        Assert.Equal(1, report.Abilities);
-        Assert.Equal(0, report.WithRole);
-        Assert.Contains("999  Shadow Bolt  -", disk.File.ReadAllText(Rules), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task The_first_encounter_is_kept_raw_so_a_wrong_guess_can_be_seen()
-    {
-        var disk = new MockFileSystem();
-
-        await new RuleBuilder(disk, AJournalWith(TwoAbilitiesUnderRoles))
-            .BuildAsync(Rules, null, CancellationToken.None);
-
-        string sample = RuleBuilder.SamplePathFor(Rules);
-
-        Assert.True(disk.File.Exists(sample), "The raw encounter should have been saved to " + sample);
-        Assert.Contains("1284103", disk.File.ReadAllText(sample), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task A_journal_that_names_no_spells_at_all_says_so_rather_than_writing_nothing()
-    {
-        const string prose = """{ "sections": [ { "id": 1, "title": "Overview", "body_text": "Words." } ] }""";
-
-        var disk = new MockFileSystem();
-
-        var report = await new RuleBuilder(disk, AJournalWith(prose)).BuildAsync(Rules, null, CancellationToken.None);
-
-        Assert.Equal(0, report.Abilities);
-        Assert.Contains("no abilities carrying a spell id", report.Summary, StringComparison.Ordinal);
-        Assert.Contains("sample", report.Summary, StringComparison.Ordinal);
+        Assert.Equal(4, report.Abilities);
+        Assert.Equal(2, report.WithRole);
+        Assert.Contains("1258427  Radiant Flare  -", disk.File.ReadAllText(Rules), StringComparison.Ordinal);
     }
 }

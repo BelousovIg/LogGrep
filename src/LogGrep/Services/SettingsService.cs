@@ -35,6 +35,9 @@ public sealed class SettingsService
     /// <summary>Where the rules built from the journal will be written. Nothing writes it yet.</summary>
     public string RulesPath => _fileSystem.Path.Combine(DataDirectory, "rules.txt");
 
+    /// <summary>The journal as it arrived, kept so the rules can be rebuilt without asking again.</summary>
+    public string JournalFolder => _fileSystem.Path.Combine(DataDirectory, "journal");
+
     /// <summary>A missing or unreadable file reads as empty settings rather than as a failure.</summary>
     public AppSettings Load()
     {
