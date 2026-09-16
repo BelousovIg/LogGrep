@@ -359,9 +359,20 @@
                                                                                 Click="OnCopyPlayerName"
                                                                                 ToolTip="{Binding FullName}"
                                                                                 AutomationProperties.Name="Copy the full name" />
-                                                                        <TextBlock Grid.Column="2" Style="{StaticResource MutedText}"
-                                                                                   Text="{Binding ClassName}" Margin="0,0,10,0"
-                                                                                   Foreground="{Binding ClassBrush}" />
+                                                                        <StackPanel Grid.Column="2"
+                                                                                    Orientation="Horizontal"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Margin="0,0,10,0">
+                                                                            <Path x:Name="RoleMark"
+                                                                                  Width="11" Height="11"
+                                                                                  Stretch="Uniform"
+                                                                                  Margin="0,0,6,0"
+                                                                                  Visibility="Collapsed" />
+                                                                            <TextBlock Style="{StaticResource MutedText}"
+                                                                                       Text="{Binding ClassName}"
+                                                                                       Foreground="{Binding ClassBrush}"
+                                                                                       TextTrimming="CharacterEllipsis" />
+                                                                        </StackPanel>
                                                                         <TextBlock Grid.Column="3" Style="{StaticResource MutedText}"
                                                                                    Text="{Binding SpecName}" Margin="0,0,10,0" />
                                                                         <TextBlock Grid.Column="4" Style="{StaticResource NumberText}"
@@ -397,6 +408,22 @@
                                                                     <DataTrigger Binding="{Binding HasMistakes}" Value="True">
                                                                         <Setter TargetName="MistakesCell" Property="Foreground"
                                                                                 Value="{StaticResource DangerBrush}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsTank}" Value="True">
+                                                                        <Setter TargetName="RoleMark" Property="Visibility" Value="Visible" />
+                                                                        <Setter TargetName="RoleMark" Property="Data"
+                                                                                Value="{StaticResource TankShield}" />
+                                                                        <Setter TargetName="RoleMark" Property="Fill"
+                                                                                Value="{StaticResource TankBrush}" />
+                                                                        <Setter TargetName="RoleMark" Property="ToolTip" Value="Tank" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsHealer}" Value="True">
+                                                                        <Setter TargetName="RoleMark" Property="Visibility" Value="Visible" />
+                                                                        <Setter TargetName="RoleMark" Property="Data"
+                                                                                Value="{StaticResource HealerCross}" />
+                                                                        <Setter TargetName="RoleMark" Property="Fill"
+                                                                                Value="{StaticResource HealerBrush}" />
+                                                                        <Setter TargetName="RoleMark" Property="ToolTip" Value="Healer" />
                                                                     </DataTrigger>
                                                                     <DataTrigger Binding="{Binding Died}" Value="True">
                                                                         <Setter TargetName="DiedCell" Property="Foreground"

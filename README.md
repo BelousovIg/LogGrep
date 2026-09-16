@@ -80,7 +80,10 @@ are the words a scenario is written in. Rewire the window and only the page obje
   DPS, HPS, damage taken per second, when they died as `m:ss` (`-:--` for a survivor, several
   deaths comma separated), and what had been hitting them over the last 10 seconds before each
   death. With more than one death the causes are bracketed per death; hover for the full list.
-  The class is painted in Blizzard's class colour, the palette the game and the log sites use.
+  The class is painted in Blizzard's class colour, the palette the game and the log sites use, and
+  carries the mark of its role: a shield for a tank, a cross for a healer, nothing for damage - the
+  shapes the game itself uses, drawn rather than copied, since its art is not ours to ship. Damage
+  goes unmarked on purpose: it is most of a group, and a mark on almost every row says nothing.
   A name is a button: clicking it copies "Name - Realm" - the form the cell trims away and another
   tool wants - and says "copied" in a bubble under the cursor, which fades out over a second. The
   status bar carries the same message, and an error if the clipboard would not take it.

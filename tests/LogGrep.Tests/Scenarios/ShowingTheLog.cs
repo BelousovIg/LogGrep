@@ -102,6 +102,23 @@ public sealed class ShowingTheLog : Scenario
         Then.PlayerIsShownAs("Priest", "Holy");
     }
 
+
+    [Fact]
+    public void A_tank_and_a_healer_are_marked_and_the_damage_are_not()
+    {
+        var log = ARaid().Pull("The Soulcoiler", Difficulty.Mythic, p => p.Lasting("1:40").Wipe());
+
+        Given.IOpenedLog(log).And.IOpenedPull("The Soulcoiler", 1);
+
+        When.ILookAtPlayer("Rockjaw");
+        Then.PlayerRoleMarkIs("tank");
+
+        When.ILookAtPlayer("Sunwell");
+        Then.PlayerRoleMarkIs("healer");
+
+        When.ILookAtPlayer("Nightblade");
+        Then.PlayerRoleMarkIs("none");
+    }
     [Fact]
     public void Players_sort_by_the_column_that_was_clicked()
     {

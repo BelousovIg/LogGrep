@@ -191,6 +191,12 @@ public sealed class Then
         return this;
     }
 
+
+    public Then PlayerRoleMarkIs(string expected)
+    {
+        _check.PlayerRoleMarkIs(expected);
+        return this;
+    }
     public Then PlayerDpsIs(string expected)
     {
         _check.PlayerDpsIs(expected);

@@ -54,6 +54,14 @@ public sealed class Verification
         Assert.Equal(spec, _page.Player.SpecName);
     }
 
+
+    /// <summary>Which mark the row carries next to the class: the tank shield, the healer cross, or none.</summary>
+    public void PlayerRoleMarkIs(string expected)
+    {
+        string actual = _page.Player.IsTank ? "tank" : _page.Player.IsHealer ? "healer" : "none";
+        Assert.True(expected == actual,
+            $"'{_page.Player.Name}' should carry the {expected} mark, and carries {actual}.");
+    }
     public void PlayerDpsIs(string expected) => Assert.Equal(expected, _page.Player.DpsText);
 
     public void PlayerHpsIs(string expected) => Assert.Equal(expected, _page.Player.HpsText);

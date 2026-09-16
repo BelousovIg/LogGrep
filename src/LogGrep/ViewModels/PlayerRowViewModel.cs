@@ -32,6 +32,15 @@ public sealed class PlayerRowViewModel
 
     public string SpecName => _stats.SpecName;
 
+
+    /// <summary>
+    /// The role, exposed as flags because the row draws a mark for two of the three and nothing
+    /// for the third. WoW marks a tank with a shield and a healer with a cross; damage carries no
+    /// mark here, since it is what most of a group is and a mark on almost every row says nothing.
+    /// </summary>
+    public bool IsTank => Specs.RoleOf(_stats.SpecId) == Role.Tank;
+
+    public bool IsHealer => Specs.RoleOf(_stats.SpecId) == Role.Healer;
     /// <summary>Class colour for the class cell, the palette WoW itself uses.</summary>
     public Brush ClassBrush => ClassBrushes.For(_stats.ClassColor);
 
