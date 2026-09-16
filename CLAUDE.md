@@ -32,6 +32,18 @@ them rather than reaching past the page object: scenarios are written as
 `Given.IOpenedLog(log); When.ILookAtPlayer("X"); Then.PlayerDpsIs("10K");`, actions live in
 `TestMethods`, and every assertion lives in `Verification`.
 
+**Type everything the log contains.** A spell is `Ability`, a boss is `Boss`, a spec is `Spec`, a
+difficulty is `Difficulty`, a role is `Role`, a column is `PlayerColumn`, a moment is a `TimeSpan`
+written `2.Minutes(51)`. A person's name stays a string, because the log carries it as one. The
+rule is not tidiness: `"Hollowing Strkes"` misspelt in a scenario compiles, writes a spell the app
+has never seen, and fails as though the app were broken - and a spell named in two places drifts
+apart silently. An enum cannot do either. New scenarios add a member to the enum rather than a
+string literal.
+
+What stays literal text is the app's own wording - `"10K"`, `"wiped"`, `"Mythic"`, the advice -
+because pinning that wording down is what the assertion is for, and rebuilding it from the app's
+own formatter would only prove the formatter equals itself.
+
 A test must never raise a dialog. `MainViewModel` only shows a message box when there is an
 application behind it, which is what keeps a failing scenario from hanging the run behind a modal
 window nobody is looking at.
@@ -39,10 +51,13 @@ window nobody is looking at.
 ## Releases
 
 ```powershell
-.\publish.ps1 -Version 1.1.0
+.\publish.ps1
 ```
 
-Tests, publishes both builds, zips them into `artifacts/`. Uploading to a GitHub release is manual.
+Tests, publishes both builds, zips them into `artifacts/`. The version comes from `<Version>` in
+`src/LogGrep/LogGrep.csproj` and nowhere else - the script reads it and never passes one in, so the
+number on the archive always identifies the commit it was built from. Bump it there, commit, then
+publish. Uploading to a GitHub release is manual.
 There is no CI: this is a business account, and a personal public repository on it has no Actions
 minutes, so a workflow would be queued and refused before a runner ever picked it up. Do not add
 one back without checking that first.

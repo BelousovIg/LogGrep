@@ -1,3 +1,4 @@
+using LogGrep.Models;
 using LogGrep.Tests.Logs;
 
 namespace LogGrep.Tests.Framework;
@@ -5,7 +6,7 @@ namespace LogGrep.Tests.Framework;
 /// <summary>
 /// What was already true when the scenario starts. Every step returns the builder, so a setup of
 /// several steps reads as one sentence:
-/// <c>Given.IOpenedLog(log).And.IOpenedPull("Boss", 1);</c>
+/// <c>Given.IOpenedLog(log).And.IOpenedPull(Boss.TheSoulcoiler, 1);</c>
 /// </summary>
 public sealed class Given
 {
@@ -21,27 +22,15 @@ public sealed class Given
         return this;
     }
 
-    public Given IOpenedLog(string path, string log)
+    public Given IExpandedEncounter(Boss boss)
     {
-        _act.OpenLog(path, log);
+        _act.ToggleEncounter(boss);
         return this;
     }
 
-    public Given IExpandedEncounter(string name)
+    public Given IOpenedPull(Boss boss, int number)
     {
-        _act.ToggleEncounter(name);
-        return this;
-    }
-
-    public Given IOpenedPull(string encounter, int number)
-    {
-        _act.OpenPull(encounter, number);
-        return this;
-    }
-
-    public Given ILookedAtPlayer(string name)
-    {
-        _act.LookAtPlayer(name);
+        _act.OpenPull(boss, number);
         return this;
     }
 }
@@ -55,15 +44,15 @@ public sealed class When
 
     public When And => this;
 
-    public When IToggleEncounter(string name)
+    public When IToggleEncounter(Boss boss)
     {
-        _act.ToggleEncounter(name);
+        _act.ToggleEncounter(boss);
         return this;
     }
 
-    public When ILookAtEncounter(string name)
+    public When ILookAtEncounter(Boss boss)
     {
-        _act.LookAtEncounter(name);
+        _act.LookAtEncounter(boss);
         return this;
     }
 
@@ -85,219 +74,9 @@ public sealed class When
         return this;
     }
 
-    public When ISortPlayersBy(string column)
+    public When ISortPlayersBy(PlayerColumn column)
     {
         _act.SortPlayersBy(column);
-        return this;
-    }
-}
-
-/// <summary>What has to hold afterwards. Chains the same way the setup does.</summary>
-public sealed class Then
-{
-    private readonly Verification _check;
-
-    public Then(Verification check) => _check = check;
-
-    public Then And => this;
-
-    public Then EncountersAreListed(params string[] names)
-    {
-        _check.EncountersAreListed(names);
-        return this;
-    }
-
-    public Then EncounterIsOpened(bool expected)
-    {
-        _check.EncounterIsOpened(expected);
-        return this;
-    }
-
-    public Then EncounterCanBeOpened(bool expected)
-    {
-        _check.EncounterCanBeOpened(expected);
-        return this;
-    }
-
-    public Then EncounterHasPulls(int expected)
-    {
-        _check.EncounterHasPulls(expected);
-        return this;
-    }
-
-    public Then EncounterShowsDifficulty(string expected)
-    {
-        _check.EncounterShowsDifficulty(expected);
-        return this;
-    }
-
-    public Then EncounterWasKilled(bool expected)
-    {
-        _check.EncounterWasKilled(expected);
-        return this;
-    }
-
-    public Then PullIsOpened(bool expected)
-    {
-        _check.PullIsOpened(expected);
-        return this;
-    }
-
-    public Then PullResultIs(string expected)
-    {
-        _check.PullResultIs(expected);
-        return this;
-    }
-
-    public Then PullLasted(string expected)
-    {
-        _check.PullLasted(expected);
-        return this;
-    }
-
-    public Then PullShowsPlayers(int expected)
-    {
-        _check.PullShowsPlayers(expected);
-        return this;
-    }
-
-    public Then PlayersAreOrdered(params string[] expected)
-    {
-        _check.PlayersAreOrdered(expected);
-        return this;
-    }
-
-    public Then PlayerIsShownAs(string className, string spec)
-    {
-        _check.PlayerIsShownAs(className, spec);
-        return this;
-    }
-
-
-    public Then PlayerRoleMarkIs(string expected)
-    {
-        _check.PlayerRoleMarkIs(expected);
-        return this;
-    }
-    public Then PlayerDpsIs(string expected)
-    {
-        _check.PlayerDpsIs(expected);
-        return this;
-    }
-
-    public Then PlayerHpsIs(string expected)
-    {
-        _check.PlayerHpsIs(expected);
-        return this;
-    }
-
-    public Then PlayerDtpsIs(string expected)
-    {
-        _check.PlayerDtpsIs(expected);
-        return this;
-    }
-
-    public Then PlayerDeathsRead(string expected)
-    {
-        _check.PlayerDeathsRead(expected);
-        return this;
-    }
-
-    public Then PlayerWasKilledBy(string expected)
-    {
-        _check.PlayerWasKilledBy(expected);
-        return this;
-    }
-
-    public Then PlayerWasNotKilledBy(string spell)
-    {
-        _check.PlayerWasNotKilledBy(spell);
-        return this;
-    }
-
-
-    public Then EncounterMistakesRead(string expected)
-    {
-        _check.EncounterMistakesRead(expected);
-        return this;
-    }
-
-    public Then PullMistakesRead(string expected)
-    {
-        _check.PullMistakesRead(expected);
-        return this;
-    }
-
-    public Then PlayerMistakesRead(string expected)
-    {
-        _check.PlayerMistakesRead(expected);
-        return this;
-    }
-
-    public Then PlayerMistakesTooltipReads(params string[] lines)
-    {
-        _check.PlayerMistakesTooltipReads(lines);
-        return this;
-    }
-    public Then FindingsRead(string expected)
-    {
-        _check.FindingsRead(expected);
-        return this;
-    }
-
-    public Then NothingWasFound()
-    {
-        _check.NothingWasFound();
-        return this;
-    }
-
-    public Then MechanicBelongsTo(string spell, string role)
-    {
-        _check.MechanicBelongsTo(spell, role);
-        return this;
-    }
-
-    public Then MechanicEvidenceReads(string spell, string expected)
-    {
-        _check.MechanicEvidenceReads(spell, expected);
-        return this;
-    }
-
-    public Then TookMechanicOutOfTurn(string spell, params string[] players)
-    {
-        _check.TookMechanicOutOfTurn(spell, players);
-        return this;
-    }
-
-    public Then MechanicWasNotFlagged(string spell)
-    {
-        _check.MechanicWasNotFlagged(spell);
-        return this;
-    }
-
-    public Then FindingPointsAt(string spell, string player, string pull, string at)
-    {
-        _check.FindingPointsAt(spell, player, pull, at);
-        return this;
-    }
-
-
-    /// <summary>The order the report is read in, which is the order the findings are given in.</summary>
-    public Then FindingsAreOrderedByCost()
-    {
-        _check.FindingsAreOrderedByCost();
-        return this;
-    }
-
-    public Then FindingCost(string spell, string player, string expected)
-    {
-        _check.FindingCost(spell, player, expected);
-        return this;
-    }
-
-    public Then FindingAdvises(string spell, string expected)
-    {
-        _check.FindingAdvises(spell, expected);
         return this;
     }
 }

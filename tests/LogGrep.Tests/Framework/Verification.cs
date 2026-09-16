@@ -1,5 +1,6 @@
 using LogGrep.Analysis;
 using LogGrep.Models;
+using LogGrep.Tests.Logs;
 using LogGrep.ViewModels;
 
 namespace LogGrep.Tests.Framework;
@@ -7,6 +8,12 @@ namespace LogGrep.Tests.Framework;
 /// <summary>
 /// Every assertion in the suite. Failures say what was expected against what the app actually
 /// shows, because a scenario that fails on "Assert.Equal(3, 2)" tells nobody anything.
+///
+/// Where an argument names something the log contains - a boss, a spell, a role, a moment, a
+/// column - it is a type, so a scenario cannot ask about a spell it never wrote. Where an argument
+/// is the app's own wording - a formatted rate, "wiped", "Holy" - it stays literal text, because
+/// pinning that wording down is the whole reason the assertion exists, and rebuilding it from the
+/// app's own formatter would only prove the formatter equals itself.
 /// </summary>
 public sealed class Verification
 {
@@ -14,8 +21,8 @@ public sealed class Verification
 
     public Verification(LogGrepPage page) => _page = page;
 
-    public void EncountersAreListed(params string[] expected)
-        => Assert.Equal(expected, _page.Encounters.Select(e => e.Name).ToArray());
+    public void EncountersAreListed(params Boss[] expected)
+        => Assert.Equal(expected.Select(b => b.NameOf()).ToArray(), _page.Encounters.Select(e => e.Name).ToArray());
 
     public void EncounterIsOpened(bool expected)
         => Assert.True(expected == _page.Encounter.IsExpanded,
@@ -56,85 +63,88 @@ public sealed class Verification
         Assert.Equal(spec, _page.Player.SpecName);
     }
 
-
-    /// <summary>Which mark the row carries next to the class: the tank shield, the healer cross, or none.</summary>
-    public void PlayerRoleMarkIs(string expected)
+    /// <summary>
+    /// Which mark the row carries next to the class. Damage is the "no mark" answer rather than a
+    /// separate word for it - the row shows a shield, a cross, or nothing, and nothing is what a
+    /// damage dealer gets.
+    /// </summary>
+    public void PlayerRoleMarkIs(Role expected)
     {
-        string actual = _page.Player.IsTank ? "tank" : _page.Player.IsHealer ? "healer" : "none";
+        var actual = _page.Player.IsTank ? Role.Tank : _page.Player.IsHealer ? Role.Healer : Role.Damage;
         Assert.True(expected == actual,
-            $"'{_page.Player.Name}' should carry the {expected} mark, and carries {actual}.");
+            $"'{_page.Player.Name}' should carry the {Specs.NameOf(expected)} mark, " +
+            $"and carries {Specs.NameOf(actual)}.");
     }
+
     public void PlayerDpsIs(string expected) => Assert.Equal(expected, _page.Player.DpsText);
 
     public void PlayerHpsIs(string expected) => Assert.Equal(expected, _page.Player.HpsText);
 
     public void PlayerDtpsIs(string expected) => Assert.Equal(expected, _page.Player.DtpsText);
 
-    public void PlayerDeathsRead(string expected) => Assert.Equal(expected, _page.Player.DeathsText);
+    public void PlayerDiedAt(params TimeSpan[] expected)
+        => Assert.Equal(string.Join(", ", expected.Select(Display.Clock)), _page.Player.DeathsText);
 
-    public void PlayerWasKilledBy(string expected)
-        => Assert.True(_page.Player.CausesText.Contains(expected, StringComparison.Ordinal),
-            $"'{_page.Player.Name}' should have been killed by '{expected}'. " +
+    public void PlayerDidNotDie() => Assert.Equal("-:--", _page.Player.DeathsText);
+
+    public void PlayerWasKilledBy(Ability spell)
+        => Assert.True(_page.Player.CausesText.Contains(spell.NameOf(), StringComparison.Ordinal),
+            $"'{_page.Player.Name}' should have been killed by '{spell.NameOf()}'. " +
             $"What is shown: {_page.Player.CausesText}");
 
-    public void PlayerWasNotKilledBy(string spell)
-        => Assert.True(!_page.Player.CausesText.Contains(spell, StringComparison.Ordinal),
-            $"'{spell}' should not be blamed for the death of '{_page.Player.Name}'. " +
+    public void PlayerWasNotKilledBy(Ability spell)
+        => Assert.True(!_page.Player.CausesText.Contains(spell.NameOf(), StringComparison.Ordinal),
+            $"'{spell.NameOf()}' should not be blamed for the death of '{_page.Player.Name}'. " +
             $"What is shown: {_page.Player.CausesText}");
 
+    public void EncounterMistakesRead(int withMistakes, int ofPulls)
+        => Assert.Equal(withMistakes + "/" + ofPulls, _page.Encounter.MistakesText);
 
-    public void EncounterMistakesRead(string expected)
-        => Assert.Equal(expected, _page.Encounter.MistakesText);
+    public void PullMistakesRead(int expected)
+        => Assert.Equal(expected.ToString(), _page.Pull.MistakesText);
 
-    public void PullMistakesRead(string expected)
-        => Assert.Equal(expected, _page.Pull.MistakesText);
+    public void PlayerMistakesRead(params AMistake[] expected)
+        => Assert.Equal(string.Join("; ", expected.Select(m => m.Line)), _page.Player.MistakesText);
 
-    public void PlayerMistakesRead(string expected)
-        => Assert.Equal(expected, _page.Player.MistakesText);
+    public void PlayerHasNoMistakes() => Assert.Equal("—", _page.Player.MistakesText);
 
-    /// <summary>
-    /// Each mistake is a block of its own, so blocks are given separately and the newline inside
-    /// one is written as \n - a scenario should not have to spell out what the platform calls a
-    /// line break.
-    /// </summary>
-    public void PlayerMistakesTooltipReads(params string[] blocks)
+    /// <summary>Each mistake is a block of its own, separated by a blank line.</summary>
+    public void PlayerMistakesTooltipReads(params AMistake[] expected)
         => Assert.Equal(
-            string.Join(
-                Environment.NewLine + Environment.NewLine,
-                blocks.Select(block => block.Replace("\n", Environment.NewLine, StringComparison.Ordinal))),
+            string.Join(Environment.NewLine + Environment.NewLine, expected.Select(m => m.Block)),
             _page.Player.MistakesTooltip);
 
-    public void FindingsRead(string expected) => Assert.Contains(expected, _page.ViewModel.FindingsSummary);
+    public void FindingsSummaryCounts(int mistakes, int players)
+        => Assert.Equal(
+            $"{mistakes} {(mistakes == 1 ? "mistake" : "mistakes")} across " +
+            $"{players} {(players == 1 ? "player." : "players.")}",
+            _page.ViewModel.FindingsSummary);
 
     public void NothingWasFound()
         => Assert.True(_page.Findings.Count == 0,
             "Nothing should have been found, but these were: " +
             string.Join(", ", _page.Findings.Select(f => f.Line)));
 
-    public void MechanicBelongsTo(string spell, string role)
-    {
-        var found = First(spell);
-        Assert.Equal(spell + " - " + role + " mechanic", found.Headline);
-    }
+    public void MechanicBelongsTo(Ability spell, Role owner)
+        => Assert.Equal(spell.NameOf() + " - " + Specs.NameOf(owner) + " mechanic", First(spell).Headline);
 
-    public void MechanicEvidenceReads(string spell, string expected)
+    public void MechanicEvidenceReads(Ability spell, string expected)
         => Assert.Contains(expected, First(spell).Evidence, StringComparison.Ordinal);
 
-    public void TookMechanicOutOfTurn(string spell, params string[] expected)
+    public void TookMechanicOutOfTurn(Ability spell, params string[] expected)
         => Assert.Equal(expected,
             _page.FindingsFor(spell).Select(f => PlayerName.Character(f.Player)).Distinct().ToArray());
 
-    public void MechanicWasNotFlagged(string spell)
-        => Assert.True(_page.FindingsFor(spell).Count == 0, $"'{spell}' should not have been flagged, but was.");
+    public void MechanicWasNotFlagged(Ability spell)
+        => Assert.True(_page.FindingsFor(spell).Count == 0,
+            $"'{spell.NameOf()}' should not have been flagged, but was.");
 
-    public void FindingPointsAt(string spell, string player, string pull, string at)
+    public void FindingPointsAt(Ability spell, string player, int pull, TimeSpan at)
     {
-        var found = _page.FindingsFor(spell)
-            .FirstOrDefault(f => PlayerName.Character(f.Player) == player)
-            ?? throw new InvalidOperationException($"'{player}' was not reported for '{spell}'.");
+        var found = Found(spell, player);
 
-        Assert.Equal(pull, "pull " + found.PullNumber);
-        Assert.Equal(at, Display.Clock(found.At));
+        Assert.Equal(pull, found.PullNumber);
+        Assert.Equal(at, found.At);
     }
 
     /// <summary>What a finding cost is what sorts the list, so the order is worth checking.</summary>
@@ -145,18 +155,24 @@ public sealed class Verification
             "Findings should come heaviest first, and came in this order: " + string.Join(", ", weights));
     }
 
-    public void FindingCost(string spell, string player, string expected)
-    {
-        var found = _page.FindingsFor(spell).First(f => PlayerName.Character(f.Player) == player);
-        Assert.Equal(expected, found.Cost.Text);
-    }
+    public void MistakeKilled(Ability spell, string player, TimeSpan at)
+        => Assert.Equal(spell.NameOf() + " killed you at " + Display.Clock(at), Found(spell, player).Cost.Text);
 
-    public void FindingAdvises(string spell, string expected)
+    public void MistakeWasSurvived(Ability spell, string player)
+        => Assert.Equal("survived it", Found(spell, player).Cost.Text);
+
+    public void FindingAdvises(Ability spell, string expected)
         => Assert.Contains(expected, First(spell).Advice, StringComparison.Ordinal);
 
-    private Finding First(string spell)
+    private Finding Found(Ability spell, string player)
+        => _page.FindingsFor(spell).FirstOrDefault(f => PlayerName.Character(f.Player) == player)
+           ?? throw new InvalidOperationException(
+               $"'{player}' was not reported for '{spell.NameOf()}'. " + What());
+
+    private Finding First(Ability spell)
         => _page.FindingsFor(spell).FirstOrDefault()
            ?? throw new InvalidOperationException(
-               $"Nothing was found for '{spell}'. Findings: " +
-               string.Join(", ", _page.Findings.Select(f => f.Line)));
+               $"Nothing was found for '{spell.NameOf()}'. " + What());
+
+    private string What() => "Findings: " + string.Join(", ", _page.Findings.Select(f => f.Line));
 }

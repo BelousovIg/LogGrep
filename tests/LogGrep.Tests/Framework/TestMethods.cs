@@ -14,11 +14,9 @@ public sealed class TestMethods
 
     public void OpenLog(CombatLogBuilder log) => _page.Open(log);
 
-    public void OpenLog(string path, string log) => _page.Open(path, log);
+    public void ToggleEncounter(Boss boss) => _page.ToggleEncounter(boss);
 
-    public void ToggleEncounter(string name) => _page.ToggleEncounter(name);
-
-    public void LookAtEncounter(string name) => _page.LookAtEncounter(name);
+    public void LookAtEncounter(Boss boss) => _page.LookAtEncounter(boss);
 
     public void TogglePull(int number) => _page.TogglePull(number);
 
@@ -26,12 +24,12 @@ public sealed class TestMethods
 
     public void LookAtPlayer(string name) => _page.LookAtPlayer(name);
 
-    public void SortPlayersBy(string column) => _page.SortPlayersBy(column);
+    public void SortPlayersBy(PlayerColumn column) => _page.SortPlayersBy(column);
 
     /// <summary>Opens an encounter and one of its pulls in one go, which most scenarios want.</summary>
-    public void OpenPull(string encounter, int number)
+    public void OpenPull(Boss boss, int number)
     {
-        ToggleEncounter(encounter);
+        ToggleEncounter(boss);
         TogglePull(number);
     }
 }

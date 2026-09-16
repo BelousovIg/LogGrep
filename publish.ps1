@@ -8,16 +8,16 @@
       LogGrep-<version>-win-x64.zip             needs the .NET 8 desktop runtime, a few hundred KB
       LogGrep-<version>-win-x64-standalone.zip  carries the runtime, runs on a machine without .NET
 
-    The version goes into the archive names and into the assembly itself.
+    The version is whatever <Version> says in src/LogGrep/LogGrep.csproj, and the script only reads
+    it - to release a new one, change it there and commit it. A build that could be told a version
+    on the command line can produce two different archives from the same commit, and then the number
+    on the box no longer identifies what is inside it.
 
 .EXAMPLE
-    .\publish.ps1 -Version 1.1.0
+    .\publish.ps1
 #>
 [CmdletBinding()]
 param(
-    # Version stamped into the build and the file names.
-    [string] $Version = '1.0.0',
-
     # Where the archives end up.
     [string] $Output = 'artifacts',
 
@@ -32,6 +32,10 @@ try {
     $project = 'src/LogGrep/LogGrep.csproj'
     $staging = Join-Path $Output 'staging'
 
+    $Version = ([xml](Get-Content $project)).Project.PropertyGroup.Version | Where-Object { $_ }
+    if (-not $Version) { throw "No <Version> in $project. The release version lives there." }
+    Write-Host "Version $Version, from $project" -ForegroundColor Cyan
+
     if (-not $SkipTests) {
         Write-Host 'Testing...' -ForegroundColor Cyan
         dotnet test --configuration Release --nologo
@@ -41,15 +45,15 @@ try {
     if (Test-Path $Output) { Remove-Item $Output -Recurse -Force }
     New-Item -ItemType Directory -Path $staging -Force | Out-Null
 
-    Write-Host "Publishing $Version against an installed runtime..." -ForegroundColor Cyan
+    Write-Host 'Publishing against an installed runtime...' -ForegroundColor Cyan
     dotnet publish $project --configuration Release --runtime win-x64 --self-contained false `
-        -p:DebugType=none -p:Version=$Version --output "$staging/runtime" --nologo
+        -p:DebugType=none --output "$staging/runtime" --nologo
     if ($LASTEXITCODE -ne 0) { throw 'The runtime-dependent build failed.' }
 
-    Write-Host "Publishing $Version with the runtime bundled in..." -ForegroundColor Cyan
+    Write-Host 'Publishing with the runtime bundled in...' -ForegroundColor Cyan
     dotnet publish $project --configuration Release --runtime win-x64 --self-contained true `
         -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
-        -p:DebugType=none -p:Version=$Version --output "$staging/standalone" --nologo
+        -p:DebugType=none --output "$staging/standalone" --nologo
     if ($LASTEXITCODE -ne 0) { throw 'The standalone build failed.' }
 
     $plain = Join-Path $Output "LogGrep-$Version-win-x64.zip"

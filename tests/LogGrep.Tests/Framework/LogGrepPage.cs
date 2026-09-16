@@ -1,7 +1,7 @@
 using System.IO.Abstractions.TestingHelpers;
 using System.Windows.Threading;
-using LogGrep.Tests.Logs;
 using LogGrep.Analysis;
+using LogGrep.Tests.Logs;
 using LogGrep.ViewModels;
 
 namespace LogGrep.Tests.Framework;
@@ -42,8 +42,8 @@ public sealed class LogGrepPage
     public IReadOnlyList<Finding> Findings => ViewModel.Findings;
 
     /// <summary>Findings whose headline names that spell, which is how a scenario asks about one.</summary>
-    public IReadOnlyList<Finding> FindingsFor(string spell)
-        => Findings.Where(f => f.Headline.StartsWith(spell, StringComparison.Ordinal)).ToList();
+    public IReadOnlyList<Finding> FindingsFor(Ability spell)
+        => Findings.Where(f => f.Headline.StartsWith(spell.NameOf(), StringComparison.Ordinal)).ToList();
 
     public EncounterViewModel Encounter => _encounter ?? throw new InvalidOperationException(
         "No encounter is being looked at. Open one first.");
@@ -74,14 +74,14 @@ public sealed class LogGrepPage
 
     public void Open(CombatLogBuilder log) => Open(LogPath, log.Build());
 
-    public void LookAtEncounter(string name)
-        => _encounter = Encounters.FirstOrDefault(e => e.Name == name)
+    public void LookAtEncounter(Boss boss)
+        => _encounter = Encounters.FirstOrDefault(e => e.Name == boss.NameOf())
             ?? throw new InvalidOperationException(
-                $"No encounter called '{name}'. The log has: {Names(Encounters.Select(e => e.Name))}");
+                $"No encounter called '{boss.NameOf()}'. The log has: {Names(Encounters.Select(e => e.Name))}");
 
-    public void ToggleEncounter(string name)
+    public void ToggleEncounter(Boss boss)
     {
-        LookAtEncounter(name);
+        LookAtEncounter(boss);
         Encounter.IsExpanded = !Encounter.IsExpanded;
     }
 
@@ -109,9 +109,9 @@ public sealed class LogGrepPage
 
     public IReadOnlyList<PlayerRowViewModel> Players() => Pull.PlayersView.Cast<PlayerRowViewModel>().ToList();
 
-    public void SortPlayersBy(string column)
+    public void SortPlayersBy(PlayerColumn column)
     {
-        ViewModel.Sorting.Players.Toggle(column);
+        ViewModel.Sorting.Players.Toggle(column.ToString());
         foreach (var encounter in Encounters) encounter.ApplySorting();
     }
 
