@@ -325,6 +325,17 @@ is normal; hit by the first, it is a mistake. The engine already keys rules on i
 and so gets this right by construction, but a file naming the wrong half of the ability would flag
 every damage dealer in every pull, and only the log would ever notice.
 
+
+**And the ids will not line up on their own.** Measured against a real journal and a real log: both
+independently call Possession Barrage a tank mechanic, which is the approach working exactly as
+hoped. But the journal names Hollowing Strikes as 1284110 - the cast - while the rule drawn from the
+log rests on 1284109, the stacking debuff it applies. One ability, two ids, and matching the file to
+the log by id alone joins neither to the other.
+
+So the join is by id first and by name second, and better still by what the log itself can see: ids
+that share a name inside one encounter are parts of one ability, and the app can learn that without
+being told. The names agree here where the ids do not, which is the one time a name is worth more
+than an id.
 **Also derivable, and worth having on its own:** how many players an ability lands on per cast. One
 is a mark, most of the group is raid-wide, a handful is a spread. Only a mark can produce "you took
 somebody else's mechanic"; a raid-wide ability can only produce "you took it when eighteen others
