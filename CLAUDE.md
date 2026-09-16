@@ -48,6 +48,13 @@ A test must never raise a dialog. `MainViewModel` only shows a message box when 
 application behind it, which is what keeps a failing scenario from hanging the run behind a modal
 window nobody is looking at.
 
+## Milestones
+
+`docs/ROADMAP.md` holds them. Starting one opens with a commit of its own: bump `<Version>` in
+`src/LogGrep/LogGrep.csproj` to `1.0.<the milestone just finished>`, commit that alone, and tag it
+`v1.0.<same>`. So the work of milestone 2 sits on top of `v1.0.1`, and the tag marks exactly the
+state the previous milestone left behind - `v1.0.0` is the app before any of them.
+
 ## Releases
 
 ```powershell
