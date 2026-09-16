@@ -1,4 +1,5 @@
 using System.IO;
+using System.IO.Abstractions;
 using System.Text;
 using LogGrep.Models;
 
@@ -9,12 +10,21 @@ namespace LogGrep.Export;
 /// exactly like a log the game itself wrote: COMBAT_LOG_VERSION header, the zone/map
 /// context that was in effect, then the fight.
 /// </summary>
-public static class LogExporter
+public sealed class LogExporter
 {
     private const int CopyBufferSize = 1 << 20;
 
+    private readonly IFileSystem _fileSystem;
+
+    /// <summary>The real disk. Tests hand in a fake one instead.</summary>
+    public LogExporter() : this(new FileSystem())
+    {
+    }
+
+    public LogExporter(IFileSystem fileSystem) => _fileSystem = fileSystem;
+
     /// <summary>Writes every selected pull into one file. Returns the number of pulls written.</summary>
-    public static int ExportSingle(ScanResult scan, IReadOnlyList<PullRecord> pulls, string destinationFile,
+    public int ExportSingle(ScanResult scan, IReadOnlyList<PullRecord> pulls, string destinationFile,
         CancellationToken ct = default)
     {
         var ordered = pulls.OrderBy(p => p.StartOffset).ToList();
@@ -52,12 +62,12 @@ public static class LogExporter
     }
 
     /// <summary>Writes each selected pull into its own file inside <paramref name="destinationFolder"/>.</summary>
-    public static IReadOnlyList<string> ExportSeparate(ScanResult scan, IReadOnlyList<PullRecord> pulls,
+    public IReadOnlyList<string> ExportSeparate(ScanResult scan, IReadOnlyList<PullRecord> pulls,
         string destinationFolder, CancellationToken ct = default)
     {
-        Directory.CreateDirectory(destinationFolder);
+        _fileSystem.Directory.CreateDirectory(destinationFolder);
 
-        string stem = Path.GetFileNameWithoutExtension(scan.FilePath);
+        string stem = _fileSystem.Path.GetFileNameWithoutExtension(scan.FilePath);
         var written = new List<string>();
         var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -96,26 +106,26 @@ public static class LogExporter
         return name.ToString();
     }
 
-    private static FileStream OpenSource(string path)
-        => new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, CopyBufferSize, FileOptions.RandomAccess);
+    private Stream OpenSource(string path)
+        => _fileSystem.FileStream.New(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, CopyBufferSize, FileOptions.RandomAccess);
 
-    private static FileStream Create(string path)
-        => new(path, FileMode.Create, FileAccess.Write, FileShare.None, CopyBufferSize);
+    private Stream Create(string path)
+        => _fileSystem.FileStream.New(path, FileMode.Create, FileAccess.Write, FileShare.None, CopyBufferSize);
 
-    private static void WriteFight(FileStream source, FileStream destination, PullRecord pull, byte[] buffer)
+    private static void WriteFight(Stream source, Stream destination, PullRecord pull, byte[] buffer)
     {
         long length = pull.EndOffset - pull.StartOffset;
         if (length <= 0) return;
         Copy(source, destination, pull.StartOffset, length, buffer);
     }
 
-    private static void WriteRange(FileStream source, FileStream destination, ByteRange range, byte[] buffer)
+    private static void WriteRange(Stream source, Stream destination, ByteRange range, byte[] buffer)
     {
         if (range.IsEmpty) return;
         Copy(source, destination, range.Offset, range.Length, buffer);
     }
 
-    private static void Copy(FileStream source, FileStream destination, long offset, long length, byte[] buffer)
+    private static void Copy(Stream source, Stream destination, long offset, long length, byte[] buffer)
     {
         source.Seek(offset, SeekOrigin.Begin);
 
@@ -147,17 +157,17 @@ public static class LogExporter
         return result.Length == 0 ? "encounter" : result;
     }
 
-    private static string UniquePath(string folder, string fileName, HashSet<string> used)
+    private string UniquePath(string folder, string fileName, HashSet<string> used)
     {
-        string candidate = Path.Combine(folder, fileName);
-        if (used.Add(candidate) && !File.Exists(candidate)) return candidate;
+        string candidate = _fileSystem.Path.Combine(folder, fileName);
+        if (used.Add(candidate) && !_fileSystem.File.Exists(candidate)) return candidate;
 
-        string stem = Path.GetFileNameWithoutExtension(fileName);
-        string extension = Path.GetExtension(fileName);
+        string stem = _fileSystem.Path.GetFileNameWithoutExtension(fileName);
+        string extension = _fileSystem.Path.GetExtension(fileName);
         for (int i = 2; ; i++)
         {
-            candidate = Path.Combine(folder, stem + "_" + i + extension);
-            if (used.Add(candidate) && !File.Exists(candidate)) return candidate;
+            candidate = _fileSystem.Path.Combine(folder, stem + "_" + i + extension);
+            if (used.Add(candidate) && !_fileSystem.File.Exists(candidate)) return candidate;
         }
     }
 }

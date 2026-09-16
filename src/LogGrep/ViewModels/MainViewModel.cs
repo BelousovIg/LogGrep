@@ -3,9 +3,11 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.IO.Abstractions;
 using System.Text;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Threading;
 using LogGrep.Analysis;
 using LogGrep.Export;
 using LogGrep.Models;
@@ -19,6 +21,9 @@ public sealed class MainViewModel : ObservableObject
     private readonly Dictionary<string, EncounterViewModel> _groups = new(StringComparer.Ordinal);
     private readonly ListCollectionView _encountersView;
     private readonly ListCollectionView _rulesView;
+    private readonly Dispatcher _dispatcher = Dispatcher.CurrentDispatcher;
+    private readonly IFileSystem _fileSystem;
+    private readonly LogExporter _exporter;
     private ScanResult? _scan;
     private CancellationTokenSource? _cancellation;
 
@@ -29,8 +34,16 @@ public sealed class MainViewModel : ObservableObject
     private bool _asSingleFile = true;
     private bool _showFindings;
 
-    public MainViewModel()
+    /// <summary>The real disk. Tests hand in a fake one instead.</summary>
+    public MainViewModel() : this(new FileSystem())
     {
+    }
+
+    public MainViewModel(IFileSystem fileSystem)
+    {
+        _fileSystem = fileSystem;
+        _exporter = new LogExporter(fileSystem);
+
         OpenCommand = new RelayCommand(Open, () => !IsBusy);
         ExportCommand = new RelayCommand(Export, () => !IsBusy && SelectedPullCount > 0);
         CancelCommand = new RelayCommand(Cancel, () => IsBusy);
@@ -148,10 +161,13 @@ public sealed class MainViewModel : ObservableObject
     }
 
     /// <summary>Opens a log that came from the command line or was dropped on the window.</summary>
-    public void Load(string path)
+    public void Load(string path) => _ = LoadAsync(path);
+
+    /// <summary>The same, awaitable, which is how a test knows the scan has finished.</summary>
+    public Task LoadAsync(string path)
     {
-        if (IsBusy || !File.Exists(path)) return;
-        _ = ScanAsync(path);
+        if (IsBusy || !_fileSystem.File.Exists(path)) return Task.CompletedTask;
+        return ScanAsync(path);
     }
 
     private void Open()
@@ -178,17 +194,17 @@ public sealed class MainViewModel : ObservableObject
         IsBusy = true;
         RaiseSelectionChanged();
 
-        long size = new FileInfo(path).Length;
+        long size = _fileSystem.FileInfo.New(path).Length;
         Status = "Reading " + FormatSize(size) + "…";
 
         _cancellation = new CancellationTokenSource();
         var token = _cancellation.Token;
-        var progress = new Progress<ScanProgress>(OnScanProgress);
+        var progress = new Reports(this);
 
         try
         {
             var started = DateTime.UtcNow;
-            var scanner = new CombatLogScanner();
+            var scanner = new CombatLogScanner(_fileSystem);
             var result = await Task.Run(() => scanner.Scan(path, progress, token), token);
 
             _scan = result;
@@ -207,7 +223,7 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Status = "Read error: " + ex.Message;
-            MessageBox.Show(ex.Message, "Could not read the log", MessageBoxButton.OK, MessageBoxImage.Error);
+            Complain(ex.Message, "Could not read the log");
         }
         finally
         {
@@ -218,6 +234,39 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+
+    /// <summary>
+
+    /// <summary>
+    /// A dialog is only worth raising when there is an application showing windows. Under a test
+    /// runner there is none, and a modal box there would hang the run behind something nobody is
+    /// looking at. The status line carries the same message either way.
+    /// </summary>
+    private static void Complain(string message, string title)
+    {
+        if (Application.Current == null) return;
+        MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+    /// Runs the action on the thread that built the collection views, which is the only thread
+    /// allowed to change what they are watching. A scan reports from a worker, and the thread its
+    /// continuations land on depends on whichever synchronization context happened to be current
+    /// when the scan started - which, early in startup, can be none at all.
+    /// </summary>
+    private void OnUi(Action action)
+    {
+        if (_dispatcher.CheckAccess()) action();
+        else _dispatcher.Invoke(action);
+    }
+
+    /// <summary>Marshals scan reports onto that same thread, whatever context the scan began under.</summary>
+    private sealed class Reports : IProgress<ScanProgress>
+    {
+        private readonly MainViewModel _owner;
+
+        public Reports(MainViewModel owner) => _owner = owner;
+
+        public void Report(ScanProgress value) => _owner.OnUi(() => _owner.OnScanProgress(value));
+    }
     private void OnScanProgress(ScanProgress report)
     {
         Progress = report.Percent;
@@ -269,7 +318,7 @@ public sealed class MainViewModel : ObservableObject
 
         if (pulls.Count == 0) return;
 
-        string stem = Path.GetFileNameWithoutExtension(scan.FilePath);
+        string stem = _fileSystem.Path.GetFileNameWithoutExtension(scan.FilePath);
         if (AsSingleFile)
         {
             var dialog = new SaveFileDialog
@@ -278,13 +327,13 @@ public sealed class MainViewModel : ObservableObject
                 Filter = "WoW combat logs (*.txt)|*.txt|All files (*.*)|*.*",
                 DefaultExt = ".txt",
                 FileName = stem + "_export.txt",
-                InitialDirectory = Path.GetDirectoryName(scan.FilePath) ?? string.Empty,
+                InitialDirectory = _fileSystem.Path.GetDirectoryName(scan.FilePath) ?? string.Empty,
             };
 
             if (dialog.ShowDialog() != true) return;
             RunExport(() =>
             {
-                LogExporter.ExportSingle(scan, pulls, dialog.FileName);
+                _exporter.ExportSingle(scan, pulls, dialog.FileName);
                 return "Wrote " + pulls.Count + " pulls → " + dialog.FileName;
             });
         }
@@ -293,13 +342,13 @@ public sealed class MainViewModel : ObservableObject
             var dialog = new OpenFolderDialog
             {
                 Title = "Folder for the per-pull files",
-                InitialDirectory = Path.GetDirectoryName(scan.FilePath) ?? string.Empty,
+                InitialDirectory = _fileSystem.Path.GetDirectoryName(scan.FilePath) ?? string.Empty,
             };
 
             if (dialog.ShowDialog() != true) return;
             RunExport(() =>
             {
-                var files = LogExporter.ExportSeparate(scan, pulls, dialog.FolderName);
+                var files = _exporter.ExportSeparate(scan, pulls, dialog.FolderName);
                 return "Wrote " + files.Count + " files → " + dialog.FolderName;
             });
         }
@@ -316,7 +365,7 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Status = "Export error: " + ex.Message;
-            MessageBox.Show(ex.Message, "Export failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            Complain(ex.Message, "Export failed");
         }
         finally
         {
@@ -375,8 +424,8 @@ public sealed class MainViewModel : ObservableObject
             Title = "Save the findings",
             Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
             DefaultExt = ".txt",
-            FileName = Path.GetFileNameWithoutExtension(scan.FilePath) + "_findings.txt",
-            InitialDirectory = Path.GetDirectoryName(scan.FilePath) ?? string.Empty,
+            FileName = _fileSystem.Path.GetFileNameWithoutExtension(scan.FilePath) + "_findings.txt",
+            InitialDirectory = _fileSystem.Path.GetDirectoryName(scan.FilePath) ?? string.Empty,
         };
 
         if (dialog.ShowDialog() != true) return;
@@ -403,13 +452,13 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
-            File.WriteAllText(dialog.FileName, text.ToString());
+            _fileSystem.File.WriteAllText(dialog.FileName, text.ToString());
             Status = "Wrote the findings → " + dialog.FileName;
         }
         catch (Exception ex)
         {
             Status = "Export error: " + ex.Message;
-            MessageBox.Show(ex.Message, "Export failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            Complain(ex.Message, "Export failed");
         }
     }
 

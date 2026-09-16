@@ -1,4 +1,5 @@
 using System.IO;
+using System.IO.Abstractions;
 using System.Text;
 using LogGrep.Models;
 
@@ -34,6 +35,8 @@ public sealed class CombatLogScanner
     /// <summary>Spell names repeat millions of times; each distinct one becomes a string once.</summary>
     private readonly Dictionary<ulong, string> _labels = new();
 
+    private readonly IFileSystem _fileSystem;
+
     private ScanResult _result = null!;
     private OpenSegment? _open;
     private ByteRange _zoneChange = ByteRange.Empty;
@@ -41,6 +44,14 @@ public sealed class CombatLogScanner
     private long _lastLineEnd;
     private int _keystoneCounter;
     private IProgress<ScanProgress>? _progress;
+
+
+    /// <summary>The real disk. Tests hand in a fake one instead.</summary>
+    public CombatLogScanner() : this(new FileSystem())
+    {
+    }
+
+    public CombatLogScanner(IFileSystem fileSystem) => _fileSystem = fileSystem;
 
     public ScanResult Scan(string path, IProgress<ScanProgress>? progress, CancellationToken ct)
     {
@@ -51,10 +62,10 @@ public sealed class CombatLogScanner
         _keystoneCounter = 0;
         _labels.Clear();
 
-        var info = new FileInfo(path);
+        var info = _fileSystem.FileInfo.New(path);
         _result = new ScanResult { FilePath = path, FileSize = info.Length };
 
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
+        using var stream = _fileSystem.FileStream.New(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
             1 << 20, FileOptions.SequentialScan);
 
         byte[] buffer = new byte[InitialBufferSize];

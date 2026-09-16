@@ -35,6 +35,38 @@ kilobytes; the standalone one carries the runtime with it, about 155 MB unpacked
 machine with no .NET installed. The version in the archive names and in the assembly comes from the
 tag. Those runner minutes are free while the repository is public.
 
+
+## Tests
+
+```
+dotnet test
+```
+
+`tests/LogGrep.Tests` drives the real view models rather than the classes underneath them, so a
+scenario exercises the same path the window does: a log is opened, an encounter is expanded, a
+player row is read. Nothing touches a disk - `System.IO.Abstractions` puts a fake one under the app,
+and the log itself is written by a builder that reads as a recount of the fight:
+
+```csharp
+var log = new CombatLogBuilder()
+    .Raid(Tank("Rockjaw", Spec.ProtectionWarrior),
+          Healer("Sunwell", Spec.HolyPriest),
+          Damage("Nightblade", Spec.AssassinationRogue))
+    .Pull("The Soulcoiler", Difficulty.Mythic, p => p
+        .Lasting("2:00")
+        .At("0:55").BossHits("Nightblade", amount: 300_000, with: "Creeping Rot")
+        .At("1:00").Kills("Nightblade", with: "Blast Wave", amount: 900_000)
+        .Wipe());
+
+Given.IOpenedLog(log).And.IOpenedPull("The Soulcoiler", 1);
+When.ILookAtPlayer("Nightblade");
+Then.PlayerDeathsRead("1:00").And.PlayerWasKilledBy("Blast Wave");
+```
+
+The pieces are kept apart on purpose: `LogGrepPage` is the only thing that touches a view model,
+`TestMethods` does things through it, `Verification` holds every assertion, and `Given`/`When`/`Then`
+are the words a scenario is written in. Rewire the window and only the page object changes.
+
 ## What it does
 
 * **Open log** streams the file once and fills the table as it goes. An 800 MB log takes a few
@@ -135,4 +167,9 @@ src/LogGrep/
   Controls/    sortable column header
   Themes/      dark theme
   Interop/     dark title bar (DWM)
+
+tests/LogGrep.Tests/
+  Logs/        the combat log builder a scenario describes a fight with
+  Framework/   page object, actions, assertions, and the Given/When/Then words
+  Scenarios/   the tests themselves
 ```

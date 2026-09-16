@@ -30,6 +30,9 @@ jobs:
           $number = $env:GITHUB_REF_NAME -replace '^v', ''
           "number=$number" >> $env:GITHUB_OUTPUT
 
+      - name: Refuse to release anything the tests do not pass
+        run: dotnet test --configuration Release
+
       - name: Publish against an installed runtime
         shell: pwsh
         run: |

@@ -17,4 +17,8 @@
     <Resource Include="Assets\app.ico" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.IO.Abstractions" Version="22.2.0" />
+  </ItemGroup>
+
 </Project>

@@ -23,6 +23,18 @@ See `README.md` for what it does and how the parser reads the log.
 - **"Done" means checked, not just written.** Build first, and say plainly what was verified and
   what was not — the UI is WPF, so anything that needs a mouse cannot be confirmed from here.
 
+
+## Tests
+
+`tests/LogGrep.Tests` drives the real view models through a page object, with a fake disk under the
+app and a builder that writes the combat log. Run them with `dotnet test` from the root, and add to
+them rather than reaching past the page object: scenarios are written as
+`Given.IOpenedLog(log); When.ILookAtPlayer("X"); Then.PlayerDpsIs("10K");`, actions live in
+`TestMethods`, and every assertion lives in `Verification`.
+
+A test must never raise a dialog. `MainViewModel` only shows a message box when there is an
+application behind it, which is what keeps a failing scenario from hanging the run behind a modal
+window nobody is looking at.
 ## Building and checking
 
 ```powershell
