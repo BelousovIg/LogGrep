@@ -175,6 +175,10 @@ the fight from `ENCOUNTER_START` to `ENCOUNTER_END` (or `CHALLENGE_MODE_START`/`
   and the rule never fires, which is why the evidence line carries the number of attempts it was
   drawn from.
 
+
+`docs/ROADMAP.md` is where the app is going: what the neighbouring tools do, why their approach
+rots, and the milestones for turning the findings into something that coaches a player rather than
+listing facts at them.
 ## Layout
 
 ```
