@@ -68,11 +68,11 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="{StaticResource ColToggle}" />
                     <ColumnDefinition Width="{StaticResource ColCheck}" />
-                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterName}" />
-                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterDifficulty}" />
-                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterPulls}" />
-                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterResult}" />
-                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterParty}" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterName}" MinWidth="150" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterDifficulty}" MinWidth="60" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterPulls}" MinWidth="60" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterResult}" MinWidth="60" />
+                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterParty}" MinWidth="60" />
                 </Grid.ColumnDefinitions>
 
                 <ctl:SortHeader Grid.Column="2" Column="Name" Title="ENCOUNTER"
@@ -116,11 +116,11 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="{StaticResource ColToggle}" />
                                         <ColumnDefinition Width="{StaticResource ColCheck}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterName}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterDifficulty}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterPulls}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterResult}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterParty}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterName}" MinWidth="150" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterDifficulty}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterPulls}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterResult}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterParty}" MinWidth="60" />
                                     </Grid.ColumnDefinitions>
 
                                     <ToggleButton Grid.Column="0"
@@ -160,14 +160,14 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="{StaticResource ColPullIndent}" />
                                         <ColumnDefinition Width="{StaticResource ColCheck}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullResult}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullStart}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullRoster}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullResult}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullStart}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullRoster}" MinWidth="150" />
                                         <ColumnDefinition Width="{StaticResource ColPullCopy}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDuration}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullPlayers}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDps}" />
-                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullHps}" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDuration}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullPlayers}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDps}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullHps}" MinWidth="60" />
                                     </Grid.ColumnDefinitions>
                                     <ctl:SortHeader Grid.Column="2" Column="Result" Title="RESULT"
                                                     Sort="{Binding Sorting.Pulls}" />
@@ -190,6 +190,12 @@
 
                                     <GridSplitter Grid.Column="2" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="3" Style="{StaticResource ColumnSplitter}" />
+                                    <!-- The copy-button column sits between ROSTER and DURATION, so that boundary had
+                                         no handle at all. PreviousAndNext leaves the splitter's own column alone and
+                                         moves its neighbours, which keeps the button at its width. -->
+                                    <GridSplitter Grid.Column="5"
+                                                  Style="{StaticResource ColumnSplitter}"
+                                                  ResizeBehavior="PreviousAndNext" />
                                     <GridSplitter Grid.Column="6" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="7" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="8" Style="{StaticResource ColumnSplitter}" />
@@ -205,14 +211,14 @@
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="{StaticResource ColPullIndent}" />
                                                             <ColumnDefinition Width="{StaticResource ColCheck}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullResult}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullStart}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullRoster}" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullResult}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullStart}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullRoster}" MinWidth="150" />
                                                             <ColumnDefinition Width="{StaticResource ColPullCopy}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDuration}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullPlayers}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDps}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullHps}" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDuration}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullPlayers}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDps}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullHps}" MinWidth="60" />
                                                         </Grid.ColumnDefinitions>
 
                                                         <ToggleButton Grid.Column="0"
@@ -263,14 +269,14 @@
                                                     <Grid Height="24">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="{StaticResource ColRosterIndent}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerName}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerClass}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerSpec}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDps}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerHps}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerName}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerClass}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerSpec}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDps}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerHps}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="150" />
                                                         </Grid.ColumnDefinitions>
 
                                                         <ctl:SortHeader Grid.Column="1" Column="Name" Title="PLAYER"
@@ -314,14 +320,14 @@
                                                                     <Grid>
                                                                         <Grid.ColumnDefinitions>
                                                                             <ColumnDefinition Width="{StaticResource ColRosterIndent}" />
-                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerName}" />
-                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerClass}" />
-                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerSpec}" />
-                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDps}" />
-                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerHps}" />
-                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" />
-                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" />
-                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerName}" MinWidth="60" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerClass}" MinWidth="60" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerSpec}" MinWidth="60" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDps}" MinWidth="60" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerHps}" MinWidth="60" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" MinWidth="60" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" MinWidth="60" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="150" />
                                                                         </Grid.ColumnDefinitions>
 
                                                                         <TextBlock Grid.Column="1"

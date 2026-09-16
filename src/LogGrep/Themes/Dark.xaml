@@ -489,6 +489,24 @@
         <Setter Property="Focusable" Value="False" />
         <Setter Property="Panel.ZIndex" Value="10" />
         <Setter Property="ToolTip" Value="Drag to resize this column" />
+
+        <!-- Applying the width on every mouse move would push it through the shared two-way
+             binding and re-lay-out every visible table mid-drag, which made the drag fight its
+             own layout pass. Preview mode draws a bar and writes the width once, on release. -->
+        <Setter Property="ShowsPreview" Value="True" />
+        <Setter Property="PreviewStyle">
+            <Setter.Value>
+                <Style TargetType="Control">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="Control">
+                                <Rectangle Width="2" Fill="{StaticResource AccentBrush}" Opacity="0.8" />
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- ============ tooltip ============ -->
