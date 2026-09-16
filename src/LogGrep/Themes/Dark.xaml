@@ -490,4 +490,41 @@
         <Setter Property="Panel.ZIndex" Value="10" />
         <Setter Property="ToolTip" Value="Drag to resize this column" />
     </Style>
+
+    <!-- ============ tooltip ============ -->
+    <!-- The global TextBlock style paints text light, so on the stock light tooltip chrome it was
+         unreadable. The wrapping override is here too: that same global style trims with an
+         ellipsis, which is right in a table cell and wrong in the popup explaining it. -->
+    <Style TargetType="ToolTip">
+        <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource FgBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="MaxWidth" Value="720" />
+        <Setter Property="HasDropShadow" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
+                            CornerRadius="4">
+                        <ContentPresenter>
+                            <ContentPresenter.Resources>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Setter Property="TextWrapping" Value="Wrap" />
+                                    <Setter Property="TextTrimming" Value="None" />
+                                    <Setter Property="Foreground" Value="{StaticResource FgBrush}" />
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>
