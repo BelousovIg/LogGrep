@@ -192,7 +192,7 @@ Measured on the real folder: the 1.4 GB log opened with two of its own exports r
 26 attempts rather than 28, the two shared attempts kept from the full log, and the findings stay at
 20 instead of doubling.
 
-### 3. Mechanics, widened
+### 3. Mechanics, widened — done
 
 The enrichment statistic already written, pointed at three more event shapes:
 
@@ -203,6 +203,24 @@ The enrichment statistic already written, pointed at three more event shapes:
   avoidable, which the rule above can now answer.
 
 Ends with: most of what a raid leader reads Wipefest for, with no per-boss rules to maintain.
+
+What it came out as: three detectors on the one statistic, and still nothing written down about any
+boss. `AvoidableDamageDetector` reads the same enrichment argument off damage events - a spell that
+lands on one person in ten, attempt after attempt, is one the other nine are getting out of - and
+stays quiet about anything a role takes, because telling a tank off for tanking is the failure that
+rule exists to prevent. `InterruptDetector` calls a cast interruptible only because the group has
+actually interrupted it; a cast nobody ever stops is never a missed one. The death breakdown marks
+a cause `(avoidable)` when the first detector has already decided so.
+
+Where it stopped short of the plan: a missed interrupt is put to whoever does most of the stopping,
+and when no one person does - which on the real log is the usual case, 116 kicks shared four ways -
+the finding is reported with no name at all rather than guessed at. The log carries no kick rotation
+and inventing one would be worse than saying nothing.
+
+Measured on the real log: 37 findings where there were 20. The 17 new ones are one cast, stopped 116
+times out of 133 and let through 17. Avoidable damage found nothing there at all - every spell on
+that boss either lands on most of the group or belongs to the tanks - which is the honest answer for
+that log and not a demonstration that the rule works.
 
 ### 4. Why somebody died
 

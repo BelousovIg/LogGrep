@@ -156,6 +156,24 @@ public sealed class FindingMissedInterrupts : Scenario
     }
 
     [Fact]
+    public void A_finding_with_no_name_is_not_counted_as_a_player()
+    {
+        var log = ANightOfCleanKicks(times: 6)
+            .Pulls(6, Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(3.Minutes())
+                .At(40.Seconds()).Interrupts("Stormfist", Incantation)
+                .Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(3.Minutes())
+                .At(40.Seconds()).BossCasts(Incantation)
+                .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.FindingsSummaryCounts(mistakes: 1, players: 0);
+    }
+
+    [Fact]
     public void What_the_group_itself_casts_is_never_counted()
     {
         // Only the enemy's casts are anybody's to stop.

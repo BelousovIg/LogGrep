@@ -90,7 +90,9 @@ public sealed class MainViewModel : ObservableObject
                        "majority within that single sample. More attempts of the same fight help.";
             }
 
-            int players = Findings.Select(f => f.Player).Distinct().Count();
+            // A finding the log cannot honestly pin on anybody - a shared interrupt that got away -
+            // carries no name, and counting it as a player would invent one.
+            int players = Findings.Select(f => f.Player).Where(p => p.Length > 0).Distinct().Count();
             return Findings.Count + (Findings.Count == 1 ? " mistake" : " mistakes") +
                    " across " + players + (players == 1 ? " player." : " players.");
         }
@@ -521,7 +523,7 @@ public sealed class MainViewModel : ObservableObject
 
         foreach (var player in Findings.GroupBy(f => f.Player).OrderByDescending(g => g.Sum(f => f.Cost.Weight)))
         {
-            text.AppendLine(PlayerName.Format(player.Key));
+            text.AppendLine(player.Key.Length == 0 ? "Nobody in particular" : PlayerName.Format(player.Key));
 
             foreach (var finding in player)
             {
