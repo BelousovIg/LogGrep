@@ -26,7 +26,6 @@
     <GridLength x:Key="ColKill">90</GridLength>
     <GridLength x:Key="ColParty">130</GridLength>
 
-    <GridLength x:Key="ColPullCopy">32</GridLength>
     <GridLength x:Key="ColPullIndent">30</GridLength>
     <GridLength x:Key="ColPullResult">80</GridLength>
     <GridLength x:Key="ColPullStart">140</GridLength>
@@ -247,44 +246,6 @@
     </Style>
 
     <Style TargetType="CheckBox" BasedOn="{StaticResource ThemedCheckBox}" />
-
-    <!-- ============ small glyph button (copy) ============ -->
-    <Style x:Key="IconButton" TargetType="Button">
-        <Setter Property="Width" Value="24" />
-        <Setter Property="Height" Value="24" />
-        <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="Focusable" Value="False" />
-        <Setter Property="SnapsToDevicePixels" Value="True" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Button">
-                    <Border x:Name="Shell" Background="Transparent" CornerRadius="4">
-                        <Path x:Name="Glyph"
-                              Data="M4.5,3.5 V1 H11 V7.5 H8.5 M1,4.5 H8.5 V12 H1 Z"
-                              Stroke="{StaticResource MutedBrush}"
-                              StrokeThickness="1.1"
-                              Fill="Transparent"
-                              Stretch="None"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Shell" Property="Background" Value="#FF2E3137" />
-                            <Setter TargetName="Glyph" Property="Stroke" Value="{StaticResource AccentHoverBrush}" />
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Glyph" Property="Stroke" Value="{StaticResource SuccessBrush}" />
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Glyph" Property="Opacity" Value="0.25" />
-                            <Setter Property="Cursor" Value="Arrow" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
 
     <!-- ============ expander toggle ============ -->
     <Style x:Key="ExpanderToggle" TargetType="ToggleButton">

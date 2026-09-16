@@ -163,7 +163,6 @@
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullResult}" MinWidth="60" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullStart}" MinWidth="60" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullRoster}" MinWidth="150" />
-                                        <ColumnDefinition Width="{StaticResource ColPullCopy}" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDuration}" MinWidth="60" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullPlayers}" MinWidth="60" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDps}" MinWidth="60" />
@@ -175,30 +174,25 @@
                                                     Sort="{Binding Sorting.Pulls}" />
                                     <ctl:SortHeader Grid.Column="4" Column="Roster" Title="ROSTER"
                                                     Sort="{Binding Sorting.Pulls}" />
-                                    <ctl:SortHeader Grid.Column="6" Column="Duration" Title="DURATION"
+                                    <ctl:SortHeader Grid.Column="5" Column="Duration" Title="DURATION"
                                                     Sort="{Binding Sorting.Pulls}"
                                                     HorizontalContentAlignment="Right" Padding="0,0,14,0" />
-                                    <ctl:SortHeader Grid.Column="7" Column="Players" Title="PLAYERS"
+                                    <ctl:SortHeader Grid.Column="6" Column="Players" Title="PLAYERS"
                                                     Sort="{Binding Sorting.Pulls}"
                                                     HorizontalContentAlignment="Right" Padding="0,0,14,0" />
-                                    <ctl:SortHeader Grid.Column="8" Column="Dps" Title="DPS"
+                                    <ctl:SortHeader Grid.Column="7" Column="Dps" Title="DPS"
                                                     Sort="{Binding Sorting.Pulls}"
                                                     HorizontalContentAlignment="Right" Padding="0,0,14,0" />
-                                    <ctl:SortHeader Grid.Column="9" Column="Hps" Title="HPS"
+                                    <ctl:SortHeader Grid.Column="8" Column="Hps" Title="HPS"
                                                     Sort="{Binding Sorting.Pulls}"
                                                     HorizontalContentAlignment="Right" Padding="0,0,14,0" />
 
                                     <GridSplitter Grid.Column="2" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="3" Style="{StaticResource ColumnSplitter}" />
-                                    <!-- The copy-button column sits between ROSTER and DURATION, so that boundary had
-                                         no handle at all. PreviousAndNext leaves the splitter's own column alone and
-                                         moves its neighbours, which keeps the button at its width. -->
-                                    <GridSplitter Grid.Column="5"
-                                                  Style="{StaticResource ColumnSplitter}"
-                                                  ResizeBehavior="PreviousAndNext" />
+                                    <GridSplitter Grid.Column="4" Style="{StaticResource ColumnSplitter}" />
+                                    <GridSplitter Grid.Column="5" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="6" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="7" Style="{StaticResource ColumnSplitter}" />
-                                    <GridSplitter Grid.Column="8" Style="{StaticResource ColumnSplitter}" />
                                 </Grid>
 
                                 <ItemsControl ItemsSource="{Binding PullsView}">
@@ -214,7 +208,6 @@
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullResult}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullStart}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullRoster}" MinWidth="150" />
-                                                            <ColumnDefinition Width="{StaticResource ColPullCopy}" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDuration}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullPlayers}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDps}" MinWidth="60" />
@@ -246,19 +239,13 @@
                                                                    ToolTip="{Binding RosterTooltip}"
                                                                    ToolTipService.ShowDuration="60000" />
 
-                                                        <Button Grid.Column="5"
-                                                                Style="{StaticResource IconButton}"
-                                                                Command="{Binding CopyRosterCommand}"
-                                                                AutomationProperties.Name="Copy roster"
-                                                                ToolTip="Copy the full roster to the clipboard" />
-
-                                                        <TextBlock Grid.Column="6" Style="{StaticResource NumberText}"
+                                                        <TextBlock Grid.Column="5" Style="{StaticResource NumberText}"
                                                                    Text="{Binding DurationText}" />
-                                                        <TextBlock Grid.Column="7" Style="{StaticResource NumberText}"
+                                                        <TextBlock Grid.Column="6" Style="{StaticResource NumberText}"
                                                                    Text="{Binding ParticipantsText}" />
-                                                        <TextBlock Grid.Column="8" Style="{StaticResource NumberText}"
+                                                        <TextBlock Grid.Column="7" Style="{StaticResource NumberText}"
                                                                    Text="{Binding DpsText}" />
-                                                        <TextBlock Grid.Column="9" Style="{StaticResource NumberText}"
+                                                        <TextBlock Grid.Column="8" Style="{StaticResource NumberText}"
                                                                    Text="{Binding HpsText}" />
                                                     </Grid>
                                                 </Border>

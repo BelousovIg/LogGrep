@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Globalization;
-using System.Windows;
 using System.Windows.Data;
 using LogGrep.Models;
 
@@ -18,7 +17,6 @@ public sealed class PullViewModel : ObservableObject
     {
         Record = record;
         Owner = owner;
-        CopyRosterCommand = new RelayCommand(CopyRoster, () => Roster.Length > 0);
     }
 
     public PullRecord Record { get; }
@@ -27,8 +25,6 @@ public sealed class PullViewModel : ObservableObject
 
     /// <summary>Shared sort state, reached through the owner so the player headers can bind to it.</summary>
     public Sorting Sorting => Owner.Sorting;
-
-    public RelayCommand CopyRosterCommand { get; }
 
     public bool IsSelected
     {
@@ -96,21 +92,5 @@ public sealed class PullViewModel : ObservableObject
             .ToList();
 
         return new ListCollectionView(rows) { CustomSort = Sorting.Players.Comparer };
-    }
-
-    private void CopyRoster()
-    {
-        try
-        {
-            Clipboard.SetDataObject(Roster, copy: true);
-        }
-        catch (Exception ex)
-        {
-            Owner.Report("Could not copy to the clipboard: " + ex.Message);
-            return;
-        }
-
-        Owner.Report("Copied " + Record.Players.Count + " names from " + Record.EncounterName +
-                     " (" + StartText + ") to the clipboard.");
     }
 }

@@ -177,7 +177,7 @@ public sealed class MainViewModel : ObservableObject
 
         if (!_groups.TryGetValue(pull.GroupKey, out var encounter))
         {
-            encounter = new EncounterViewModel(pull, Sorting, RaiseSelectionChanged, message => Status = message);
+            encounter = new EncounterViewModel(pull, Sorting, RaiseSelectionChanged);
             _groups[pull.GroupKey] = encounter;
             Encounters.Add(encounter);
             RaiseCommandStates();

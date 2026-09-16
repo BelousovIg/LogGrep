@@ -30,7 +30,7 @@ LogGrep.exe "C:\...\Logs\WoWCombatLog-091526_120136.txt"
 * The **toggle** opens the list of pulls. It is enabled for raid bosses and for anything with more
   than one attempt; a keystone run is a single pull, so its toggle stays off.
 * Each pull lists its **roster** as "Name - Realm". The text is trimmed to the column width; hover
-  it for the full list, or use the copy button next to it to put the whole roster on the clipboard.
+  it for the full list.
 * Each pull has a **toggle** of its own that opens a table of everyone in the group: class, spec,
   DPS, HPS, damage taken per second, when they died as `m:ss` (`-:--` for a survivor, several
   deaths comma separated), and what had been hitting them over the last 10 seconds before each

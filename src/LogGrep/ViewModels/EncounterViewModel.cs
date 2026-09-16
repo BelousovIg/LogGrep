@@ -9,16 +9,14 @@ namespace LogGrep.ViewModels;
 public sealed class EncounterViewModel : ObservableObject
 {
     private readonly Action _selectionChanged;
-    private readonly Action<string> _report;
     private readonly ListCollectionView _pullsView;
     private bool _isExpanded;
     private bool? _isChecked = false;
     private bool _suppressBubbling;
 
-    public EncounterViewModel(PullRecord first, Sorting sorting, Action selectionChanged, Action<string> report)
+    public EncounterViewModel(PullRecord first, Sorting sorting, Action selectionChanged)
     {
         _selectionChanged = selectionChanged;
-        _report = report;
         Sorting = sorting;
         Name = first.EncounterName;
         Kind = first.Kind;
@@ -102,9 +100,6 @@ public sealed class EncounterViewModel : ObservableObject
     }
 
     public int SelectedCount => Pulls.Count(p => p.IsSelected);
-
-    /// <summary>Bubbles a one-line message up to the status bar.</summary>
-    public void Report(string message) => _report(message);
 
     public void Add(PullRecord record)
     {
