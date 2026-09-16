@@ -99,7 +99,12 @@ are the words a scenario is written in. Rewire the window and only the page obje
   depths. The encounter says how many attempts had one in them out of how many there were, `2/3`.
   The attempt says how many were made in it, counting each player's separately, in the colour a
   wipe is written in. The player spells out their own, `0:31 Hollowing Strikes - tank mechanic;
-  2:51 Possession Barrage - tank mechanic`, and the tooltip puts each on its own line.
+  2:51 Possession Barrage - tank mechanic`.
+* Hovering that last cell gives the reasoning rather than just the list. A spell name says what was
+  taken and nothing about why it was wrong, and the app cannot explain a boss - it has no idea what
+  any of them do - but it can explain itself: `went to a healer; 69 of 71 hit a tank, over 13
+  attempts`. The size of that sample is the point. A rule drawn from one attempt is worth arguing
+  with; one drawn from thirteen is not.
 * The encounter **checkbox is three-state**: all pulls selected, none, or some.
 * **Findings** in the toolbar switches to the mechanics that were taken by the wrong role. Nothing
   about any boss is written into the app: a debuff is recognised as belonging to a role by how it

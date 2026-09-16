@@ -214,8 +214,8 @@ public sealed class FindingMistakes : Scenario
 
         Then.PlayerMistakesRead("0:31 Hollowing Strikes - tank mechanic; 2:51 Possession Barrage - tank mechanic")
             .And.PlayerMistakesTooltipReads(
-                "0:31 Hollowing Strikes - tank mechanic",
-                "2:51 Possession Barrage - tank mechanic");
+                "0:31  Hollowing Strikes\n      went to a healer; 8 of 9 hit a tank, over 1 attempt",
+                "2:51  Possession Barrage\n      went to a healer; 8 of 9 hit a tank, over 1 attempt");
     }
 
     [Fact]

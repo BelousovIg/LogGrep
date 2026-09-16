@@ -82,8 +82,18 @@ public sealed class Verification
     public void PlayerMistakesRead(string expected)
         => Assert.Equal(expected, _page.Player.MistakesText);
 
-    public void PlayerMistakesTooltipReads(params string[] lines)
-        => Assert.Equal(string.Join(Environment.NewLine, lines), _page.Player.MistakesTooltip);
+    /// <summary>
+    /// Each mistake is a block of its own, so blocks are given separately and the newline inside
+    /// one is written as \n - a scenario should not have to spell out what the platform calls a
+    /// line break.
+    /// </summary>
+    public void PlayerMistakesTooltipReads(params string[] blocks)
+        => Assert.Equal(
+            string.Join(
+                Environment.NewLine + Environment.NewLine,
+                blocks.Select(block => block.Replace("\n", Environment.NewLine, StringComparison.Ordinal))),
+            _page.Player.MistakesTooltip);
+
     public void FindingsRead(string expected) => Assert.Contains(expected, _page.ViewModel.FindingsSummary);
 
     public void NothingWasFound()

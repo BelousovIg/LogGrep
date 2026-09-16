@@ -116,4 +116,15 @@ public static class Specs
         Role.Healer => "healer",
         _ => "damage",
     };
+
+    /// <summary>
+    /// The role as a person rather than as a label: "a tank", not "tank". "damage" is the odd one
+    /// out - it works as an adjective in "damage mechanic" and not as a noun, hence the two forms.
+    /// </summary>
+    public static string PersonOf(Role role) => role switch
+    {
+        Role.Tank => "a tank",
+        Role.Healer => "a healer",
+        _ => "a damage dealer",
+    };
 }
