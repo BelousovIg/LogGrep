@@ -283,17 +283,28 @@ the Battle.net Game Data API. Its encounter endpoints give the section structure
 Healer - the spell ids named in each, and `body_text`, which is Blizzard's own tactical advice and
 therefore the "what to do" line we thought a person would have to write. No addon needed.
 
-**Decided: the file ships with the app and nothing talks to Blizzard at run time.** The API wants
-client credentials, and a desktop program that carries them hands them to anyone with a decompiler,
-who then spends the quota or earns the ban for everybody. The alternatives are worse: asking each
-person to register their own key is a wall almost nobody climbs, and running a proxy means running a
-server. So a script fetches once per tier, writes the file, and the file is versioned here and built
-into the release. No key, no network, no new way for opening a log to fail.
+**Decided: a generated file ships, and the app can regenerate it for whoever holds a key.** No
+credential is ever built into the binary - that is the part that cannot be done, because a secret in
+a distributed program belongs to anyone with a decompiler, who then spends the quota or earns the
+ban for everybody. But a key the *person* supplies is a different thing entirely.
 
-The file going stale mid-tier is handled without any of that. The log audit mutes a rule that stops
-matching, and a file placed next to the exe overrides the built-in one, so a guild updates by
-passing a file around. If self-updating is ever wanted, the thing to fetch is our own generated file
-from a static URL - one unauthenticated request, content we control - and never the API itself.
+So: the app gains a "refresh the rules" action, lit only when a Blizzard client id and secret are
+present in settings, exactly where CursedApp keeps its CurseForge key -
+`%APPDATA%\LogGrep\settings.json`, outside the repository, never in a commit and never in an export.
+It walks the journal endpoints, writes the rules file next to the executable, and that file
+overrides the built-in one.
+
+The shape that falls out of this is good in every direction. Somebody who never registers anything
+gets the shipped file and never knows the API exists. A patch lands mid-tier and one person with a
+key regenerates and passes the file to the guild, without waiting for a release and without the rest
+of them registering anything. And the maintainer of the shipped file is just whoever ran that action
+last and committed the result - no build secret, no CI credential, nothing for a repository to leak.
+
+Two things to get right when it is built. The secret goes in a password field and is not echoed
+back, and it is worth encrypting at rest with DPAPI rather than sitting in plain JSON the way the
+CurseForge key does - it costs a few lines and the failure mode is somebody else's account. And
+**opening a log must never wait on the network**: refreshing rules is a deliberate act with a
+button, not something that happens because a file was opened.
 
 **And the log audits all of it.** A section flagged for tanks means tanks should care, which is not
 the same claim as "it lands on a tank" - an ability the whole raid takes while the tank must react
