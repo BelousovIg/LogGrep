@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using LogGrep.Analysis;
 using LogGrep.Models;
 
 namespace LogGrep.ViewModels;
@@ -10,12 +11,15 @@ public sealed class PlayerRowViewModel
     private readonly PlayerStats _stats;
     private readonly double _seconds;
     private readonly Action<string> _report;
+    private readonly IReadOnlyList<Finding> _mistakes;
 
-    public PlayerRowViewModel(PlayerStats stats, TimeSpan duration, Action<string> report)
+    public PlayerRowViewModel(PlayerStats stats, TimeSpan duration, Action<string> report,
+        IReadOnlyList<Finding> mistakes)
     {
         _stats = stats;
         _seconds = duration.TotalSeconds;
         _report = report;
+        _mistakes = mistakes;
     }
 
     /// <summary>The character on its own; the realm lives in the tooltip.</summary>
@@ -31,6 +35,25 @@ public sealed class PlayerRowViewModel
     /// <summary>Class colour for the class cell, the palette WoW itself uses.</summary>
     public Brush ClassBrush => ClassBrushes.For(_stats.ClassColor);
 
+
+    /// <summary>How many mechanics this player took that were not theirs; the column sorts on it.</summary>
+    public int MistakeCount => _mistakes.Count;
+
+    public bool HasMistakes => _mistakes.Count > 0;
+
+    /// <summary>Each mistake as "m:ss spell - role mechanic", separated for one line.</summary>
+    public string MistakesText => _mistakes.Count == 0
+        ? "—"
+        : string.Join("; ", _mistakes.Select(Describe));
+
+    /// <summary>The same list one to a line, which is what the separator is standing in for.</summary>
+    public string MistakesTooltip => _mistakes.Count == 0
+        ? "This player took nothing that was not theirs"
+        : string.Join(Environment.NewLine, _mistakes.Select(Describe));
+
+    private static string Describe(Finding mistake)
+        => Display.Clock(mistake.At) + " " + mistake.Rule.Spell + " - " +
+           Specs.NameOf(mistake.Rule.Owner) + " mechanic";
     /// <summary>Raw values behind the formatted cells, so the columns sort on numbers and times.</summary>
     public double DpsValue => Rate(_stats.Damage);
 

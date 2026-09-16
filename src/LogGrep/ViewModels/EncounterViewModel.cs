@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Data;
+using LogGrep.Analysis;
 using LogGrep.Models;
 
 namespace LogGrep.ViewModels;
@@ -78,6 +79,23 @@ public sealed class EncounterViewModel : ObservableObject
         }
     }
 
+
+    /// <summary>How many attempts had a mistake in them, out of how many there were.</summary>
+    public string MistakesText => Pulls.Count == 0 ? "—" : PullsWithMistakes + "/" + Pulls.Count;
+
+    public int PullsWithMistakes => Pulls.Count(p => p.HasMistakes);
+
+    public bool HasMistakes => PullsWithMistakes > 0;
+
+    /// <summary>Hands each attempt the mistakes the analysis pinned on it.</summary>
+    internal void ApplyMistakes(ILookup<PullRecord, Finding> byPull)
+    {
+        foreach (var pull in Pulls) pull.SetMistakes(byPull[pull.Record]);
+
+        OnPropertyChanged(nameof(MistakesText));
+        OnPropertyChanged(nameof(PullsWithMistakes));
+        OnPropertyChanged(nameof(HasMistakes));
+    }
     /// <summary>Raids always expand; anything else only when it actually has several attempts.</summary>
     public bool IsExpandable => Kind == ContentKind.Raid || Pulls.Count > 1;
 
@@ -117,6 +135,8 @@ public sealed class EncounterViewModel : ObservableObject
         OnPropertyChanged(nameof(KillText));
         OnPropertyChanged(nameof(PartySizeText));
         OnPropertyChanged(nameof(PartySizeKey));
+        OnPropertyChanged(nameof(MistakesText));
+        OnPropertyChanged(nameof(PullsWithMistakes));
         OnPropertyChanged(nameof(IsExpandable));
         RefreshCheckState();
     }

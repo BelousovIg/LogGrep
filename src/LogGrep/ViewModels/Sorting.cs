@@ -15,6 +15,7 @@ public sealed class Sorting
         ["Pulls"] = new(row => ((EncounterViewModel)row).Pulls.Count, DescendingFirst: true),
         ["Result"] = new(row => ((EncounterViewModel)row).HasKill, DescendingFirst: true),
         ["Party"] = new(row => ((EncounterViewModel)row).PartySizeKey, DescendingFirst: true),
+        ["Mistakes"] = new(row => ((EncounterViewModel)row).PullsWithMistakes, DescendingFirst: true),
     });
 
     public SortState Pulls { get; } = new(new Dictionary<string, SortColumn>(StringComparer.Ordinal)
@@ -25,6 +26,7 @@ public sealed class Sorting
         ["Players"] = new(row => ((PullViewModel)row).Record.Participants, DescendingFirst: true),
         ["Dps"] = new(row => ((PullViewModel)row).Record.Dps, DescendingFirst: true),
         ["Hps"] = new(row => ((PullViewModel)row).Record.Hps, DescendingFirst: true),
+        ["Mistakes"] = new(row => ((PullViewModel)row).MistakeCount, DescendingFirst: true),
     });
 
     public SortState Players { get; } = new(new Dictionary<string, SortColumn>(StringComparer.Ordinal)
@@ -45,5 +47,7 @@ public sealed class Sorting
 
         // A survivor has no killing blow at all, so they stay at the bottom here either way.
         ["Causes"] = new(row => ((PlayerRowViewModel)row).TopCause),
+
+        ["Mistakes"] = new(row => ((PlayerRowViewModel)row).MistakeCount, DescendingFirst: true),
     });
 }

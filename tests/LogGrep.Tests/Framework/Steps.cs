@@ -227,6 +227,30 @@ public sealed class Then
         return this;
     }
 
+
+    public Then EncounterMistakesRead(string expected)
+    {
+        _check.EncounterMistakesRead(expected);
+        return this;
+    }
+
+    public Then PullMistakesRead(string expected)
+    {
+        _check.PullMistakesRead(expected);
+        return this;
+    }
+
+    public Then PlayerMistakesRead(string expected)
+    {
+        _check.PlayerMistakesRead(expected);
+        return this;
+    }
+
+    public Then PlayerMistakesTooltipReads(params string[] lines)
+    {
+        _check.PlayerMistakesTooltipReads(lines);
+        return this;
+    }
     public Then FindingsRead(string expected)
     {
         _check.FindingsRead(expected);

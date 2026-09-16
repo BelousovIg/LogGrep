@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Data;
+using LogGrep.Analysis;
 using LogGrep.Models;
 
 namespace LogGrep.ViewModels;
@@ -11,6 +12,7 @@ public sealed class PullViewModel : ObservableObject
     private bool _isSelected;
     private bool _isExpanded;
     private ListCollectionView? _playersView;
+    private IReadOnlyList<Finding> _mistakes = Array.Empty<Finding>();
 
     public PullViewModel(PullRecord record, EncounterViewModel owner)
     {
@@ -22,6 +24,28 @@ public sealed class PullViewModel : ObservableObject
 
     public EncounterViewModel Owner { get; }
 
+
+    /// <summary>Every mistake made in this attempt, counting each player's separately.</summary>
+    public int MistakeCount => _mistakes.Count;
+
+    public bool HasMistakes => _mistakes.Count > 0;
+
+    public string MistakesText => _mistakes.Count == 0 ? "—" : _mistakes.Count.ToString();
+
+    /// <summary>
+    /// Hands the attempt what the analysis found. The player rows are dropped rather than patched:
+    /// they are built on demand anyway, and nothing has opened them this early in a scan.
+    /// </summary>
+    internal void SetMistakes(IEnumerable<Finding> mistakes)
+    {
+        _mistakes = mistakes.OrderBy(f => f.At).ToArray();
+        _playersView = null;
+
+        OnPropertyChanged(nameof(MistakeCount));
+        OnPropertyChanged(nameof(HasMistakes));
+        OnPropertyChanged(nameof(MistakesText));
+        OnPropertyChanged(nameof(PlayersView));
+    }
     /// <summary>Shared sort state, reached through the owner so the player headers can bind to it.</summary>
     public Sorting Sorting => Owner.Sorting;
 
@@ -79,8 +103,9 @@ public sealed class PullViewModel : ObservableObject
 
     private ListCollectionView CreatePlayersView()
     {
+        var mistakes = _mistakes.ToLookup(m => m.Player, StringComparer.Ordinal);
         var rows = Record.Roster
-            .Select(stats => new PlayerRowViewModel(stats, Record.Duration, Owner.Report))
+            .Select(stats => new PlayerRowViewModel(stats, Record.Duration, Owner.Report, mistakes[stats.Name].ToArray()))
             .ToList();
 
         return new ListCollectionView(rows) { CustomSort = Sorting.Players.Comparer };

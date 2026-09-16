@@ -400,10 +400,16 @@ public sealed class MainViewModel : ObservableObject
     {
         Rules.Clear();
 
-        foreach (var group in MechanicAnalyzer.Analyse(pulls).GroupBy(f => f.Rule))
+        var findings = MechanicAnalyzer.Analyse(pulls);
+
+        foreach (var group in findings.GroupBy(f => f.Rule))
         {
             Rules.Add(new RuleViewModel(group.Key, group, () => _rulesView.Refresh()));
         }
+
+        // The same findings, pushed down the tree so every row can show its own share of them.
+        var byPull = findings.ToLookup(f => f.Pull);
+        foreach (var encounter in Encounters) encounter.ApplyMistakes(byPull);
 
         _rulesView.Refresh();
         OnPropertyChanged(nameof(HasFindings));

@@ -85,6 +85,7 @@
                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterPulls}" MinWidth="60" />
                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterResult}" MinWidth="60" />
                     <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterParty}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterMistakes}" MinWidth="60" />
                 </Grid.ColumnDefinitions>
 
                 <ctl:SortHeader Grid.Column="2" Column="Name" Title="ENCOUNTER"
@@ -101,11 +102,16 @@
                                 Sort="{Binding Sorting.Encounters}"
                                 HorizontalContentAlignment="Right" Padding="0,0,14,0"
                                 ToolTip="Largest group size seen across the attempts" />
+                <ctl:SortHeader Grid.Column="7" Column="Mistakes" Title="MISTAKES"
+                                Sort="{Binding Sorting.Encounters}"
+                                HorizontalContentAlignment="Right" Padding="0,0,14,0"
+                                ToolTip="Attempts with a mechanic taken by the wrong role, out of all attempts" />
 
                 <GridSplitter Grid.Column="2" Style="{StaticResource ColumnSplitter}" />
                 <GridSplitter Grid.Column="3" Style="{StaticResource ColumnSplitter}" />
                 <GridSplitter Grid.Column="4" Style="{StaticResource ColumnSplitter}" />
                 <GridSplitter Grid.Column="5" Style="{StaticResource ColumnSplitter}" />
+                <GridSplitter Grid.Column="6" Style="{StaticResource ColumnSplitter}" />
             </Grid>
         </Border>
 
@@ -134,6 +140,7 @@
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterPulls}" MinWidth="60" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterResult}" MinWidth="60" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterParty}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=EncounterMistakes}" MinWidth="60" />
                                     </Grid.ColumnDefinitions>
 
                                     <ToggleButton Grid.Column="0"
@@ -163,6 +170,12 @@
                                                Text="{Binding KillText}" />
 
                                     <TextBlock Grid.Column="6" Style="{StaticResource NumberText}" Text="{Binding PartySizeText}" />
+                                    <TextBlock x:Name="MistakesCell"
+                                               Grid.Column="7"
+                                               Style="{StaticResource NumberText}"
+                                               Foreground="{StaticResource MutedBrush}"
+                                               Text="{Binding MistakesText}"
+                                               ToolTip="Attempts with a mechanic taken by the wrong role, out of all attempts" />
                                 </Grid>
                             </Border>
 
@@ -180,6 +193,7 @@
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullPlayers}" MinWidth="60" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDps}" MinWidth="60" />
                                         <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullHps}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullMistakes}" MinWidth="60" />
                                     </Grid.ColumnDefinitions>
                                     <ctl:SortHeader Grid.Column="2" Column="Result" Title="RESULT"
                                                     Sort="{Binding Sorting.Pulls}" />
@@ -197,12 +211,17 @@
                                     <ctl:SortHeader Grid.Column="8" Column="Hps" Title="HPS"
                                                     Sort="{Binding Sorting.Pulls}"
                                                     HorizontalContentAlignment="Right" Padding="0,0,14,0" />
+                                    <ctl:SortHeader Grid.Column="9" Column="Mistakes" Title="MISTAKES"
+                                                    Sort="{Binding Sorting.Pulls}"
+                                                    HorizontalContentAlignment="Right" Padding="0,0,14,0"
+                                                    ToolTip="Mechanics taken by the wrong role during this attempt" />
 
                                     <GridSplitter Grid.Column="2" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="3" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="5" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="6" Style="{StaticResource ColumnSplitter}" />
                                     <GridSplitter Grid.Column="7" Style="{StaticResource ColumnSplitter}" />
+                                    <GridSplitter Grid.Column="8" Style="{StaticResource ColumnSplitter}" />
                                 </Grid>
 
                                 <ItemsControl ItemsSource="{Binding PullsView}">
@@ -222,6 +241,7 @@
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullPlayers}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullDps}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullHps}" MinWidth="60" />
+                                        <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PullMistakes}" MinWidth="60" />
                                                         </Grid.ColumnDefinitions>
 
                                                         <ToggleButton Grid.Column="0"
@@ -250,6 +270,12 @@
                                                                    Text="{Binding DpsText}" />
                                                         <TextBlock Grid.Column="8" Style="{StaticResource NumberText}"
                                                                    Text="{Binding HpsText}" />
+                                                        <TextBlock x:Name="PullMistakesCell"
+                                                                   Grid.Column="9"
+                                                                   Style="{StaticResource NumberText}"
+                                                                   Foreground="{StaticResource MutedBrush}"
+                                                                   Text="{Binding MistakesText}"
+                                                                   ToolTip="How many times somebody took a mechanic that was not theirs" />
                                                     </Grid>
                                                 </Border>
 
@@ -267,6 +293,7 @@
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="150" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerMistakes}" MinWidth="80" />
                                                         </Grid.ColumnDefinitions>
 
                                                         <ctl:SortHeader Grid.Column="1" Column="Name" Title="PLAYER"
@@ -292,6 +319,9 @@
                                                         <ctl:SortHeader Grid.Column="8" Column="Causes" Title="KILLED BY"
                                                                         Sort="{Binding Sorting.Players}"
                                                                         ToolTip="Damage taken over the last 10 seconds before each death" />
+                                                        <ctl:SortHeader Grid.Column="9" Column="Mistakes" Title="MISTAKES"
+                                                                        Sort="{Binding Sorting.Players}"
+                                                                        ToolTip="Mechanics this player took that belong to another role" />
 
                                                         <GridSplitter Grid.Column="1" Style="{StaticResource ColumnSplitter}" />
                                                         <GridSplitter Grid.Column="2" Style="{StaticResource ColumnSplitter}" />
@@ -300,6 +330,7 @@
                                                         <GridSplitter Grid.Column="5" Style="{StaticResource ColumnSplitter}" />
                                                         <GridSplitter Grid.Column="6" Style="{StaticResource ColumnSplitter}" />
                                                         <GridSplitter Grid.Column="7" Style="{StaticResource ColumnSplitter}" />
+                                                        <GridSplitter Grid.Column="8" Style="{StaticResource ColumnSplitter}" />
                                                     </Grid>
 
                                                     <ItemsControl ItemsSource="{Binding PlayersView}">
@@ -318,6 +349,7 @@
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" MinWidth="60" />
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" MinWidth="60" />
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="150" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerMistakes}" MinWidth="80" />
                                                                         </Grid.ColumnDefinitions>
 
                                                                         <Button Grid.Column="1"
@@ -350,10 +382,22 @@
                                                                                    Margin="0,0,6,0"
                                                                                    ToolTip="{Binding CausesTooltip}"
                                                                                    ToolTipService.ShowDuration="60000" />
+                                                                        <TextBlock x:Name="MistakesCell"
+                                                                                   Grid.Column="9"
+                                                                                   Style="{StaticResource MutedText}"
+                                                                                   Text="{Binding MistakesText}"
+                                                                                   TextTrimming="CharacterEllipsis"
+                                                                                   Margin="0,0,6,0"
+                                                                                   ToolTip="{Binding MistakesTooltip}"
+                                                                                   ToolTipService.ShowDuration="60000" />
                                                                     </Grid>
                                                                 </Border>
 
                                                                 <DataTemplate.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasMistakes}" Value="True">
+                                                                        <Setter TargetName="MistakesCell" Property="Foreground"
+                                                                                Value="{StaticResource DangerBrush}" />
+                                                                    </DataTrigger>
                                                                     <DataTrigger Binding="{Binding Died}" Value="True">
                                                                         <Setter TargetName="DiedCell" Property="Foreground"
                                                                                 Value="{StaticResource DangerBrush}" />
@@ -368,6 +412,10 @@
                                             </StackPanel>
 
                                             <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding HasMistakes}" Value="True">
+                                                    <Setter TargetName="PullMistakesCell" Property="Foreground"
+                                                            Value="{StaticResource DangerBrush}" />
+                                                </DataTrigger>
                                                 <DataTrigger Binding="{Binding IsSuccess}" Value="True">
                                                     <Setter TargetName="ResultCell" Property="Foreground"
                                                             Value="{StaticResource SuccessBrush}" />
@@ -382,6 +430,10 @@
                         </StackPanel>
 
                         <DataTemplate.Triggers>
+                            <DataTrigger Binding="{Binding HasMistakes}" Value="True">
+                                <Setter TargetName="MistakesCell" Property="Foreground"
+                                        Value="{StaticResource DangerBrush}" />
+                            </DataTrigger>
                             <DataTrigger Binding="{Binding HasKill}" Value="True">
                                 <Setter TargetName="KillCell" Property="Foreground" Value="{StaticResource SuccessBrush}" />
                             </DataTrigger>

@@ -72,6 +72,18 @@ public sealed class Verification
             $"'{spell}' should not be blamed for the death of '{_page.Player.Name}'. " +
             $"What is shown: {_page.Player.CausesText}");
 
+
+    public void EncounterMistakesRead(string expected)
+        => Assert.Equal(expected, _page.Encounter.MistakesText);
+
+    public void PullMistakesRead(string expected)
+        => Assert.Equal(expected, _page.Pull.MistakesText);
+
+    public void PlayerMistakesRead(string expected)
+        => Assert.Equal(expected, _page.Player.MistakesText);
+
+    public void PlayerMistakesTooltipReads(params string[] lines)
+        => Assert.Equal(string.Join(Environment.NewLine, lines), _page.Player.MistakesTooltip);
     public void FindingsRead(string expected) => Assert.Contains(expected, _page.ViewModel.FindingsSummary);
 
     public void NothingWasFound()

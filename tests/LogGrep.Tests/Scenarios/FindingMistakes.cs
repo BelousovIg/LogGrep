@@ -154,6 +154,84 @@ public sealed class FindingMistakes : Scenario
         Then.FindingsRead("across 2 mechanics");
     }
 
+
+    [Fact]
+    public void The_encounter_counts_the_attempts_that_went_wrong()
+    {
+        var log = ARaid()
+            .Pull(Boss, Difficulty.Mythic, p => p
+                .Lasting("3:00").At("0:20").BossDebuffs("Rockjaw", with: TankMechanic, times: 8).Wipe())
+            .Pull(Boss, Difficulty.Mythic, p => p
+                .Lasting("3:00")
+                .At("0:20").BossDebuffs("Rockjaw", with: TankMechanic, times: 4)
+                .At("1:00").BossDebuffs("Sunwell", with: TankMechanic)
+                .Wipe())
+            .Pull(Boss, Difficulty.Mythic, p => p
+                .Lasting("3:00")
+                .At("0:20").BossDebuffs("Rockjaw", with: TankMechanic, times: 4)
+                .At("1:00").BossDebuffs("Nightblade", with: TankMechanic)
+                .Kill());
+
+        Given.IOpenedLog(log);
+        When.ILookAtEncounter(Boss);
+
+        Then.EncounterMistakesRead("2/3");
+    }
+
+    [Fact]
+    public void The_attempt_counts_every_mistake_made_in_it()
+    {
+        // Two people, each taking two mechanics that were not theirs.
+        var log = ARaid().Pull(Boss, Difficulty.Mythic, p => p
+            .Lasting("5:00")
+            .At("0:20").BossDebuffs("Rockjaw", with: TankMechanic, times: 12)
+            .At("1:00").BossDebuffs("Sunwell", with: TankMechanic)
+            .At("1:10").BossDebuffs("Nightblade", with: TankMechanic)
+            .At("2:00").BossDebuffs("Grimhide", with: "Hollowing Strikes", times: 12)
+            .At("3:00").BossDebuffs("Sunwell", with: "Hollowing Strikes")
+            .At("3:10").BossDebuffs("Nightblade", with: "Hollowing Strikes")
+            .Wipe());
+
+        Given.IOpenedLog(log).And.IExpandedEncounter(Boss);
+        When.ILookAtPull(1);
+
+        Then.PullMistakesRead("4");
+    }
+
+    [Fact]
+    public void The_player_lists_each_mistake_with_the_moment_it_happened()
+    {
+        var log = ARaid().Pull(Boss, Difficulty.Mythic, p => p
+            .Lasting("5:00")
+            .At("0:10").BossDebuffs("Rockjaw", with: "Hollowing Strikes", times: 8)
+            .At("0:31").BossDebuffs("Sunwell", with: "Hollowing Strikes")
+            .At("1:00").BossDebuffs("Grimhide", with: TankMechanic, times: 8)
+            .At("2:51").BossDebuffs("Sunwell", with: TankMechanic)
+            .Wipe());
+
+        Given.IOpenedLog(log).And.IOpenedPull(Boss, 1);
+        When.ILookAtPlayer("Sunwell");
+
+        Then.PlayerMistakesRead("0:31 Hollowing Strikes - tank mechanic; 2:51 Possession Barrage - tank mechanic")
+            .And.PlayerMistakesTooltipReads(
+                "0:31 Hollowing Strikes - tank mechanic",
+                "2:51 Possession Barrage - tank mechanic");
+    }
+
+    [Fact]
+    public void Somebody_who_took_nothing_of_anyone_elses_shows_a_dash()
+    {
+        var log = ARaid().Pull(Boss, Difficulty.Mythic, p => p
+            .Lasting("3:00")
+            .At("0:20").BossDebuffs("Rockjaw", with: TankMechanic, times: 8)
+            .At("1:00").BossDebuffs("Sunwell", with: TankMechanic)
+            .Wipe());
+
+        Given.IOpenedLog(log).And.IOpenedPull(Boss, 1);
+        When.ILookAtPlayer("Nightblade");
+
+        Then.PlayerMistakesRead("—");
+    }
     /// <summary>One mechanic two people took wrongly, another only one did.</summary>
     private static CombatLogBuilder TwoMechanics() => ARaid().Pull(Boss, Difficulty.Mythic, p => p
         .Lasting("5:00")

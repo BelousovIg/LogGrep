@@ -19,6 +19,7 @@ public sealed class ColumnLayout : ObservableObject
     private GridLength _encounterPulls = new(80);
     private GridLength _encounterResult = new(90);
     private GridLength _encounterParty = new(130);
+    private GridLength _encounterMistakes = new(110);
 
     private GridLength _pullResult = new(80);
     private GridLength _pullStart = new(140);
@@ -26,6 +27,7 @@ public sealed class ColumnLayout : ObservableObject
     private GridLength _pullPlayers = new(90);
     private GridLength _pullDps = new(110);
     private GridLength _pullHps = new(110);
+    private GridLength _pullMistakes = new(110);
 
     private GridLength _playerName = new(140);
     private GridLength _playerClass = new(100);
@@ -35,12 +37,14 @@ public sealed class ColumnLayout : ObservableObject
     private GridLength _playerDtps = new(85);
     private GridLength _playerDied = new(100);
     private GridLength _playerCauses = Fill;
+    private GridLength _playerMistakes = new(300);
 
     public GridLength EncounterName { get => _encounterName; set => Set(ref _encounterName, value); }
     public GridLength EncounterDifficulty { get => _encounterDifficulty; set => Set(ref _encounterDifficulty, value); }
     public GridLength EncounterPulls { get => _encounterPulls; set => Set(ref _encounterPulls, value); }
     public GridLength EncounterResult { get => _encounterResult; set => Set(ref _encounterResult, value); }
     public GridLength EncounterParty { get => _encounterParty; set => Set(ref _encounterParty, value); }
+    public GridLength EncounterMistakes { get => _encounterMistakes; set => Set(ref _encounterMistakes, value); }
 
     public GridLength PullResult { get => _pullResult; set => Set(ref _pullResult, value); }
     public GridLength PullStart { get => _pullStart; set => Set(ref _pullStart, value); }
@@ -48,6 +52,7 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength PullPlayers { get => _pullPlayers; set => Set(ref _pullPlayers, value); }
     public GridLength PullDps { get => _pullDps; set => Set(ref _pullDps, value); }
     public GridLength PullHps { get => _pullHps; set => Set(ref _pullHps, value); }
+    public GridLength PullMistakes { get => _pullMistakes; set => Set(ref _pullMistakes, value); }
 
     public GridLength PlayerName { get => _playerName; set => Set(ref _playerName, value); }
     public GridLength PlayerClass { get => _playerClass; set => Set(ref _playerClass, value); }
@@ -57,4 +62,5 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength PlayerDtps { get => _playerDtps; set => Set(ref _playerDtps, value); }
     public GridLength PlayerDied { get => _playerDied; set => Set(ref _playerDied, value); }
     public GridLength PlayerCauses { get => _playerCauses; set => Set(ref _playerCauses, value); }
+    public GridLength PlayerMistakes { get => _playerMistakes; set => Set(ref _playerMistakes, value); }
 }

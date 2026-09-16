@@ -95,6 +95,11 @@ are the words a scenario is written in. Rewire the window and only the page obje
   backwards.
 * Columns are **resized** by dragging the right edge of a header. A width belongs to the level, not
   to one table, so every pull and every roster stays lined up with the header above it.
+* A **mistakes** column closes every one of the three tables, carrying the same analysis at three
+  depths. The encounter says how many attempts had one in them out of how many there were, `2/3`.
+  The attempt says how many were made in it, counting each player's separately, in the colour a
+  wipe is written in. The player spells out their own, `0:31 Hollowing Strikes - tank mechanic;
+  2:51 Possession Barrage - tank mechanic`, and the tooltip puts each on its own line.
 * The encounter **checkbox is three-state**: all pulls selected, none, or some.
 * **Findings** in the toolbar switches to the mechanics that were taken by the wrong role. Nothing
   about any boss is written into the app: a debuff is recognised as belonging to a role by how it
