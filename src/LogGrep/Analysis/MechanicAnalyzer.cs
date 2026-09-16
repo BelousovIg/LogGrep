@@ -46,6 +46,14 @@ public static class MechanicAnalyzer
     /// <summary>Below this many applications an encounter has not shown a pattern, only noise.</summary>
     private const int MinimumApplications = 8;
 
+    /// <summary>
+    /// And below this many attempts it has not shown one either, however many applications there
+    /// were. A single attempt where a mistake repeated makes the mistake the majority of the
+    /// sample and hides itself; a run of attempts is what separates a habit from an accident. The
+    /// price is that a short log finds nothing at all, which is the honest answer for a short log.
+    /// </summary>
+    private const int MinimumAttempts = 10;
+
     /// <summary>How much of a spell one role has to take before it counts as theirs.</summary>
     private const double OwnerShare = 0.85;
 
@@ -78,6 +86,9 @@ public static class MechanicAnalyzer
             var applications = spell.ToList();
             if (applications.Count < MinimumApplications) continue;
 
+            int attempts = applications.Select(a => a.PullNumber).Distinct().Count();
+            if (attempts < MinimumAttempts) continue;
+
             var byRole = applications.GroupBy(a => a.Role).OrderByDescending(g => g.Count()).First();
             double share = byRole.Count() / (double)applications.Count;
             if (share < OwnerShare) continue;
@@ -93,7 +104,7 @@ public static class MechanicAnalyzer
                 byRole.Key,
                 byRole.Count(),
                 applications.Count,
-                applications.Select(a => a.PullNumber).Distinct().Count());
+                attempts);
 
             foreach (var off in applications.Where(a => a.Role != byRole.Key))
             {

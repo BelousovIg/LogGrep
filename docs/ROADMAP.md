@@ -59,10 +59,13 @@ Self-calibration has a hard edge and the plan should not pretend otherwise.
 - **It cannot name the reason.** It can say a spell hit you that hits almost nobody. It cannot say
   "because you stood in the wrong third of the room". The log does carry positions, so some of this
   is recoverable later, but not cheaply.
-- **A single attempt gives little.** Already measured on a real log: thirteen attempts read together
-  produce 20 findings; the same attempts read one at a time produce none in eight of them. Worse, an
-  attempt where a mistake repeated hides it, the wrong thing having become the majority of the
-  sample.
+- **A run of attempts is the price of admission, and it is paid.** Measured on a real log:
+  thirteen attempts read together produce 20 findings; the same attempts read one at a time produce
+  none in eight of them, because an attempt where a mistake repeated makes the mistake the majority
+  of its own sample. The app therefore refuses to draw a rule from fewer than ten attempts. On that
+  same log the floor drops three of the five rules - the ones resting on two and four attempts - and
+  20 of the 24 findings survive. A short evening gets nothing, and that is the correct answer for a
+  short evening.
 - **Build advice needs a corpus.** The log carries the whole talent tree in COMBATANT_INFO, so what
   you ran is known exactly. Whether it was a good choice is not answerable from one raid night.
 
@@ -137,7 +140,39 @@ The enrichment statistic already written, pointed at three more event shapes:
 
 Ends with: most of what a raid leader reads Wipefest for, with no per-boss rules to maintain.
 
-### 3. Execution, without knowing the class
+### 3. Why somebody died
+
+A death is the loudest thing in a log and the app currently says only what landed beforehand. The
+first question is not what killed them, it is **whether it was their death at all**.
+
+**Collective, or alone.** When most of the raid dies inside a few seconds, the attempt ended - the
+damage check was missed, the timer ran out - and nobody made a personal mistake worth reporting.
+When one player dies at 8:01 and the rest live to 9:30, that death is theirs. The rule is a window
+and a share: deaths clustered in time across a large fraction of the group are one event, not
+twenty findings. Getting this wrong in the other direction is worse than missing it - a tool that
+reports eighteen mistakes for one wipe will be closed and not reopened.
+
+**Then, how.** Three shapes, all readable from the log and none needing a word about the boss:
+
+- **A burst.** One or two hits took a large share of the player's health. The advanced parameters
+  of every damage event carry the target's current and maximum health, so "that hit took 52% of
+  them" is a fact sitting in the log rather than an estimate. This is a defensive that was not
+  pressed, or a hit that should not have been taken at all - which the avoidable-damage rule from
+  the previous milestone can often settle.
+- **Attrition.** No single large hit, but a stack count that climbed - the dose is in the log - or a
+  steady stream that outran the healing. This is a different conversation: it belongs to the healers
+  as much as to the person who died.
+- **Unhealable.** The time between dropping low and dying. Under about two seconds no healer could
+  have reacted, and saying so protects the healer from a finding that was never theirs. Over ten,
+  somebody was not watching.
+
+The engineering note: the scanner reads the damage payload today but skips the health fields in the
+advanced block. They are the whole basis of this milestone and cost nothing to start keeping.
+
+Ends with: a death that explains itself - whether it was the raid's or the player's, and if the
+player's, whether they were bursted, ground down, or beyond saving.
+
+### 4. Execution, without knowing the class
 
 Three signals that need no class knowledge at all:
 
@@ -149,7 +184,7 @@ Three signals that need no class knowledge at all:
 Ends with: rotation findings for every spec in the game, including the ones nobody wrote a module
 for, at the price of being less specific than one that was.
 
-### 4. The yardstick
+### 5. The yardstick
 
 Formalise the baselines so every detector can pick one: the group on this attempt, the player across
 their own attempts, and where it exists, another player of the same spec in the same log.
@@ -157,7 +192,7 @@ their own attempts, and where it exists, another player of the same spec in the 
 Ends with: findings phrased as "you usually do this, and this time you did not", which is the form
 advice is actually accepted in.
 
-### 5. Talents and builds
+### 6. Talents and builds
 
 The tree is in the log, so what was run is known exactly. Without a corpus we can still say what
 changed between attempts and whether output followed, and whether a talent sat unused - a node taken
@@ -165,7 +200,7 @@ and its spell never cast is a finding needing no reference data whatsoever.
 
 Ends with: build findings that are certain, and an honest blank where certainty is not available.
 
-### 6. Reference data, if it turns out to be wanted
+### 7. Reference data, if it turns out to be wanted
 
 Only here, and only if "what should good look like" is still missing by then. This is where an
 Archon-style aggregate would plug in, and the terms of use of whoever provides it are a real
@@ -192,10 +227,14 @@ adds a detector, and detectors that each invent their own shape of output are ho
 with forty findings nobody can sort. Cost and evidence have to exist before there is anything to
 rank.
 
+Deaths come third because they are what a raid leader opens the app for, and because the collective
+versus individual split is the difference between a useful report and one that cries wolf on every
+wipe.
+
 The second is next because it is nearly free: the statistic is written, tested, and proven on a real
 log. Pointing it at damage taken is a day of work for the largest single gain in the plan.
 
-The third is where the app stops being a mechanics tool and starts being a coach, and it is also
+The fourth is where the app stops being a mechanics tool and starts being a coach, and it is also
 where it will be wrong most often. Dead time on a fight with a forced break in it is not a mistake.
 Expect to spend as long tuning thresholds as writing detectors, and expect the ignore control to
 earn its place there rather than in the mechanics list.
