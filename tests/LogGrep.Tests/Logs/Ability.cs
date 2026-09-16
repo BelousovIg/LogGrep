@@ -27,6 +27,9 @@ public enum Ability
     /// <summary>Damage from long enough before a death that it should not be blamed for it.</summary>
     OldPoke = 3106,
 
+    /// <summary>What a plain swing is called in a death breakdown; it has no spell id of its own.</summary>
+    Melee = 0,
+
     /// <summary>What a rogue or a monk stops a cast with; the same spell all night.</summary>
     Kick = 3107,
 

@@ -129,6 +129,17 @@ public sealed class Verification
             $"'{_page.Player.Name}' should have been killed by '{spell.NameOf()}'. " +
             $"What is shown: {_page.Player.CausesText}");
 
+
+    /// <summary>
+    /// The death breakdown naming a spell and saying the group gets out of it. Half the value of a
+    /// breakdown is whether what killed you was yours to avoid.
+    /// </summary>
+    public void PlayerWasKilledByAvoidableDamage(Ability spell)
+        => Assert.True(_page.Player.CausesText.Contains(spell.NameOf(), StringComparison.Ordinal)
+            && _page.Player.CausesText.Contains(spell.NameOf() + " ", StringComparison.Ordinal)
+            && _page.Player.CausesText.Contains("(avoidable)", StringComparison.Ordinal),
+            $"'{spell.NameOf()}' should have been marked avoidable in the death of " +
+            $"'{_page.Player.Name}'. What is shown: {_page.Player.CausesText}");
     public void PlayerWasNotKilledBy(Ability spell)
         => Assert.True(!_page.Player.CausesText.Contains(spell.NameOf(), StringComparison.Ordinal),
             $"'{spell.NameOf()}' should not be blamed for the death of '{_page.Player.Name}'. " +
@@ -198,6 +209,12 @@ public sealed class Verification
         => Assert.Equal(spell.NameOf() + " - avoidable", First(spell).Headline);
 
 
+
+    /// <summary>The finding exists but carries no name, because the log cannot honestly give one.</summary>
+    public void NobodyWasNamedFor(Ability spell)
+        => Assert.True(_page.FindingsFor(spell).All(f => f.Player.Length == 0),
+            $"'{spell.NameOf()}' should have been reported without a name, and named: " +
+            string.Join(", ", _page.FindingsFor(spell).Select(f => f.Player).Where(p => p.Length > 0)));
     /// <summary>A cast that went off where this group usually stops it.</summary>
     public void InterruptWasMissed(Ability spell)
         => Assert.Equal(spell.NameOf() + " - interrupt missed", First(spell).Headline);

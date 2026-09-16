@@ -123,9 +123,19 @@ public sealed class PlayerRowViewModel
         : string.Join(Environment.NewLine, _stats.Deaths.Select(
             (d, i) => "Death " + (i + 1) + " at " + Display.Clock(d.At) + ": " + Causes(d)));
 
-    private static string Causes(DeathRecord death) => death.Causes.Count == 0
+    private string Causes(DeathRecord death) => death.Causes.Count == 0
         ? "no damage logged"
-        : string.Join(", ", death.Causes.Select(c => c.Label + " " + Display.Amount(c.Amount)));
+        : string.Join(", ", death.Causes.Select(
+            c => c.Label + " " + Display.Amount(c.Amount) + (Avoidable(c.Label) ? " (avoidable)" : string.Empty)));
+
+    /// <summary>
+    /// Whether the app worked out, from this run of attempts, that most of the group takes none of
+    /// what killed this player. A breakdown that only names the spell leaves the reader to guess
+    /// whether it was theirs to get out of, and that guess is the whole question.
+    /// </summary>
+    private bool Avoidable(string cause)
+        => _mistakes.Any(m => m.Category == AvoidableDamageDetector.Name
+            && m.Headline.StartsWith(cause + " -", StringComparison.Ordinal));
 
     private double Rate(long total) => _seconds > 0.5 ? total / _seconds : 0;
 

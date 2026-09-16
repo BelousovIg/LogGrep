@@ -19,9 +19,6 @@ public sealed class AvoidableDamageDetector : IDetector
     /// <summary>Below this many attempts an encounter has shown noise, not a pattern.</summary>
     private const int MinimumAttempts = 10;
 
-    /// <summary>And below this many landings there is not enough of it to average over.</summary>
-    private const int MinimumLandings = 8;
-
     /// <summary>How much of the group a spell may touch and still count as something they avoid.</summary>
     private const double CrowdShare = 0.25;
 
@@ -44,15 +41,19 @@ public sealed class AvoidableDamageDetector : IDetector
     /// <summary>How long after taking a hit a death still counts as having followed from it.</summary>
     private static readonly TimeSpan Soon = TimeSpan.FromSeconds(15);
 
-    public string Category => "avoidable damage";
+    /// <summary>What findings of this kind are filed under; the death breakdown reads it too.</summary>
+    public const string Name = "avoidable damage";
+
+    public string Category => Name;
 
     public IEnumerable<Finding> Look(Attempts attempts)
     {
         foreach (var spell in Landings(attempts).GroupBy(l => l.Blow.SpellId))
         {
             var landings = spell.ToList();
-            if (landings.Count < MinimumLandings) continue;
 
+            // Counted in attempts rather than in landings: an attempt where it went out ten times
+            // is still one attempt, and ten of those would otherwise pass for a pattern.
             var runs = landings.GroupBy(l => l.Pull).ToList();
             if (runs.Count < MinimumAttempts) continue;
 

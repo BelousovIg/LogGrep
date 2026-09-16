@@ -174,6 +174,12 @@ public sealed class Then
         return this;
     }
 
+    public Then PlayerWasKilledByAvoidableDamage(Ability spell)
+    {
+        _check.PlayerWasKilledByAvoidableDamage(spell);
+        return this;
+    }
+
     public Then PlayerWasNotKilledBy(Ability spell)
     {
         _check.PlayerWasNotKilledBy(spell);
@@ -262,6 +268,12 @@ public sealed class Then
     public Then DamageWasAvoidable(Ability spell)
     {
         _check.DamageWasAvoidable(spell);
+        return this;
+    }
+
+    public Then NobodyWasNamedFor(Ability spell)
+    {
+        _check.NobodyWasNamedFor(spell);
         return this;
     }
 

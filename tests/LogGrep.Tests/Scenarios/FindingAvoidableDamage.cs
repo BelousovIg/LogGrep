@@ -129,6 +129,25 @@ public sealed class FindingAvoidableDamage : Scenario
     }
 
     [Fact]
+    public void The_death_breakdown_says_what_was_avoidable_and_what_was_not()
+    {
+        // Naming the spell that killed somebody leaves the reader to guess whether it was theirs to
+        // get out of, and that guess is the whole question. The app has already worked it out.
+        var log = SomebodyStoodInIt().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(30.Seconds()).BossHits("Earthen", 400_000, with: Puddle)
+            .At(32.Seconds()).BossSwingsAt("Earthen", 300_000)
+            .At(35.Seconds()).Kills("Earthen", with: Puddle)
+            .Wipe());
+
+        Given.IOpenedLog(log).And.IOpenedPull(Soulcoiler, 13);
+        When.ILookAtPlayer("Earthen");
+
+        Then.PlayerWasKilledByAvoidableDamage(Puddle)
+            .And.PlayerWasKilledBy(Ability.Melee);
+    }
+
+    [Fact]
     public void Standing_in_it_and_dying_to_it_costs_a_death()
     {
         string[] unlucky = { "Rockjaw", "Sunwell", "Nightblade", "Grimhide", "Emberwild", "Moonfire" };

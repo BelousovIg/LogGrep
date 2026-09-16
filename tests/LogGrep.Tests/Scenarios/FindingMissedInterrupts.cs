@@ -106,9 +106,9 @@ public sealed class FindingMissedInterrupts : Scenario
     [Fact]
     public void Nobody_is_named_when_the_stopping_was_shared_evenly()
     {
-        // Two people taking turns, and then one got through. The log carries no kick rotation, so
-        // there is no honest way to say whose it was - and a finding sent to the wrong person is
-        // worse than none at all.
+        // Two people taking turns, and then one got through. It still gets reported - it happened -
+        // but with nobody's name on it: the log carries no kick rotation, so naming one of the two
+        // would be a coin toss.
         var log = ARaid()
             .Pulls(6, Soulcoiler, Difficulty.Mythic, p => p
                 .Lasting(3.Minutes())
@@ -125,7 +125,9 @@ public sealed class FindingMissedInterrupts : Scenario
 
         Given.IOpenedLog(log);
 
-        Then.NothingWasFound();
+        Then.InterruptWasMissed(Incantation)
+            .And.NobodyWasNamedFor(Incantation)
+            .And.MechanicEvidenceReads(Incantation, "12 of 13 were stopped, and no one person does most of the stopping");
     }
 
     [Fact]

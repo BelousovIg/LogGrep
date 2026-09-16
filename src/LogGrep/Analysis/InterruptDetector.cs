@@ -19,9 +19,6 @@ public sealed class InterruptDetector : IDetector
     /// <summary>Below this many attempts an encounter has shown noise, not a habit.</summary>
     private const int MinimumAttempts = 10;
 
-    /// <summary>And below this many casts of the one spell there is nothing to take a share of.</summary>
-    private const int MinimumCasts = 8;
-
     /// <summary>How much of the time a cast has to be stopped before letting one through is a miss.</summary>
     private const double UsuallyStopped = 0.85;
 
@@ -40,7 +37,9 @@ public sealed class InterruptDetector : IDetector
         foreach (var spell in Casts(attempts).GroupBy(c => c.Cast.SpellId))
         {
             var casts = spell.ToList();
-            if (casts.Count < MinimumCasts) continue;
+
+            // Counted in attempts, not in casts: a spell that goes out eight times on one attempt
+            // has still only been seen once.
             if (casts.Select(c => c.Pull).Distinct().Count() < MinimumAttempts) continue;
 
             var stopped = casts.Where(c => c.Cast.Stopped).ToList();
@@ -51,14 +50,16 @@ public sealed class InterruptDetector : IDetector
                 .OrderByDescending(g => g.Count())
                 .First();
 
-            if (regular.Count() / (double)stopped.Count <= TheirJob) continue;
+            bool theirs = regular.Count() / (double)stopped.Count > TheirJob;
 
-            string evidence = stopped.Count + " of " + casts.Count + " were stopped, " +
-                              regular.Count() + " of them by you";
+            string evidence = theirs
+                ? stopped.Count + " of " + casts.Count + " were stopped, " + regular.Count() + " of them by you"
+                : stopped.Count + " of " + casts.Count + " were stopped, and no one person does most " +
+                  "of the stopping";
 
             foreach (var missed in casts.Where(c => !c.Cast.Stopped))
             {
-                yield return Report(attempts, missed, regular.Key, evidence);
+                yield return Report(attempts, missed, theirs ? regular.Key : string.Empty, evidence);
             }
         }
     }
@@ -68,8 +69,11 @@ public sealed class InterruptDetector : IDetector
             Category,
             missed.Cast.Spell + " - interrupt missed",
             evidence,
-            "This one is usually stopped, and mostly by you. Whatever it does afterwards is not " +
-            "the healers' to undo.",
+            player.Length > 0
+                ? "This one is usually stopped, and mostly by you. Whatever it does afterwards is " +
+                  "not the healers' to undo."
+                : "This one is usually stopped. Whoever was due to take it did not, and whatever it " +
+                  "does afterwards is not the healers' to undo.",
             Cost.Nothing("the cast went off"),
             attempts.NumberOf(missed.Pull),
             missed.Pull,
