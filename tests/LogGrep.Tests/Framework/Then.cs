@@ -180,6 +180,12 @@ public sealed class Then
         return this;
     }
 
+    public Then TheDeathBreakdownOpensWith(string expected)
+    {
+        _check.TheDeathBreakdownOpensWith(expected);
+        return this;
+    }
+
     public Then PlayerWasNotKilledBy(Ability spell)
     {
         _check.PlayerWasNotKilledBy(spell);

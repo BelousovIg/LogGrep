@@ -136,10 +136,15 @@ public sealed class PlayerRowViewModel
         : string.Join(Environment.NewLine, _stats.Deaths.Select(
             (d, i) => "Death " + (i + 1) + " at " + Display.Clock(d.At) + ": " + Causes(d)));
 
+    /// <summary>
+    /// The word goes in front of the ability rather than after the number, because the column is
+    /// trimmed on the right: a mark at the end of a long list is the first thing to disappear, and
+    /// the whole point of it is to be read without opening anything.
+    /// </summary>
     private string Causes(DeathRecord death) => death.Causes.Count == 0
         ? "no damage logged"
         : string.Join(", ", death.Causes.Select(
-            c => c.Label + " " + Display.Amount(c.Amount) + (Avoidable(c.Label) ? " (avoidable)" : string.Empty)));
+            c => (Avoidable(c.Label) ? "avoidable " : string.Empty) + c.Label + " " + Display.Amount(c.Amount)));
 
     /// <summary>
     /// Whether the app worked out, from this run of attempts, that most of the group takes none of

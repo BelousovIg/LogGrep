@@ -144,7 +144,9 @@ public sealed class FindingAvoidableDamage : Scenario
         When.ILookAtPlayer("Earthen");
 
         Then.PlayerWasKilledByAvoidableDamage(Puddle)
-            .And.PlayerWasKilledBy(Ability.Melee);
+            .And.PlayerWasKilledBy(Ability.Melee)
+            // The column is trimmed on the right, so the mark has to be the first thing in it.
+            .And.TheDeathBreakdownOpensWith("avoidable Creeping Rot");
     }
 
     [Fact]

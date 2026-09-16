@@ -151,11 +151,16 @@ public sealed class Verification
     /// breakdown is whether what killed you was yours to avoid.
     /// </summary>
     public void PlayerWasKilledByAvoidableDamage(Ability spell)
-        => Assert.True(_page.Player.CausesText.Contains(spell.NameOf(), StringComparison.Ordinal)
-            && _page.Player.CausesText.Contains(spell.NameOf() + " ", StringComparison.Ordinal)
-            && _page.Player.CausesText.Contains("(avoidable)", StringComparison.Ordinal),
+        => Assert.True(_page.Player.CausesText.Contains("avoidable " + spell.NameOf(), StringComparison.Ordinal),
             $"'{spell.NameOf()}' should have been marked avoidable in the death of " +
             $"'{_page.Player.Name}'. What is shown: {_page.Player.CausesText}");
+
+    /// <summary>
+    /// The mark has to open the cell, not trail off the end of it - the column is trimmed on the
+    /// right, so a mark at the back is the first thing the reader loses.
+    /// </summary>
+    public void TheDeathBreakdownOpensWith(string expected)
+        => Assert.StartsWith(expected, _page.Player.CausesText, StringComparison.Ordinal);
     public void PlayerWasNotKilledBy(Ability spell)
         => Assert.True(!_page.Player.CausesText.Contains(spell.NameOf(), StringComparison.Ordinal),
             $"'{spell.NameOf()}' should not be blamed for the death of '{_page.Player.Name}'. " +
