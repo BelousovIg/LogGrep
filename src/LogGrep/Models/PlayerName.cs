@@ -27,6 +27,18 @@ public static class PlayerName
         return name + " - " + SplitWords(realm);
     }
 
+    /// <summary>
+    /// Just the character, with the realm dropped: "Ivarpriest-BurningLegion-EU" becomes
+    /// "Ivarpriest". Names are unique inside a group, so the realm only matters on hover.
+    /// </summary>
+    public static string Character(string raw)
+    {
+        if (string.IsNullOrEmpty(raw)) return string.Empty;
+
+        int dash = raw.IndexOf('-');
+        return dash <= 0 ? raw : raw[..dash];
+    }
+
     private static bool IsRegion(ReadOnlySpan<char> value)
     {
         foreach (string region in Regions)

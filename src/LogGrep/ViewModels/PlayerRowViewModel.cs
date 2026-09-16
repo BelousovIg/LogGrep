@@ -15,7 +15,11 @@ public sealed class PlayerRowViewModel
         _seconds = duration.TotalSeconds;
     }
 
-    public string Name => PlayerName.Format(_stats.Name);
+    /// <summary>The character on its own; the realm lives in the tooltip.</summary>
+    public string Name => PlayerName.Character(_stats.Name);
+
+    /// <summary>"Name - Realm", what the cell shows on hover.</summary>
+    public string FullName => PlayerName.Format(_stats.Name);
 
     public string ClassName => _stats.ClassName;
 

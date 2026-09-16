@@ -333,7 +333,7 @@
                                                                         <TextBlock Grid.Column="1"
                                                                                    Text="{Binding Name}"
                                                                                    Margin="0,0,10,0"
-                                                                                   ToolTip="{Binding Name}" />
+                                                                                   ToolTip="{Binding FullName}" />
                                                                         <TextBlock Grid.Column="2" Style="{StaticResource MutedText}"
                                                                                    Text="{Binding ClassName}" Margin="0,0,10,0"
                                                                                    Foreground="{Binding ClassBrush}" />

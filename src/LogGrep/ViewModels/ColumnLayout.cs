@@ -28,7 +28,7 @@ public sealed class ColumnLayout : ObservableObject
     private GridLength _pullDps = new(110);
     private GridLength _pullHps = new(110);
 
-    private GridLength _playerName = new(170);
+    private GridLength _playerName = new(140);
     private GridLength _playerClass = new(100);
     private GridLength _playerSpec = new(110);
     private GridLength _playerDps = new(85);
