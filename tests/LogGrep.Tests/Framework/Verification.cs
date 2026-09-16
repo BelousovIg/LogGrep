@@ -89,10 +89,26 @@ public sealed class Verification
 
     public void PlayerDtpsIs(string expected) => Assert.Equal(expected, _page.Player.DtpsText);
 
+    /// <summary>
+    /// The cell shows the first death and counts the rest, because it is narrow and right-aligned
+    /// and a full list ran off its left edge. Both halves are checked: what the cell says, and the
+    /// tooltip that still has to carry every time.
+    /// </summary>
     public void PlayerDiedAt(params TimeSpan[] expected)
-        => Assert.Equal(string.Join(", ", expected.Select(Display.Clock)), _page.Player.DeathsText);
+    {
+        string cell = expected.Length == 1
+            ? Display.Clock(expected[0])
+            : Display.Clock(expected[0]) + " +" + (expected.Length - 1);
 
-    public void PlayerDidNotDie() => Assert.Equal("-:--", _page.Player.DeathsText);
+        Assert.Equal(cell, _page.Player.DeathsText);
+        Assert.Equal(string.Join(", ", expected.Select(Display.Clock)), _page.Player.DeathsTooltip);
+    }
+
+    public void PlayerDidNotDie()
+    {
+        Assert.Equal("-:--", _page.Player.DeathsText);
+        Assert.Equal("This player did not die", _page.Player.DeathsTooltip);
+    }
 
 
     public void LogsWereRead(int expected)

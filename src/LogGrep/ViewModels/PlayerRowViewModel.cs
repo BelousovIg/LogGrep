@@ -98,9 +98,22 @@ public sealed class PlayerRowViewModel
 
     public bool Died => _stats.Deaths.Count > 0;
 
-    /// <summary>Every death as "m:ss", or "-:--" for a player who survived the pull.</summary>
-    public string DeathsText => _stats.Deaths.Count == 0
-        ? "-:--"
+    /// <summary>
+    /// The first death as "m:ss", with a count of the ones after it, or "-:--" for a player who
+    /// survived. The cell is right-aligned and narrow, so a list of every time ran off its left
+    /// edge and left the reader looking at ", 2:10" - a fixed width that cannot do that is worth
+    /// more here than the full list, which the tooltip carries.
+    /// </summary>
+    public string DeathsText => _stats.Deaths.Count switch
+    {
+        0 => "-:--",
+        1 => Display.Clock(_stats.Deaths[0].At),
+        _ => Display.Clock(_stats.Deaths[0].At) + " +" + (_stats.Deaths.Count - 1),
+    };
+
+    /// <summary>Every death, for the cell that only had room for the first.</summary>
+    public string DeathsTooltip => _stats.Deaths.Count == 0
+        ? "This player did not die"
         : string.Join(", ", _stats.Deaths.Select(d => Display.Clock(d.At)));
 
     /// <summary>

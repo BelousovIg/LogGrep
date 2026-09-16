@@ -287,7 +287,7 @@
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDps}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerHps}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" MinWidth="60" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" MinWidth="76" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="150" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerMistakes}" MinWidth="80" />
                                                         </Grid.ColumnDefinitions>
@@ -343,7 +343,7 @@
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDps}" MinWidth="60" />
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerHps}" MinWidth="60" />
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" MinWidth="60" />
-                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" MinWidth="60" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" MinWidth="76" />
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="150" />
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerMistakes}" MinWidth="80" />
                                                                         </Grid.ColumnDefinitions>
@@ -381,7 +381,9 @@
                                                                                    Grid.Column="7"
                                                                                    Style="{StaticResource NumberText}"
                                                                                    Foreground="{StaticResource MutedBrush}"
-                                                                                   Text="{Binding DeathsText}" />
+                                                                                   Text="{Binding DeathsText}"
+                                                                                   ToolTip="{Binding DeathsTooltip}"
+                                                                                   ToolTipService.ShowDuration="60000" />
                                                                         <TextBlock Grid.Column="8"
                                                                                    Style="{StaticResource MutedText}"
                                                                                    Text="{Binding CausesText}"
