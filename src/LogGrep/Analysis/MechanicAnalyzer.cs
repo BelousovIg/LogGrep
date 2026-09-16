@@ -9,12 +9,19 @@ public sealed record MechanicRule(
     string Encounter,
     Role Owner,
     int OwnerHits,
-    int TotalHits)
+    int TotalHits,
+    int Attempts)
 {
     public double Share => TotalHits > 0 ? OwnerHits / (double)TotalHits : 0;
 
-    /// <summary>"69 of 71 applications hit a tank" - the evidence the rule rests on.</summary>
-    public string Evidence => OwnerHits + " of " + TotalHits + " applications hit a " + Specs.NameOf(Owner);
+    /// <summary>
+    /// "69 of 71 hit a tank, over 13 attempts" - the evidence the rule rests on. The number of
+    /// attempts belongs here because a pattern drawn from one pull is a far weaker claim: a single
+    /// attempt where the same mistake happened repeatedly hides it, the wrong targets having become
+    /// the majority within that one sample.
+    /// </summary>
+    public string Evidence => OwnerHits + " of " + TotalHits + " hit a " + Specs.NameOf(Owner) +
+        ", over " + Attempts + (Attempts == 1 ? " attempt" : " attempts");
 }
 
 /// <summary>One application of a mechanic to somebody whose role does not own it.</summary>
@@ -85,7 +92,8 @@ public static class MechanicAnalyzer
                 pulls[0].EncounterName,
                 byRole.Key,
                 byRole.Count(),
-                applications.Count);
+                applications.Count,
+                applications.Select(a => a.PullNumber).Distinct().Count());
 
             foreach (var off in applications.Where(a => a.Role != byRole.Key))
             {

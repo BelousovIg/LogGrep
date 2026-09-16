@@ -80,8 +80,10 @@ public sealed class MainViewModel : ObservableObject
             if (_scan == null) return "Open a log to look for mechanics taken by the wrong role.";
             if (Rules.Count == 0)
             {
-                return "Nothing found. A mechanic is recognised by how it behaves across several " +
-                       "attempts of the same fight, so one or two pulls give nothing to compare.";
+                return "Nothing found. A mechanic only shows whose it is once it has been applied " +
+                       "often enough, so a short attempt finds nothing - and so does one where the " +
+                       "same mistake happened again and again, the wrong targets having become the " +
+                       "majority within that single sample. More attempts of the same fight help.";
             }
 
             int players = Rules.Sum(r => r.Findings.Count);

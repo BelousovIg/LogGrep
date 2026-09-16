@@ -101,6 +101,12 @@ the fight from `ENCOUNTER_START` to `ENCOUNTER_END` (or `CHALLENGE_MODE_START`/`
   test is what stops a raid-wide debuff from reading as a damage mechanic merely because most of a
   raid is damage - and it is why a tank mechanic, with tanks at a tenth of the group, stands out so
   clearly.
+* One attempt is enough for a rule to fire, if the spell landed often enough within it, but the
+  result is thin: on this log the thirteen attempts read together give 20 findings, while the same
+  attempts read one at a time give nothing at all in eight of them. The case that matters is an
+  attempt where the mistake repeated - there the wrong targets become the majority of the sample
+  and the rule never fires, which is why the evidence line carries the number of attempts it was
+  drawn from.
 
 ## Layout
 
