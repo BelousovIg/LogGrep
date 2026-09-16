@@ -359,20 +359,20 @@
                                                                                 Click="OnCopyPlayerName"
                                                                                 ToolTip="{Binding FullName}"
                                                                                 AutomationProperties.Name="Copy the full name" />
-                                                                        <StackPanel Grid.Column="2"
-                                                                                    Orientation="Horizontal"
-                                                                                    VerticalAlignment="Center"
-                                                                                    Margin="0,0,10,0">
-                                                                            <Path x:Name="RoleMark"
-                                                                                  Width="11" Height="11"
-                                                                                  Stretch="Uniform"
-                                                                                  Margin="0,0,6,0"
-                                                                                  Visibility="Collapsed" />
-                                                                            <TextBlock Style="{StaticResource MutedText}"
-                                                                                       Text="{Binding ClassName}"
-                                                                                       Foreground="{Binding ClassBrush}"
-                                                                                       TextTrimming="CharacterEllipsis" />
-                                                                        </StackPanel>
+                                                                        <!-- Sits in the indent column, which lines up under the
+                                                                             checkbox of the attempt this table belongs to. -->
+                                                                        <Path x:Name="RoleMark"
+                                                                              Grid.Column="0"
+                                                                              Width="11" Height="11"
+                                                                              Stretch="Uniform"
+                                                                              HorizontalAlignment="Right"
+                                                                              VerticalAlignment="Center"
+                                                                              Margin="0,0,8,0"
+                                                                              Visibility="Collapsed" />
+
+                                                                        <TextBlock Grid.Column="2" Style="{StaticResource MutedText}"
+                                                                                   Text="{Binding ClassName}" Margin="0,0,10,0"
+                                                                                   Foreground="{Binding ClassBrush}" />
                                                                         <TextBlock Grid.Column="3" Style="{StaticResource MutedText}"
                                                                                    Text="{Binding SpecName}" Margin="0,0,10,0" />
                                                                         <TextBlock Grid.Column="4" Style="{StaticResource NumberText}"
