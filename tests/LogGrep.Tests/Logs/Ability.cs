@@ -41,6 +41,13 @@ public enum Boss
     ForgottenDepths = 2703,
 }
 
+/// <summary>Keystone dungeons, under the challenge mode id the log records them with.</summary>
+public enum Dungeon
+{
+    TheRookery = 503,
+    DarkflameCleft = 504,
+}
+
 /// <summary>
 /// What the log prints for a spell or a boss. Almost every name is the enum member with spaces put
 /// back into it, so only the ones the game punctuates need saying twice.
@@ -56,6 +63,8 @@ public static class Named
         => Spelled.TryGetValue(ability, out string? name) ? name : Spaced(ability.ToString());
 
     public static string NameOf(this Boss boss) => Spaced(boss.ToString());
+
+    public static string NameOf(this Dungeon dungeon) => Spaced(dungeon.ToString());
 
     /// <summary>"HollowingStrikes" reads back as "Hollowing Strikes".</summary>
     private static string Spaced(string name)

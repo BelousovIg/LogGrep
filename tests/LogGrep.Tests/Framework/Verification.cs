@@ -24,6 +24,13 @@ public sealed class Verification
     public void EncountersAreListed(params Boss[] expected)
         => Assert.Equal(expected.Select(b => b.NameOf()).ToArray(), _page.Encounters.Select(e => e.Name).ToArray());
 
+
+    public void EncountersAreListed(params Dungeon[] expected)
+        => Assert.Equal(expected.Select(d => d.NameOf()).ToArray(), _page.Encounters.Select(e => e.Name).ToArray());
+
+    /// <summary>Which difficulty each row landed under, which is what keeps two of them apart.</summary>
+    public void EncounterDifficultiesAre(params string[] expected)
+        => Assert.Equal(expected, _page.Encounters.Select(e => e.DifficultyText).ToArray());
     public void EncounterIsOpened(bool expected)
         => Assert.True(expected == _page.Encounter.IsExpanded,
             $"'{_page.Encounter.Name}' should be {(expected ? "open" : "closed")} and is not.");
@@ -87,6 +94,36 @@ public sealed class Verification
 
     public void PlayerDidNotDie() => Assert.Equal("-:--", _page.Player.DeathsText);
 
+
+    public void LogsWereRead(int expected)
+        => Assert.True(expected == _page.Reading.Sources.Count,
+            $"The reading should hold {expected} files, it holds {_page.Reading.Sources.Count}: " +
+            string.Join(", ", _page.Reading.Sources.Select(s => s.Name)));
+
+    /// <summary>The files in the order the evening ran, which is what orders the attempts under it.</summary>
+    public void LogsAreOrdered(params DateTime[] evenings)
+        => Assert.Equal(evenings, _page.Reading.Sources.Select(s => s.Recorded.Date).ToArray());
+
+
+    /// <summary>Which file each attempt in the open encounter was kept from.</summary>
+    public void PullsCameFrom(params string[] expected)
+        => Assert.Equal(expected, _page.Encounter.Pulls.Select(p => p.Record.Source.Name).Distinct().ToArray());
+    public void PullsLasted(params TimeSpan[] expected)
+        => Assert.Equal(expected, _page.Encounter.Pulls.Select(p => p.Record.Duration).ToArray());
+
+    /// <summary>
+    /// What the app says about the reading itself rather than about the fights. The wording is the
+    /// app's own, so a scenario quotes the part of it that carries the meaning.
+    /// </summary>
+    public void ReadingNoted(string expected)
+        => Assert.True(_page.Reading.Notes.Any(n => n.Contains(expected, StringComparison.Ordinal)),
+            $"Nothing said '{expected}'. What was said: " +
+            (_page.Reading.Notes.Count == 0 ? "nothing" : string.Join(" ", _page.Reading.Notes)));
+
+    public void NothingWasRemarkedOn()
+        => Assert.True(_page.Reading.Notes.Count == 0,
+            "The reading should have passed without remark, and said: " +
+            string.Join(" ", _page.Reading.Notes));
     public void PlayerWasKilledBy(Ability spell)
         => Assert.True(_page.Player.CausesText.Contains(spell.NameOf(), StringComparison.Ordinal),
             $"'{_page.Player.Name}' should have been killed by '{spell.NameOf()}'. " +

@@ -42,7 +42,6 @@ public sealed class CombatLogScanner
     private ByteRange _zoneChange = ByteRange.Empty;
     private ByteRange _mapChange = ByteRange.Empty;
     private long _lastLineEnd;
-    private int _keystoneCounter;
     private IProgress<ScanProgress>? _progress;
 
 
@@ -59,11 +58,20 @@ public sealed class CombatLogScanner
         _open = null;
         _zoneChange = ByteRange.Empty;
         _mapChange = ByteRange.Empty;
-        _keystoneCounter = 0;
         _labels.Clear();
 
         var info = _fileSystem.FileInfo.New(path);
-        _result = new ScanResult { FilePath = path, FileSize = info.Length };
+        _result = new ScanResult
+        {
+            Source = new LogSource
+            {
+                Path = path,
+                Name = info.Name,
+                Size = info.Length,
+                Created = info.CreationTime,
+                Named = LogSource.TimeInName(info.Name),
+            },
+        };
 
         using var stream = _fileSystem.FileStream.New(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
             1 << 20, FileOptions.SequentialScan);
@@ -109,7 +117,7 @@ public sealed class CombatLogScanner
             if (bufferOrigin + filled >= nextProgressAt)
             {
                 nextProgressAt = bufferOrigin + filled + ProgressStep;
-                Report(new ScanProgress(_result.FileSize > 0 ? (bufferOrigin + filled) * 100.0 / _result.FileSize : 0, null));
+                Report(new ScanProgress(_result.Source.Size > 0 ? (bufferOrigin + filled) * 100.0 / _result.Source.Size : 0, null));
             }
         }
 
@@ -123,6 +131,8 @@ public sealed class CombatLogScanner
         // A log that was cut off mid-fight still gives us a usable (wiped) pull.
         if (_open != null) Close(_open, success: false, _lastLineEnd, TimeSpan.Zero, _open.LastTimestamp);
 
+        _result.Source.Pulls = _result.Pulls.Count;
+
         Report(new ScanProgress(100, null));
         return _result;
     }
@@ -135,6 +145,14 @@ public sealed class CombatLogScanner
 
         int eventStart = FindEventStart(line);
         if (eventStart < 0) return;
+
+        // The first timestamp in the file is when this log was being written, and it is the one
+        // thing about the file that copying it cannot change - so it, not the filesystem, is what
+        // places this log among the others.
+        if (_result.Source.Recorded == default)
+        {
+            _result.Source.Recorded = LogTimestamp.Parse(Timestamp(line, eventStart), default);
+        }
 
         var rest = line[eventStart..];
         int comma = rest.IndexOf((byte)',');
@@ -150,7 +168,7 @@ public sealed class CombatLogScanner
         switch (kind)
         {
             case EventKind.CombatLogVersion:
-                if (_result.Header.IsEmpty) _result.Header = new ByteRange(start, (int)(end - start));
+                if (_result.Source.Header.IsEmpty) _result.Source.Header = new ByteRange(start, (int)(end - start));
                 break;
 
             case EventKind.ZoneChange:
@@ -277,7 +295,9 @@ public sealed class CombatLogScanner
             LastTimestamp = startTime,
             Zone = _zoneChange,
             Map = _mapChange,
-            GroupKey = "M|" + (++_keystoneCounter), // every keystone run is its own row
+            // Every keystone run is its own row, and stays its own row when a second file is read
+            // beside this one - so the key has to name the file, not count within it.
+            GroupKey = "M|" + _result.Source.Path + "|" + start,
         };
     }
 
@@ -319,6 +339,7 @@ public sealed class CombatLogScanner
 
         var pull = new PullRecord
         {
+            Source = _result.Source,
             GroupKey = segment.GroupKey,
             EncounterName = segment.Name,
             EncounterId = segment.EncounterId,
@@ -342,7 +363,7 @@ public sealed class CombatLogScanner
         };
 
         _result.Pulls.Add(pull);
-        Report(new ScanProgress(_result.FileSize > 0 ? endOffset * 100.0 / _result.FileSize : 0, pull));
+        Report(new ScanProgress(_result.Source.Size > 0 ? endOffset * 100.0 / _result.Source.Size : 0, pull));
     }
 
     /// <summary>

@@ -22,6 +22,13 @@ public sealed class Given
         return this;
     }
 
+    /// <summary>Several nights at once, which is what the ten-attempt floor is usually waiting for.</summary>
+    public Given IOpenedLogs(params CombatLogBuilder[] logs)
+    {
+        _act.OpenLog(logs);
+        return this;
+    }
+
     public Given IExpandedEncounter(Boss boss)
     {
         _act.ToggleEncounter(boss);

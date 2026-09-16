@@ -23,7 +23,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly Dispatcher _dispatcher = Dispatcher.CurrentDispatcher;
     private readonly IFileSystem _fileSystem;
     private readonly LogExporter _exporter;
-    private ScanResult? _scan;
+    private Reading _reading = Reading.Nothing;
     private CancellationTokenSource? _cancellation;
 
     private string _logPath = string.Empty;
@@ -74,11 +74,14 @@ public sealed class MainViewModel : ObservableObject
 
     public bool HasFindings => Findings.Count > 0;
 
+    /// <summary>The files that are open and what came out of them, joined.</summary>
+    public Reading Reading => _reading;
+
     public string FindingsSummary
     {
         get
         {
-            if (_scan == null) return "Open a log to look for mistakes.";
+            if (_reading.Sources.Count == 0) return "Open a log to look for mistakes.";
             if (Findings.Count == 0)
             {
                 return "Nothing found. A mechanic only shows whose it is once it has been applied " +
@@ -151,37 +154,44 @@ public sealed class MainViewModel : ObservableObject
     public void Load(string path) => _ = LoadAsync(path);
 
     /// <summary>The same, awaitable, which is how a test knows the scan has finished.</summary>
-    public Task LoadAsync(string path)
+    public Task LoadAsync(params string[] paths)
     {
-        if (IsBusy || !_fileSystem.File.Exists(path)) return Task.CompletedTask;
-        return ScanAsync(path);
+        var present = paths.Where(_fileSystem.File.Exists).ToList();
+        return IsBusy || present.Count == 0 ? Task.CompletedTask : ScanAsync(present);
     }
 
     private void Open()
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Choose a combat log file",
+            Title = "Choose one or more combat log files",
             Filter = "WoW combat logs (*.txt)|*.txt|All files (*.*)|*.*",
             CheckFileExists = true,
+
+            // A tier is fought over several nights and several files, and the app needs ten
+            // attempts at a boss before it will say anything. One night's file often cannot reach
+            // that on its own; the same three files read together clear it without trying.
+            Multiselect = true,
         };
 
         if (dialog.ShowDialog() != true) return;
-        _ = ScanAsync(dialog.FileName);
+        _ = ScanAsync(dialog.FileNames);
     }
 
-    private async Task ScanAsync(string path)
+    private async Task ScanAsync(IReadOnlyList<string> paths)
     {
         Encounters.Clear();
         _groups.Clear();
         Findings = Array.Empty<Finding>();
-        _scan = null;
-        LogPath = path;
+        _reading = Reading.Nothing;
+        LogPath = paths.Count == 1
+            ? paths[0]
+            : paths.Count + " logs, starting with " + _fileSystem.Path.GetFileName(paths[0]);
         Progress = 0;
         IsBusy = true;
         RaiseSelectionChanged();
 
-        long size = _fileSystem.FileInfo.New(path).Length;
+        long size = paths.Sum(p => _fileSystem.FileInfo.New(p).Length);
         Status = "Reading " + FormatSize(size) + "…";
 
         _cancellation = new CancellationTokenSource();
@@ -191,17 +201,20 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var started = DateTime.UtcNow;
-            var scanner = new CombatLogScanner(_fileSystem);
-            var result = await Task.Run(() => scanner.Scan(path, progress, token), token);
+            var reading = await Task.Run(() => Read(paths, progress, token), token);
 
-            _scan = result;
-            BuildFindings(result.Pulls);
+            _reading = reading;
+            Rebuild(reading.Pulls);
+            BuildFindings(reading.Pulls);
             Progress = 100;
             var elapsed = DateTime.UtcNow - started;
-            Status = result.Pulls.Count == 0
-                ? "No fights found in this log (no ENCOUNTER_START / CHALLENGE_MODE_START)."
-                : "Done: " + Encounters.Count + " encounters, " + result.Pulls.Count + " pulls in " +
-                  elapsed.TotalSeconds.ToString("0.0", CultureInfo.InvariantCulture) + " s.";
+            Status = reading.IsEmpty
+                ? "No fights found (no ENCOUNTER_START / CHALLENGE_MODE_START)."
+                : Describe(reading, elapsed);
+
+            // Anything about the reading itself rather than about the fights: a file whose date
+            // does not match what is inside it, attempts that were in two of the files at once.
+            foreach (string note in reading.Notes) Status += "  " + note;
         }
         catch (OperationCanceledException)
         {
@@ -219,6 +232,66 @@ public sealed class MainViewModel : ObservableObject
             IsBusy = false;
             RaiseSelectionChanged();
         }
+    }
+
+    /// <summary>
+    /// Each file on its own, then joined. The scanner keeps no state between files, and the whole
+    /// of the joining - the order, the duplicates, what to say about either - is in one place.
+    /// </summary>
+    private Reading Read(IReadOnlyList<string> paths, IProgress<ScanProgress> progress, CancellationToken ct)
+    {
+        var scans = new List<ScanResult>(paths.Count);
+        var scanner = new CombatLogScanner(_fileSystem);
+
+        var sizes = paths.Select(p => _fileSystem.FileInfo.New(p).Length).ToList();
+        long total = sizes.Sum();
+        long done = 0;
+
+        for (int i = 0; i < paths.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            scans.Add(scanner.Scan(paths[i], new Share(progress, done, sizes[i], total), ct));
+            done += sizes[i];
+        }
+
+        return Reading.Of(scans);
+    }
+
+    /// <summary>
+    /// One file's progress as a share of all of them. A scanner only knows how far through its own
+    /// file it is, and four files each reporting their own hundred percent would run the bar to the
+    /// end four times.
+    /// </summary>
+    private sealed class Share : IProgress<ScanProgress>
+    {
+        private readonly IProgress<ScanProgress> _whole;
+        private readonly long _before;
+        private readonly long _size;
+        private readonly long _total;
+
+        public Share(IProgress<ScanProgress> whole, long before, long size, long total)
+        {
+            _whole = whole;
+            _before = before;
+            _size = size;
+            _total = total;
+        }
+
+        public void Report(ScanProgress value)
+        {
+            double bytes = _before + value.Percent / 100.0 * _size;
+            _whole.Report(new ScanProgress(_total > 0 ? bytes * 100.0 / _total : 0, value.Pull));
+        }
+
+    }
+    private string Describe(Reading reading, TimeSpan elapsed)
+    {
+        string files = reading.Sources.Count == 1
+            ? string.Empty
+            : " across " + reading.Sources.Count + " files";
+
+        return "Done: " + Encounters.Count + " encounters, " + reading.Pulls.Count + " pulls" + files +
+               " in " + elapsed.TotalSeconds.ToString("0.0", CultureInfo.InvariantCulture) + " s.";
     }
 
 
@@ -257,8 +330,11 @@ public sealed class MainViewModel : ObservableObject
     private void OnScanProgress(ScanProgress report)
     {
         Progress = report.Percent;
-        if (report.Pull is not { } pull) return;
+        if (report.Pull is { } pull) Place(pull);
+    }
 
+    private void Place(PullRecord pull)
+    {
         if (!_groups.TryGetValue(pull.GroupKey, out var encounter))
         {
             encounter = new EncounterViewModel(pull, Sorting, RaiseSelectionChanged, message => Status = message);
@@ -268,6 +344,20 @@ public sealed class MainViewModel : ObservableObject
         }
 
         encounter.Add(pull);
+    }
+
+    /// <summary>
+    /// The tree fills as the scan runs, so a large log shows its fights while it is still being
+    /// read. What arrives that way is one file at a time, in the order the files were handed over,
+    /// and it holds twice over whatever a pair of overlapping files both contain. Once the reading
+    /// is joined the tree is built again from it - the version that is right rather than early.
+    /// </summary>
+    private void Rebuild(IReadOnlyList<PullRecord> pulls)
+    {
+        Encounters.Clear();
+        _groups.Clear();
+
+        foreach (var pull in pulls) Place(pull);
     }
 
     private void Cancel() => _cancellation?.Cancel();
@@ -294,18 +384,19 @@ public sealed class MainViewModel : ObservableObject
 
     private void Export()
     {
-        if (_scan is not { } scan) return;
-
         var pulls = Encounters
             .SelectMany(e => e.Pulls)
             .Where(p => p.IsSelected)
             .Select(p => p.Record)
-            .OrderBy(p => p.StartOffset)
             .ToList();
 
         if (pulls.Count == 0) return;
 
-        string stem = _fileSystem.Path.GetFileNameWithoutExtension(scan.FilePath);
+        // The selection can now straddle several files, so the names offered are the first file's.
+        // Each attempt still goes back to its own source when the bytes are copied.
+        var first = _reading.Sources.Count > 0 ? _reading.Sources[0] : pulls[0].Source;
+        string stem = _fileSystem.Path.GetFileNameWithoutExtension(first.Path);
+        string folder = _fileSystem.Path.GetDirectoryName(first.Path) ?? string.Empty;
         if (AsSingleFile)
         {
             var dialog = new SaveFileDialog
@@ -314,13 +405,13 @@ public sealed class MainViewModel : ObservableObject
                 Filter = "WoW combat logs (*.txt)|*.txt|All files (*.*)|*.*",
                 DefaultExt = ".txt",
                 FileName = stem + "_export.txt",
-                InitialDirectory = _fileSystem.Path.GetDirectoryName(scan.FilePath) ?? string.Empty,
+                InitialDirectory = folder,
             };
 
             if (dialog.ShowDialog() != true) return;
             RunExport(() =>
             {
-                _exporter.ExportSingle(scan, pulls, dialog.FileName);
+                _exporter.ExportSingle(pulls, dialog.FileName);
                 return "Wrote " + pulls.Count + " pulls → " + dialog.FileName;
             });
         }
@@ -329,13 +420,13 @@ public sealed class MainViewModel : ObservableObject
             var dialog = new OpenFolderDialog
             {
                 Title = "Folder for the per-pull files",
-                InitialDirectory = _fileSystem.Path.GetDirectoryName(scan.FilePath) ?? string.Empty,
+                InitialDirectory = folder,
             };
 
             if (dialog.ShowDialog() != true) return;
             RunExport(() =>
             {
-                var files = _exporter.ExportSeparate(scan, pulls, dialog.FolderName);
+                var files = _exporter.ExportSeparate(pulls, dialog.FolderName);
                 return "Wrote " + files.Count + " files → " + dialog.FolderName;
             });
         }
@@ -403,21 +494,22 @@ public sealed class MainViewModel : ObservableObject
     /// </summary>
     private void ExportFindings()
     {
-        if (_scan is not { } scan || Findings.Count == 0) return;
+        if (_reading.Sources.Count == 0 || Findings.Count == 0) return;
 
+        var first = _reading.Sources[0];
         var dialog = new SaveFileDialog
         {
             Title = "Save the findings",
             Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
             DefaultExt = ".txt",
-            FileName = _fileSystem.Path.GetFileNameWithoutExtension(scan.FilePath) + "_findings.txt",
-            InitialDirectory = _fileSystem.Path.GetDirectoryName(scan.FilePath) ?? string.Empty,
+            FileName = _fileSystem.Path.GetFileNameWithoutExtension(first.Path) + "_findings.txt",
+            InitialDirectory = _fileSystem.Path.GetDirectoryName(first.Path) ?? string.Empty,
         };
 
         if (dialog.ShowDialog() != true) return;
 
         var text = new StringBuilder();
-        text.AppendLine("Mistakes found in " + scan.FilePath);
+        text.AppendLine("Mistakes found in " + string.Join(", ", _reading.Sources.Select(s => s.Name)));
         text.AppendLine();
 
         foreach (var player in Findings.GroupBy(f => f.Player).OrderByDescending(g => g.Sum(f => f.Cost.Weight)))

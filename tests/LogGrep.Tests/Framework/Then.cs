@@ -18,6 +18,24 @@ public sealed class Then
         return this;
     }
 
+    public Then EncountersAreListed(params Dungeon[] dungeons)
+    {
+        _check.EncountersAreListed(dungeons);
+        return this;
+    }
+
+    public Then EncounterDifficultiesAre(params string[] expected)
+    {
+        _check.EncounterDifficultiesAre(expected);
+        return this;
+    }
+
+    public Then PullsCameFrom(params string[] expected)
+    {
+        _check.PullsCameFrom(expected);
+        return this;
+    }
+
     public Then EncounterIsOpened(bool expected)
     {
         _check.EncounterIsOpened(expected);
@@ -117,6 +135,36 @@ public sealed class Then
     public Then PlayerDidNotDie()
     {
         _check.PlayerDidNotDie();
+        return this;
+    }
+
+    public Then LogsWereRead(int expected)
+    {
+        _check.LogsWereRead(expected);
+        return this;
+    }
+
+    public Then LogsAreOrdered(params DateTime[] evenings)
+    {
+        _check.LogsAreOrdered(evenings);
+        return this;
+    }
+
+    public Then PullsLasted(params TimeSpan[] expected)
+    {
+        _check.PullsLasted(expected);
+        return this;
+    }
+
+    public Then ReadingNoted(string expected)
+    {
+        _check.ReadingNoted(expected);
+        return this;
+    }
+
+    public Then NothingWasRemarkedOn()
+    {
+        _check.NothingWasRemarkedOn();
         return this;
     }
 

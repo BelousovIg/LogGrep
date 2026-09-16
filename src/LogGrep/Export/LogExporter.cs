@@ -9,6 +9,11 @@ namespace LogGrep.Export;
 /// Copies the selected pulls out of the source log byte for byte, so the result looks
 /// exactly like a log the game itself wrote: COMBAT_LOG_VERSION header, the zone/map
 /// context that was in effect, then the fight.
+///
+/// The attempts handed in may come from several files at once, and every offset one carries is an
+/// offset into its own file - so the exporter follows the attempt to its source rather than being
+/// told which file is open. Attempts are written in reading order, which keeps an export of a whole
+/// evening in the order the evening ran.
 /// </summary>
 public sealed class LogExporter
 {
@@ -24,35 +29,49 @@ public sealed class LogExporter
     public LogExporter(IFileSystem fileSystem) => _fileSystem = fileSystem;
 
     /// <summary>Writes every selected pull into one file. Returns the number of pulls written.</summary>
-    public int ExportSingle(ScanResult scan, IReadOnlyList<PullRecord> pulls, string destinationFile,
-        CancellationToken ct = default)
+    public int ExportSingle(IReadOnlyList<PullRecord> pulls, string destinationFile, CancellationToken ct = default)
     {
-        var ordered = pulls.OrderBy(p => p.StartOffset).ToList();
+        var ordered = InOrder(pulls);
         if (ordered.Count == 0) return 0;
 
-        using var source = OpenSource(scan.FilePath);
         using var destination = Create(destinationFile);
+        using var sources = new Sources(_fileSystem);
         byte[] buffer = new byte[CopyBufferSize];
 
-        WriteRange(source, destination, scan.Header, buffer);
+        // One header, from the first file the export draws on. Every log of a given build carries
+        // the same one, and a second COMBAT_LOG_VERSION halfway down a file is not something the
+        // game ever writes.
+        WriteRange(sources.For(ordered[0].Source), destination, ordered[0].Source.Header, buffer);
 
-        long lastZone = -1;
-        long lastMap = -1;
+        var lastZone = ByteRange.Empty;
+        var lastMap = ByteRange.Empty;
+        LogSource? lastSource = null;
+
         foreach (var pull in ordered)
         {
             ct.ThrowIfCancellationRequested();
+            var source = sources.For(pull.Source);
 
-            // Only repeat the zone/map context when it actually changed between pulls.
-            if (!pull.ZoneChange.IsEmpty && pull.ZoneChange.Offset != lastZone)
+            // Offsets only mean anything within their own file, so crossing into another one makes
+            // the context stale whatever the numbers say.
+            if (!ReferenceEquals(lastSource, pull.Source))
             {
-                WriteRange(source, destination, pull.ZoneChange, buffer);
-                lastZone = pull.ZoneChange.Offset;
+                lastZone = ByteRange.Empty;
+                lastMap = ByteRange.Empty;
+                lastSource = pull.Source;
             }
 
-            if (!pull.MapChange.IsEmpty && pull.MapChange.Offset != lastMap)
+            // Only repeat the zone/map context when it actually changed between pulls.
+            if (!pull.ZoneChange.IsEmpty && pull.ZoneChange != lastZone)
+            {
+                WriteRange(source, destination, pull.ZoneChange, buffer);
+                lastZone = pull.ZoneChange;
+            }
+
+            if (!pull.MapChange.IsEmpty && pull.MapChange != lastMap)
             {
                 WriteRange(source, destination, pull.MapChange, buffer);
-                lastMap = pull.MapChange.Offset;
+                lastMap = pull.MapChange;
             }
 
             WriteFight(source, destination, pull, buffer);
@@ -62,26 +81,28 @@ public sealed class LogExporter
     }
 
     /// <summary>Writes each selected pull into its own file inside <paramref name="destinationFolder"/>.</summary>
-    public IReadOnlyList<string> ExportSeparate(ScanResult scan, IReadOnlyList<PullRecord> pulls,
-        string destinationFolder, CancellationToken ct = default)
+    public IReadOnlyList<string> ExportSeparate(IReadOnlyList<PullRecord> pulls, string destinationFolder,
+        CancellationToken ct = default)
     {
         _fileSystem.Directory.CreateDirectory(destinationFolder);
 
-        string stem = _fileSystem.Path.GetFileNameWithoutExtension(scan.FilePath);
         var written = new List<string>();
         var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        using var source = OpenSource(scan.FilePath);
+        using var sources = new Sources(_fileSystem);
         byte[] buffer = new byte[CopyBufferSize];
 
-        foreach (var pull in pulls.OrderBy(p => p.StartOffset))
+        foreach (var pull in InOrder(pulls))
         {
             ct.ThrowIfCancellationRequested();
 
+            var source = sources.For(pull.Source);
+            string stem = _fileSystem.Path.GetFileNameWithoutExtension(pull.Source.Path);
             string path = UniquePath(destinationFolder, BuildFileName(stem, pull), used);
+
             using (var destination = Create(path))
             {
-                WriteRange(source, destination, scan.Header, buffer);
+                WriteRange(source, destination, pull.Source.Header, buffer);
                 WriteRange(source, destination, pull.ZoneChange, buffer);
                 WriteRange(source, destination, pull.MapChange, buffer);
                 WriteFight(source, destination, pull, buffer);
@@ -92,6 +113,10 @@ public sealed class LogExporter
 
         return written;
     }
+
+    /// <summary>Reading order: the files as the evening ran, the attempts as they sit in each.</summary>
+    private static List<PullRecord> InOrder(IReadOnlyList<PullRecord> pulls)
+        => pulls.OrderBy(p => p.Source.Order).ThenBy(p => p.StartOffset).ToList();
 
     /// <summary>"WoWCombatLog-090126_Gnarlroot_2026-09-15_20-15-31.txt"</summary>
     public static string BuildFileName(string sourceStem, PullRecord pull)
@@ -106,8 +131,34 @@ public sealed class LogExporter
         return name.ToString();
     }
 
-    private Stream OpenSource(string path)
-        => _fileSystem.FileStream.New(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, CopyBufferSize, FileOptions.RandomAccess);
+    /// <summary>
+    /// The files an export is drawing on, opened once each and held until it is done. An evening of
+    /// several logs alternates between them only when it crosses from one to the next, but opening
+    /// a 1.4 GB file per attempt would be paid for on every attempt.
+    /// </summary>
+    private sealed class Sources : IDisposable
+    {
+        private readonly IFileSystem _fileSystem;
+        private readonly Dictionary<string, Stream> _open = new(StringComparer.OrdinalIgnoreCase);
+
+        public Sources(IFileSystem fileSystem) => _fileSystem = fileSystem;
+
+        public Stream For(LogSource source)
+        {
+            if (_open.TryGetValue(source.Path, out var stream)) return stream;
+
+            stream = _fileSystem.FileStream.New(source.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
+                CopyBufferSize, FileOptions.RandomAccess);
+            _open[source.Path] = stream;
+            return stream;
+        }
+
+        public void Dispose()
+        {
+            foreach (var stream in _open.Values) stream.Dispose();
+            _open.Clear();
+        }
+    }
 
     private Stream Create(string path)
         => _fileSystem.FileStream.New(path, FileMode.Create, FileAccess.Write, FileShare.None, CopyBufferSize);

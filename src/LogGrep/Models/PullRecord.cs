@@ -40,6 +40,9 @@ public sealed class PullRecord
     public long Damage { get; set; }
     public long Healing { get; set; }
 
+    /// <summary>The file this attempt was read out of, and that every offset below points into.</summary>
+    public required LogSource Source { get; init; }
+
     /// <summary>Byte range of the whole fight, from the START line to the end of the END line.</summary>
     public long StartOffset { get; init; }
     public long EndOffset { get; set; }
@@ -59,9 +62,7 @@ public sealed class PullRecord
 /// <summary>Everything the scanner learned about one log file.</summary>
 public sealed class ScanResult
 {
-    public required string FilePath { get; init; }
-    public long FileSize { get; init; }
-    /// <summary>The COMBAT_LOG_VERSION header line, re-emitted at the top of every exported file.</summary>
-    public ByteRange Header { get; set; } = ByteRange.Empty;
+    public required LogSource Source { get; init; }
+
     public List<PullRecord> Pulls { get; } = new();
 }

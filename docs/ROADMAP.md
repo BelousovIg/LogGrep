@@ -135,7 +135,7 @@ no new plumbing. The panel is gone; the report lives in the roster, one row per 
 four fields under the tooltip and `Save report` in the footer writing it out per player. Measured on
 the 1.4 GB log: 26 attempts, 20 findings, 15 of which cost a death.
 
-### 2. Several logs, one evening
+### 2. Several logs, one evening — done
 
 The floor of ten attempts is what the app pays for having no written rules, and a single night's
 file often cannot afford it. A tier is fought over several nights and several files, and read
@@ -169,6 +169,22 @@ looks like a habit, which is the one thing the ten-attempt floor exists to preve
 be matched on their encounter and start time, the duplicate dropped, and the person told.
 
 Ends with: a tier read as one body of evidence instead of one night at a time.
+
+What it came out as: `LogSource` is the file, and every attempt carries the one it was read from, so
+the exporter follows the attempt back to its own bytes rather than being told which file is open.
+`Reading.Of` does the joining in one place - the order, the duplicates, and what to say about
+either. Raid bosses merge on the key that already grouped them inside one file; a keystone run now
+keys on its file and offset rather than on a counter that started again in each file, which would
+have folded two nights' runs into one row.
+
+Where it departed from the plan: files are ordered by the first timestamp *inside* the log rather
+than by creation time. Creation time is the half a copy resets, and ordering on it presents the
+evening backwards - which the plan set out to avoid. It is still read, and so is the timestamp in
+the file name; a disagreement with either becomes a note rather than a silent reordering.
+
+Measured on the real folder: the 1.4 GB log opened with two of its own exports reads as 3 files and
+26 attempts rather than 28, the two shared attempts kept from the full log, and the findings stay at
+20 instead of doubling.
 
 ### 3. Mechanics, widened
 

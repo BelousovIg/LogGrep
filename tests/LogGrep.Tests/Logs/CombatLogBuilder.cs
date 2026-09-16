@@ -30,10 +30,51 @@ public sealed class CombatLogBuilder
 
     private readonly StringBuilder _text = new();
     private readonly List<Fighter> _roster = new();
-    private DateTime _start = new(2026, 9, 15, 20, 0, 0);
+    private DateTime _start = Evening(2026, 9, 15);
+    private DateTime _origin = Evening(2026, 9, 15) - TimeSpan.FromMinutes(1);
+    private DateTime? _copied;
+    private string? _name;
     private Boss _boss = Boss.TheSoulcoiler;
 
     internal string BossName => _boss.NameOf();
+
+    /// <summary>When the log itself says it was written - the first line, and every line after it.</summary>
+    internal DateTime Recorded => _origin;
+
+    /// <summary>What the filesystem will claim, which a copy from another machine resets.</summary>
+    internal DateTime Created => _copied ?? _origin;
+
+    /// <summary>The name the game would give this file, which carries its own timestamp.</summary>
+    internal string FileName
+        => _name ?? "WoWCombatLog-" + _origin.ToString("MMddyy_HHmmss", CultureInfo.InvariantCulture) + ".txt";
+
+    /// <summary>A file under a name of somebody's own - an export, rather than what the game wrote.</summary>
+    public CombatLogBuilder Called(string name)
+    {
+        _name = name;
+        return this;
+    }
+
+    /// <summary>Eight in the evening on that day, which is when a raid night starts.</summary>
+    public static DateTime Evening(int year, int month, int day) => new(year, month, day, 20, 0, 0);
+
+    /// <summary>Which evening this log was recorded on. Files are read in the order they were.</summary>
+    public CombatLogBuilder On(DateTime evening)
+    {
+        _start = evening;
+        _origin = evening - TimeSpan.FromMinutes(1);
+        return this;
+    }
+
+    /// <summary>
+    /// A file carried over from another machine, whose creation date is the day it was copied and
+    /// says nothing about the night it holds.
+    /// </summary>
+    public CombatLogBuilder CopiedOn(DateTime when)
+    {
+        _copied = when;
+        return this;
+    }
 
     public CombatLogBuilder Raid(params Fighter[] fighters)
     {
@@ -78,6 +119,25 @@ public sealed class CombatLogBuilder
     }
 
     /// <summary>
+    /// One keystone run. Unlike a boss, a run is never grouped with another - two runs of the same
+    /// dungeon are two separate things that happen to share a name.
+    /// </summary>
+    public CombatLogBuilder Keystone(Dungeon zone, int level, Action<PullBuilder> body)
+    {
+        Line(_start, $"CHALLENGE_MODE_START,\"{zone.NameOf()}\",2521,{(int)zone},{level},[9,10]");
+        foreach (var fighter in _roster) Line(_start, CombatantInfo(fighter));
+
+        var run = new PullBuilder(this, _start);
+        body(run);
+
+        Line(_start + run.Length, $"CHALLENGE_MODE_END,2521,{(run.Won ? 1 : 0)},{level}," +
+                                  $"{(long)run.Length.TotalMilliseconds},0");
+
+        _start += run.Length + TimeSpan.FromMinutes(1);
+        return this;
+    }
+
+    /// <summary>
     /// The same attempt, several times over. A rule is only drawn from a run of attempts, so a
     /// scenario about one needs a run of them, and writing ten out by hand would bury the one line
     /// that differs.
@@ -91,7 +151,8 @@ public sealed class CombatLogBuilder
     public string Build()
     {
         var log = new StringBuilder();
-        log.AppendLine("9/15/2026 19:59:00.000  COMBAT_LOG_VERSION,22,ADVANCED_LOG_ENABLED,1,BUILD_VERSION,12.0.0,PROJECT_ID,1");
+        log.Append(_origin.ToString("M/d/yyyy HH:mm:ss.fff", CultureInfo.InvariantCulture))
+           .AppendLine("  COMBAT_LOG_VERSION,22,ADVANCED_LOG_ENABLED,1,BUILD_VERSION,12.0.0,PROJECT_ID,1");
         log.Append(_text);
         return log.ToString();
     }

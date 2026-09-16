@@ -1,6 +1,7 @@
 using System.IO.Abstractions.TestingHelpers;
 using System.Windows.Threading;
 using LogGrep.Analysis;
+using LogGrep.Models;
 using LogGrep.Tests.Logs;
 using LogGrep.ViewModels;
 
@@ -16,7 +17,8 @@ namespace LogGrep.Tests.Framework;
 /// </summary>
 public sealed class LogGrepPage
 {
-    public const string LogPath = @"C:\logs\WoWCombatLog.txt";
+    /// <summary>Where the fake disk keeps the logs a scenario writes.</summary>
+    public const string Folder = @"C:\logs\";
 
     private readonly MockFileSystem _disk = new();
     private readonly Dispatcher _dispatcher;
@@ -41,6 +43,8 @@ public sealed class LogGrepPage
 
     public IReadOnlyList<Finding> Findings => ViewModel.Findings;
 
+    public Reading Reading => ViewModel.Reading;
+
     /// <summary>Findings whose headline names that spell, which is how a scenario asks about one.</summary>
     public IReadOnlyList<Finding> FindingsFor(Ability spell)
         => Findings.Where(f => f.Headline.StartsWith(spell.NameOf(), StringComparison.Ordinal)).ToList();
@@ -54,10 +58,21 @@ public sealed class LogGrepPage
     public PlayerRowViewModel Player => _player ?? throw new InvalidOperationException(
         "No player is being looked at. Look at one first.");
 
-    public void Open(string path, string log)
+    /// <summary>
+    /// Puts the logs on the fake disk under the names the game would have given them, with the
+    /// creation dates each one claims, and opens the lot together.
+    /// </summary>
+    public void Open(params CombatLogBuilder[] logs)
     {
-        _disk.AddFile(path, new MockFileData(log));
-        Pump(ViewModel.LoadAsync(path));
+        var paths = new string[logs.Length];
+
+        for (int i = 0; i < logs.Length; i++)
+        {
+            paths[i] = Folder + logs[i].FileName;
+            _disk.AddFile(paths[i], new MockFileData(logs[i].Build()) { CreationTime = logs[i].Created });
+        }
+
+        Pump(ViewModel.LoadAsync(paths));
     }
 
     /// <summary>Runs the dispatcher until the scan is done, the way a running window would.</summary>
@@ -72,7 +87,6 @@ public sealed class LogGrepPage
         task.GetAwaiter().GetResult();
     }
 
-    public void Open(CombatLogBuilder log) => Open(LogPath, log.Build());
 
     public void LookAtEncounter(Boss boss)
         => _encounter = Encounters.FirstOrDefault(e => e.Name == boss.NameOf())

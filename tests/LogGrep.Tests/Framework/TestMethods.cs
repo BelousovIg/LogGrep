@@ -12,7 +12,7 @@ public sealed class TestMethods
 
     public TestMethods(LogGrepPage page) => _page = page;
 
-    public void OpenLog(CombatLogBuilder log) => _page.Open(log);
+    public void OpenLog(params CombatLogBuilder[] logs) => _page.Open(logs);
 
     public void ToggleEncounter(Boss boss) => _page.ToggleEncounter(boss);
 
