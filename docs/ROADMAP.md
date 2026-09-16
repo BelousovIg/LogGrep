@@ -128,7 +128,42 @@ everything after this adds detectors. Replace the findings panel with the per-pl
 
 Ends with: the same mechanics findings, ranked by what they cost, each with a sentence of advice.
 
-### 2. Mechanics, widened
+### 2. Several logs, one evening
+
+The floor of ten attempts is what the app pays for having no written rules, and a single night's
+file often cannot afford it. A tier is fought over several nights and several files, and read
+together they clear the floor easily. This is the cheapest way to make everything after it
+productive.
+
+**How they join.** Raid bosses merge across files by encounter and difficulty, which is the grouping
+already used inside one file, so heroic and mythic attempts at one boss stay apart as they should.
+Dungeon and keystone runs stay one row each, because each run is its own thing.
+
+**The order.** Files by the time they were created; attempts inside a file by where they appear,
+front to back.
+
+**What it costs to build.** Every byte range in the model - the attempts, the header, the zone and
+map context - is an offset into one particular file, and export copies raw bytes back out of it.
+Those offsets have to learn which file they belong to, and the exporter has to open the right source
+per attempt. That is the bulk of the work. The grouping itself is nearly free, since the keys are
+already right.
+
+**Two hazards worth naming before they bite.**
+
+*Creation time is not always the truth.* A log copied from another machine gets a new creation time
+and sorts wrong. The log carries its own: the file name has a timestamp and the first line has
+another. Take creation time as specified, cross-check the first timestamp, and say something when
+the two disagree rather than quietly presenting the evening backwards.
+
+*Overlapping files double-count.* An exported slice opened alongside the log it was cut from shows
+every attempt twice - and the folder these were all tested against holds exactly that: a 1.4 GB log
+and four exports taken out of it. A doubled attempt inflates every count, and a doubled mistake
+looks like a habit, which is the one thing the ten-attempt floor exists to prevent. Attempts have to
+be matched on their encounter and start time, the duplicate dropped, and the person told.
+
+Ends with: a tier read as one body of evidence instead of one night at a time.
+
+### 3. Mechanics, widened
 
 The enrichment statistic already written, pointed at three more event shapes:
 
@@ -140,7 +175,7 @@ The enrichment statistic already written, pointed at three more event shapes:
 
 Ends with: most of what a raid leader reads Wipefest for, with no per-boss rules to maintain.
 
-### 3. Why somebody died
+### 4. Why somebody died
 
 A death is the loudest thing in a log and the app currently says only what landed beforehand. The
 first question is not what killed them, it is **whether it was their death at all**.
@@ -172,7 +207,7 @@ advanced block. They are the whole basis of this milestone and cost nothing to s
 Ends with: a death that explains itself - whether it was the raid's or the player's, and if the
 player's, whether they were bursted, ground down, or beyond saving.
 
-### 4. Execution, without knowing the class
+### 5. Execution, without knowing the class
 
 Three signals that need no class knowledge at all:
 
@@ -184,7 +219,7 @@ Three signals that need no class knowledge at all:
 Ends with: rotation findings for every spec in the game, including the ones nobody wrote a module
 for, at the price of being less specific than one that was.
 
-### 5. The yardstick
+### 6. The yardstick
 
 Formalise the baselines so every detector can pick one: the group on this attempt, the player across
 their own attempts, and where it exists, another player of the same spec in the same log.
@@ -192,7 +227,7 @@ their own attempts, and where it exists, another player of the same spec in the 
 Ends with: findings phrased as "you usually do this, and this time you did not", which is the form
 advice is actually accepted in.
 
-### 6. Talents and builds
+### 7. Talents and builds
 
 The tree is in the log, so what was run is known exactly. Without a corpus we can still say what
 changed between attempts and whether output followed, and whether a talent sat unused - a node taken
@@ -200,7 +235,7 @@ and its spell never cast is a finding needing no reference data whatsoever.
 
 Ends with: build findings that are certain, and an honest blank where certainty is not available.
 
-### 7. The night, summed up
+### 8. The night, summed up
 
 Everything so far answers "what went wrong here". An evening also has a shape, and it is the shape
 a raid leader argues about afterwards.
@@ -229,7 +264,7 @@ count. "Best player" is an opinion and does not belong here.
 Ends with: an evening a raid leader can read in one screen, with the good and the bad held to the
 same evidence.
 
-### 8. Rules that may rot, and the log that catches them
+### 9. Rules that may rot, and the log that catches them
 
 A derived rule needs ten attempts. A written one works from the first pull and can carry the one
 thing derivation never will: what the mechanic is *for*. The two are not rivals - they fail in
@@ -287,7 +322,7 @@ did not", which is a different detector and a different sentence.
 Ends with: coverage from the first pull, an advice line written by the people who made the fight,
 and a rule file that announces its own decay.
 
-### 9. Reference data, if it turns out to be wanted
+### 10. Reference data, if it turns out to be wanted
 
 Only here, and only if "what should good look like" is still missing by then. This is where an
 Archon-style aggregate would plug in, and the terms of use of whoever provides it are a real
@@ -322,14 +357,19 @@ adds a detector, and detectors that each invent their own shape of output are ho
 with forty findings nobody can sort. Cost and evidence have to exist before there is anything to
 rank.
 
-The second is next because it is nearly free: the statistic is written, tested, and proven on a real
-log. Pointing it at damage taken is a day of work for the largest single gain in the plan.
+Reading several logs is second because the analysis is currently starving. The ten-attempt floor is
+the right rule and it means one night's file usually yields nothing; the same nights read together
+clear it without a line of new analysis. Every detector added after this gets a wider sample for
+free.
 
-Deaths come third because they are what a raid leader opens the app for, and because the collective
+The third is nearly free in itself: the statistic is written, tested, and proven on a real log.
+Pointing it at damage taken is a day of work for the largest single gain in the plan.
+
+Deaths come fourth because they are what a raid leader opens the app for, and because the collective
 versus individual split is the difference between a report worth reading and one that cries wolf on
 every wipe.
 
-The fourth is where the app stops being a mechanics tool and starts being a coach, and it is also
+The fifth is where the app stops being a mechanics tool and starts being a coach, and it is also
 where it will be wrong most often. Dead time on a fight with a forced break in it is not a mistake.
 Expect to spend as long tuning thresholds as writing detectors, and expect the ignore control to
 earn its place there rather than in the mechanics list.
