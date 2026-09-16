@@ -200,7 +200,85 @@ and its spell never cast is a finding needing no reference data whatsoever.
 
 Ends with: build findings that are certain, and an honest blank where certainty is not available.
 
-### 7. Reference data, if it turns out to be wanted
+### 7. The night, summed up
+
+Everything so far answers "what went wrong here". An evening also has a shape, and it is the shape
+a raid leader argues about afterwards.
+
+At the encounter, across all of its attempts:
+
+- **Mistakes**, totalled and split - by player, by mechanic, and by half of the evening, because
+  somebody who made four in the first six attempts and none in the last seven is the good news and
+  currently reads the same as somebody who made four throughout.
+- **Deaths**, and more usefully **who died first**. The first death of an attempt is often the one
+  that caused the rest, and a player who is first in nine attempts out of thirteen is a finding on
+  their own.
+- **Consistency.** The spread of a player's output across the attempts. Steady at a fair number
+  beats spiky at a high one, and the spread says which it was.
+- **What a player led.** Top damage in nine of thirteen, top healing in eleven - a fact, plainly
+  counted.
+
+And the counterweight, which matters as much: **the things that went right.** Survived every
+attempt. Took nothing that was not theirs all evening. Improved the most across the night. A report
+that only ever accuses is a report people stop opening, and these cost nothing to compute from data
+already gathered.
+
+One rule for the praise: it is held to the same standard as the blame. "Top damage in 9 of 13" is a
+count. "Best player" is an opinion and does not belong here.
+
+Ends with: an evening a raid leader can read in one screen, with the good and the bad held to the
+same evidence.
+
+### 8. Rules that may rot, and the log that catches them
+
+A derived rule needs ten attempts. A written one works from the first pull and can carry the one
+thing derivation never will: what the mechanic is *for*. The two are not rivals - they fail in
+opposite directions, which is exactly why both are worth having.
+
+**Where the writing comes from.** Not from guides: prose has to be read by a language model, which
+invents confidently at that volume, and it rots faster than anything. Not from BigWigs or DBM
+either - checked, and neither permits it. BigWigs states `All Rights Reserved: You are free to fork
+and modify on GitHub, please ask us about anything else`, which puts this squarely in "ask". DBM
+ships an `All Rights Reserved` file granting nothing at all. Method Raid Tools has no public
+licensed source. Their curated tables are theirs; the underlying facts are not, but a compilation
+can be, so the line is: derive the same facts ourselves, do not copy their work.
+
+Which leaves the source that is both authoritative and clean: **Blizzard's own journal**, through
+the Battle.net Game Data API. Its encounter endpoints give the section structure - Tank, DPS,
+Healer - the spell ids named in each, and `body_text`, which is Blizzard's own tactical advice and
+therefore the "what to do" line we thought a person would have to write. No addon needed. It wants
+an OAuth key, so the fetch belongs offline: a script pulls it once per tier and writes the rules
+file, which is also the answer to who maintains that file - a script does, and a person only edits
+the advice.
+
+**And the log audits all of it.** A section flagged for tanks means tanks should care, which is not
+the same claim as "it lands on a tank" - an ability the whole raid takes while the tank must react
+is flagged the same way. So every written rule is checked against what the log says, and where they
+disagree the app says so instead of quietly reporting nonsense:
+
+```
+Possession Barrage - the file says tank, thirteen attempts say damage (64 of 71)
+The rule is stale or it was never about who it lands on. Findings from it are muted.
+```
+
+Nobody else can do this, for the plain reason that nobody else has a second, independent source of
+truth to check the first against. We do, and it is free.
+
+The worked example that proves the need: Possession Barrage is two spell ids. One marks a single
+player - a tank, 69 times in 71. The other damages the whole raid. A damage dealer hit by the second
+is normal; hit by the first, it is a mistake. The engine already keys rules on id rather than name
+and so gets this right by construction, but a file naming the wrong half of the ability would flag
+every damage dealer in every pull, and only the log would ever notice.
+
+**Also derivable, and worth having on its own:** how many players an ability lands on per cast. One
+is a mark, most of the group is raid-wide, a handful is a spread. Only a mark can produce "you took
+somebody else's mechanic"; a raid-wide ability can only produce "you took it when eighteen others
+did not", which is a different detector and a different sentence.
+
+Ends with: coverage from the first pull, an advice line written by the people who made the fight,
+and a rule file that announces its own decay.
+
+### 9. Reference data, if it turns out to be wanted
 
 Only here, and only if "what should good look like" is still missing by then. This is where an
 Archon-style aggregate would plug in, and the terms of use of whoever provides it are a real
@@ -214,9 +292,17 @@ The tree - encounters, attempts, players - is the spine and stays. It is how a n
 the app reads it well.
 
 What changes is that the tree becomes the navigation and stops being the product. The product is the
-report: pick a player, see their night. The mistakes columns are the first draft of that already,
-and the findings panel is the part that should go, because a rule with no person attached to it is
-not what anyone opened the app to read.
+report, and the report is reached from the row it is about.
+
+**The findings button goes.** A rule with nobody attached to it is not what anyone opened the app
+to read, and a panel off to one side is the wrong place for an answer about a fight.
+
+**Analyse sits on the attempt.** A mistake is always made in a particular pull, and that is where
+somebody goes looking for it. That the rule behind it was drawn from all thirteen attempts is an
+implementation detail of the evidence line, not a reason to make the person navigate elsewhere.
+
+**And on the encounter, for the evening as a whole** - who made what, who died first, who led, who
+improved. Milestone seven is what that page shows.
 
 None of this needs the window thrown away.
 
