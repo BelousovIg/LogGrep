@@ -119,6 +119,35 @@ public sealed class ShowingTheLog : Scenario
         When.ILookAtPlayer("Nightblade");
         Then.PlayerRoleMarkIs("none");
     }
+
+    [Fact]
+    public void The_group_is_listed_tanks_first_then_healers_then_the_rest()
+    {
+        var log = new CombatLogBuilder()
+            .Raid(
+                Tank("Rockjaw", Spec.ProtectionWarrior),
+                Tank("Grimhide", Spec.VengeanceDemonHunter),
+                Healer("Sunwell", Spec.HolyPriest),
+                Healer("Lightwell", Spec.RestorationShaman),
+                Damage("Nightblade", Spec.AssassinationRogue),
+                Damage("Emberwild", Spec.ArcaneMage))
+            .Pull("The Soulcoiler", Difficulty.Mythic, p => p
+                .Lasting("1:40")
+                // Tanks rank by damage, so the weaker one comes second despite out-healing nobody.
+                .At("0:10").Deals("Grimhide", to: "The Soulcoiler", amount: 3_000_000)
+                .At("0:11").Deals("Rockjaw", to: "The Soulcoiler", amount: 2_000_000)
+                // Healers rank by healing, and their damage is beside the point.
+                .At("0:20").Heals("Lightwell", target: "Rockjaw", amount: 2_000_000)
+                .At("0:21").Heals("Sunwell", target: "Rockjaw", amount: 1_000_000)
+                .At("0:22").Deals("Sunwell", to: "The Soulcoiler", amount: 9_000_000)
+                .At("0:30").Deals("Nightblade", to: "The Soulcoiler", amount: 4_000_000)
+                .At("0:31").Deals("Emberwild", to: "The Soulcoiler", amount: 1_000_000)
+                .Wipe());
+
+        Given.IOpenedLog(log).And.IOpenedPull("The Soulcoiler", 1);
+
+        Then.PlayersAreOrdered("Grimhide", "Rockjaw", "Lightwell", "Sunwell", "Nightblade", "Emberwild");
+    }
     [Fact]
     public void Players_sort_by_the_column_that_was_clicked()
     {
@@ -131,7 +160,8 @@ public sealed class ShowingTheLog : Scenario
 
         Given.IOpenedLog(log).And.IOpenedPull("The Soulcoiler", 1);
 
-        Then.PlayersAreOrdered("Nightblade", "Emberwild", "Rockjaw", "Sunwell");
+        // Tanks lead, then healers, then the rest by damage.
+        Then.PlayersAreOrdered("Rockjaw", "Sunwell", "Nightblade", "Emberwild");
 
         When.ISortPlayersBy("Name");
         Then.PlayersAreOrdered("Emberwild", "Nightblade", "Rockjaw", "Sunwell");

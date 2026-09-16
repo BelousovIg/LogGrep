@@ -101,11 +101,25 @@ public sealed class PullViewModel : ObservableObject
 
     public string HpsText => Display.Rate(Record.Hps);
 
+
+    /// <summary>
+    /// The order a group is read in: the tanks, then the healers, then everyone else. It is how a
+    /// raid is talked about, and it keeps the two rows that matter most out of the middle of a
+    /// list of twenty.
+    /// </summary>
+    private static int Group(PlayerRowViewModel player) => player.IsTank ? 0 : player.IsHealer ? 1 : 2;
+
+    /// <summary>Within a group, by what that group is there to do: healing for the healers, damage for the rest.</summary>
+    private static double Score(PlayerRowViewModel player) => player.IsHealer ? player.HpsValue : player.DpsValue;
+
     private ListCollectionView CreatePlayersView()
     {
         var mistakes = _mistakes.ToLookup(m => m.Player, StringComparer.Ordinal);
         var rows = Record.Roster
             .Select(stats => new PlayerRowViewModel(stats, Record.Duration, Owner.Report, mistakes[stats.Name].ToArray()))
+            .OrderBy(Group)
+            .ThenByDescending(Score)
+            .ThenBy(p => p.Name, StringComparer.CurrentCulture)
             .ToList();
 
         return new ListCollectionView(rows) { CustomSort = Sorting.Players.Comparer };

@@ -81,6 +81,10 @@ are the words a scenario is written in. Rewire the window and only the page obje
   deaths comma separated), and what had been hitting them over the last 10 seconds before each
   death. With more than one death the causes are bracketed per death; hover for the full list.
   The class is painted in Blizzard's class colour, the palette the game and the log sites use.
+* The group is listed the way it is talked about: the tanks, then the healers, then everyone else.
+  Inside each, by what that group is there to do - healing for the healers, damage for the rest - so
+  a healer who happens to deal a lot of damage still ranks by their healing. Clicking any header
+  replaces this with that column, and it comes back on the next log.
 * A role mark sits to the left of the name, in the indent, which lands under the checkbox of the
   attempt the table belongs to: a shield for a tank, a cross for a healer, and nothing for damage.
   They are the shapes the game itself uses, drawn rather than copied, since its art is not ours to
