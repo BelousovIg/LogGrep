@@ -197,9 +197,37 @@ reports eighteen mistakes for one wipe will be closed and not reopened.
 - **Attrition.** No single large hit, but a stack count that climbed - the dose is in the log - or a
   steady stream that outran the healing. This is a different conversation: it belongs to the healers
   as much as to the person who died.
-- **Unhealable.** The time between dropping low and dying. Under about two seconds no healer could
-  have reacted, and saying so protects the healer from a finding that was never theirs. Over ten,
-  somebody was not watching.
+- **Unhealable.** Not by reaction time - healers always react, and a player left with no healing for
+  ten seconds is not a thing that happens. By throughput: did the damage exceed what healing could
+  have covered at all? The ceiling is derivable too, and without knowing a single class - the
+  largest healing the group landed in any window of that length, all evening, is what they have
+  demonstrated they can do. Against a pool of 1.3M drained in under three seconds, a best-ever 900k
+  of healing settles the question arithmetically.
+
+Which sorts a death into one of three, by counting rather than by opinion. **Not survivable**: the
+damage beat the demonstrated ceiling, so it is not the healers and the question moves back a step to
+why that much landed. **Survivable and not healed**: the rate was within what the group has shown,
+and little healing reached this player while it reached others - that one is the healers, and the
+log will also say whether they were alive, in range, or busy. **Healed and still dead**: back to the
+damage, and whether it was avoidable.
+
+And the window itself should not be a fixed three seconds. Walk back to the last moment the player
+was at full health: that span is the event. A short span with huge damage is a mechanics finding. A
+long span spent low is a healing one - somebody was never topped up. A long span that was fine until
+a sudden drop puts the event at the drop. The last three seconds of a death are the symptom, and
+reading only them blames whoever was nearest the end.
+
+The same shape settles the stack question, and the honest answer there may be silence. Take every
+player's peak stacks of a debuff across the evening and split them by whether they died soon after.
+If the dead cluster above some number and the living below it, that number is the fight's tolerance,
+found rather than assumed. If there is no separation, stacks are not what kills on this fight and
+nothing should be said - which is the answer on the log this was checked against, where somebody
+carried thirty-five stacks of Mark of Acid and lived while the dead held one or two of something
+else.
+
+Every number above is a placeholder. The thresholds - how close to the ceiling counts as
+unsurvivable, how clean a separation counts as a tolerance - come out of real logs later, not out of
+a guess now.
 
 The engineering note: the scanner reads the damage payload today but skips the health fields in the
 advanced block. They are the whole basis of this milestone and cost nothing to start keeping.
