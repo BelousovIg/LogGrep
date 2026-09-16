@@ -246,10 +246,19 @@ can be, so the line is: derive the same facts ourselves, do not copy their work.
 Which leaves the source that is both authoritative and clean: **Blizzard's own journal**, through
 the Battle.net Game Data API. Its encounter endpoints give the section structure - Tank, DPS,
 Healer - the spell ids named in each, and `body_text`, which is Blizzard's own tactical advice and
-therefore the "what to do" line we thought a person would have to write. No addon needed. It wants
-an OAuth key, so the fetch belongs offline: a script pulls it once per tier and writes the rules
-file, which is also the answer to who maintains that file - a script does, and a person only edits
-the advice.
+therefore the "what to do" line we thought a person would have to write. No addon needed.
+
+**Decided: the file ships with the app and nothing talks to Blizzard at run time.** The API wants
+client credentials, and a desktop program that carries them hands them to anyone with a decompiler,
+who then spends the quota or earns the ban for everybody. The alternatives are worse: asking each
+person to register their own key is a wall almost nobody climbs, and running a proxy means running a
+server. So a script fetches once per tier, writes the file, and the file is versioned here and built
+into the release. No key, no network, no new way for opening a log to fail.
+
+The file going stale mid-tier is handled without any of that. The log audit mutes a rule that stops
+matching, and a file placed next to the exe overrides the built-in one, so a guild updates by
+passing a file around. If self-updating is ever wanted, the thing to fetch is our own generated file
+from a static URL - one unauthenticated request, content we control - and never the API itself.
 
 **And the log audits all of it.** A section flagged for tanks means tanks should care, which is not
 the same claim as "it lands on a tank" - an ability the whole raid takes while the tank must react
