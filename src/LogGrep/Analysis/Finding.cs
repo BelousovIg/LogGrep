@@ -12,9 +12,13 @@ public readonly record struct Cost(double Weight, string Text)
 {
     public static readonly Cost Unknown = new(0, "cost not worked out");
 
-    /// <summary>A death outweighs any amount of damage, because the pull carries on without you.</summary>
+    /// <summary>
+    /// A death outweighs any amount of damage, because the pull carries on without you. The number
+    /// is far above anything a night of damage can reach - a whole evening measures in the hundreds
+    /// of millions - so no pile of damage findings can ever outrank one death.
+    /// </summary>
     public static Cost Death(TimeSpan at, string? from = null)
-        => new(1_000_000, from == null
+        => new(1e12, from == null
             ? "died at " + Display.Clock(at)
             : from + " killed you at " + Display.Clock(at));
 

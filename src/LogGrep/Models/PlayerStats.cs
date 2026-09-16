@@ -16,6 +16,13 @@ public sealed record DeathRecord(TimeSpan At, IReadOnlyList<DamageCause> Causes)
 /// </summary>
 public readonly record struct AuraHit(int SpellId, string Spell, string Player, TimeSpan At);
 
+/// <summary>
+/// What one enemy spell did to one group member over a whole attempt, rolled up. A pull holds
+/// millions of damage events and perhaps a thousand pairs of spell and person, and it is the pairs
+/// that say who stood in what.
+/// </summary>
+public readonly record struct Blow(int SpellId, string Spell, string Player, long Amount, int Times, TimeSpan First);
+
 /// <summary>What one group member did during a single pull.</summary>
 public sealed class PlayerStats
 {

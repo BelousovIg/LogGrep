@@ -83,6 +83,14 @@ public sealed class PullBuilder
         return this;
     }
 
+    /// <summary>A plain melee swing, which carries no spell id and so no way to stand elsewhere.</summary>
+    public PullBuilder BossSwingsAt(string target, long amount)
+    {
+        _log.Line(_start + _at,
+            $"SWING_DAMAGE,{_log.Units(_log.BossName, target)},{amount},0,1,0,0,0,nil,nil,nil");
+        return this;
+    }
+
     /// <summary>The killing blow and the death itself, which is what a death breakdown is built from.</summary>
     public PullBuilder Kills(string target, Ability with = Ability.BlastWave, long amount = 900_000)
     {

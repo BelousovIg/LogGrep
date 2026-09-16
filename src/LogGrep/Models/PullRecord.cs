@@ -37,6 +37,9 @@ public sealed class PullRecord
     /// <summary>Hostile debuffs that landed on group members, in the order they were applied.</summary>
     public IReadOnlyList<AuraHit> Debuffs { get; set; } = Array.Empty<AuraHit>();
 
+    /// <summary>Enemy damage that landed on group members, one entry per spell and person.</summary>
+    public IReadOnlyList<Blow> Blows { get; set; } = Array.Empty<Blow>();
+
     public long Damage { get; set; }
     public long Healing { get; set; }
 

@@ -259,6 +259,24 @@ public sealed class Then
         return this;
     }
 
+    public Then DamageWasAvoidable(Ability spell)
+    {
+        _check.DamageWasAvoidable(spell);
+        return this;
+    }
+
+    public Then MistakeCost(Ability spell, string player, string expected)
+    {
+        _check.MistakeCost(spell, player, expected);
+        return this;
+    }
+
+    public Then NothingWasFoundFor(Ability spell)
+    {
+        _check.NothingWasFoundFor(spell);
+        return this;
+    }
+
     public Then MistakeKilled(Ability spell, string player, TimeSpan at)
     {
         _check.MistakeKilled(spell, player, at);

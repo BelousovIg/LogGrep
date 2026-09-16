@@ -354,6 +354,7 @@ public sealed class CombatLogScanner
             Players = roster.Select(p => p.Name).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray(),
             Roster = roster,
             Debuffs = segment.Debuffs.ToArray(),
+            Blows = segment.Blows.Values.ToArray(),
             Damage = segment.Damage,
             Healing = segment.Healing,
             StartOffset = segment.StartOffset,
@@ -490,7 +491,8 @@ public sealed class CombatLogScanner
 
         int sourceFlags = _fields.Hex(line, 3);
         int affiliation = sourceFlags & AffiliationMask;
-        if (affiliation != 0 && affiliation != AffiliationOutsider && (sourceFlags & ControlPlayer) != 0)
+        bool fromTheGroup = affiliation != 0 && affiliation != AffiliationOutsider && (sourceFlags & ControlPlayer) != 0;
+        if (fromTheGroup)
         {
             var actor = Actor(line, advancedAt);
             if (kind == EventKind.Heal)
@@ -515,6 +517,23 @@ public sealed class CombatLogScanner
 
         double at = LogTimestamp.SecondsOfDay(line, eventStart);
         if (at >= 0) victim.Hit(at, prefixParams >= 3 ? Label(line, 10) : "Melee", amount);
+
+        // Enemy spell damage, rolled up per spell and person. A swing has no spell id and cannot
+        // be avoided by standing elsewhere, so it is left out of this.
+        if (fromTheGroup || prefixParams < 3) return;
+
+        int spellId = _fields.Int(line, 9);
+        if (spellId <= 0) return;
+
+        var key = (spellId, victim.Name);
+        if (_open!.Blows.TryGetValue(key, out var blow))
+        {
+            _open.Blows[key] = blow with { Amount = blow.Amount + amount, Times = blow.Times + 1 };
+        }
+        else
+        {
+            _open.Blows[key] = new Blow(spellId, Label(line, 10), victim.Name, amount, 1, Elapsed(at));
+        }
     }
 
     /// <summary>
@@ -778,6 +797,9 @@ public sealed class CombatLogScanner
 
         /// <summary>Hostile debuffs that landed on group members, in the order they were applied.</summary>
         public List<AuraHit> Debuffs { get; } = new();
+
+        /// <summary>One entry per enemy spell and person it landed on, keyed so it stays one entry.</summary>
+        public Dictionary<(int Spell, string Player), Blow> Blows { get; } = new();
 
         /// <summary>Specialization per player GUID hash, learned from COMBATANT_INFO.</summary>
         public Dictionary<ulong, int> Specs { get; } = new();

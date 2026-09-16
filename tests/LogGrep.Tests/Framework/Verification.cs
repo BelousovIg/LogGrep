@@ -192,6 +192,17 @@ public sealed class Verification
             "Findings should come heaviest first, and came in this order: " + string.Join(", ", weights));
     }
 
+
+    /// <summary>Damage the group is getting out of, which is a finding of its own kind.</summary>
+    public void DamageWasAvoidable(Ability spell)
+        => Assert.Equal(spell.NameOf() + " - avoidable", First(spell).Headline);
+
+    public void MistakeCost(Ability spell, string player, string expected)
+        => Assert.Equal(expected, Found(spell, player).Cost.Text);
+
+    public void NothingWasFoundFor(Ability spell)
+        => Assert.True(_page.FindingsFor(spell).Count == 0,
+            $"'{spell.NameOf()}' should not have been flagged, but was. " + What());
     public void MistakeKilled(Ability spell, string player, TimeSpan at)
         => Assert.Equal(spell.NameOf() + " killed you at " + Display.Clock(at), Found(spell, player).Cost.Text);
 
