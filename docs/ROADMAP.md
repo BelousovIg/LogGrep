@@ -227,12 +227,12 @@ adds a detector, and detectors that each invent their own shape of output are ho
 with forty findings nobody can sort. Cost and evidence have to exist before there is anything to
 rank.
 
-Deaths come third because they are what a raid leader opens the app for, and because the collective
-versus individual split is the difference between a useful report and one that cries wolf on every
-wipe.
-
 The second is next because it is nearly free: the statistic is written, tested, and proven on a real
 log. Pointing it at damage taken is a day of work for the largest single gain in the plan.
+
+Deaths come third because they are what a raid leader opens the app for, and because the collective
+versus individual split is the difference between a report worth reading and one that cries wolf on
+every wipe.
 
 The fourth is where the app stops being a mechanics tool and starts being a coach, and it is also
 where it will be wrong most often. Dead time on a fight with a forced break in it is not a mistake.
