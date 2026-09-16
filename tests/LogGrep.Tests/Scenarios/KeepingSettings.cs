@@ -60,6 +60,17 @@ public sealed class KeepingSettings
         Assert.DoesNotContain("the-secret", written, StringComparison.Ordinal);
     }
 
+
+    [Fact]
+    public void The_file_holds_what_was_told_and_nothing_worked_out_from_it()
+    {
+        var disk = new MockFileSystem();
+        new SettingsViewModel(AFreshMachine(disk)) { ClientId = "abc123" }.Save("the-secret");
+
+        string written = disk.File.ReadAllText(@"C:\fake\LogGrep\settings.json");
+
+        Assert.DoesNotContain("HasCredentials", written, StringComparison.Ordinal);
+    }
     [Fact]
     public void Leaving_the_box_empty_keeps_the_secret_that_is_already_there()
     {
