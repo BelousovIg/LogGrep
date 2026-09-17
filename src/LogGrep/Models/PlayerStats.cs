@@ -51,6 +51,18 @@ public sealed record DeathRecord(TimeSpan At, IReadOnlyList<DamageCause> Causes)
 
 
 /// <summary>
+/// One spell a player used during an attempt, and the shortest gap ever seen between two of its
+/// casts. That gap is the spell's cooldown as the log demonstrates it - no database, no class
+/// knowledge, and it stays right through a patch that changes the number.
+/// </summary>
+public readonly record struct SpellUse(int SpellId, string Spell, int Uses, double Cooldown)
+{
+    /// <summary>How many times it could have gone out over a fight of that length.</summary>
+    public int Room(TimeSpan duration)
+        => Cooldown <= 0 ? Uses : (int)Math.Floor(duration.TotalSeconds / Cooldown) + 1;
+}
+
+/// <summary>
 /// One hostile debuff landing on a group member. This is where a pull records who took which
 /// mechanic: raid-wide damage says nothing, but the debuff picks its target.
 /// </summary>
@@ -82,6 +94,19 @@ public sealed class PlayerStats
     public long DamageTaken { get; set; }
 
     public IReadOnlyList<DeathRecord> Deaths { get; set; } = Array.Empty<DeathRecord>();
+
+    /// <summary>How many times they cast anything at all during the attempt.</summary>
+    public int Casts { get; set; }
+
+    /// <summary>
+    /// Seconds spent casting nothing, over and above what the casts themselves cost. Read against
+    /// this player's own other attempts rather than against anybody else's - the point of the
+    /// measure is that it needs to know nothing about their class.
+    /// </summary>
+    public double DeadSeconds { get; set; }
+
+    /// <summary>Each spell they used, with the cooldown the log demonstrates for it.</summary>
+    public IReadOnlyList<SpellUse> Spells { get; set; } = Array.Empty<SpellUse>();
 
     public string ClassName => Specs.ClassOf(SpecId);
     public string SpecName => Specs.SpecOf(SpecId);

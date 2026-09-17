@@ -189,6 +189,30 @@ public sealed class Verification
             $"{players} {(players == 1 ? "player." : "players.")}",
             _page.ViewModel.FindingsSummary);
 
+    /// <summary>An attempt where the app says this player stood about far more than they usually do.</summary>
+    public void WasIdle(string player)
+        => Assert.True(Idle(player).Any(),
+            $"'{player}' should have been reported as idle. " + What());
+
+    public void WasNotIdle(string player)
+        => Assert.True(!Idle(player).Any(),
+            $"'{player}' should not have been reported as idle, and was: " +
+            string.Join(", ", Idle(player).Select(f => f.Line)));
+
+    public void NobodyElseWasIdle(string player)
+        => Assert.Equal(
+            new[] { player },
+            _page.Findings.Where(f => f.Category == "idle")
+                .Select(f => PlayerName.Character(f.Player))
+                .Distinct()
+                .ToArray());
+
+    public void IdleEvidenceMentions(string player, string expected)
+        => Assert.Contains(expected, Idle(player).First().Evidence, StringComparison.Ordinal);
+
+    private IEnumerable<Finding> Idle(string player)
+        => _page.Findings.Where(f => f.Category == "idle" && PlayerName.Character(f.Player) == player);
+
     /// <summary>A death the app decided was that player's own rather than the attempt ending.</summary>
     public void ADeathWasReported(string player, TimeSpan at)
         => Assert.True(Deaths(player).Any(f => f.At == at),

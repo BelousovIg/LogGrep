@@ -9,6 +9,9 @@ public static class Clock
 {
     public static TimeSpan Seconds(this int seconds) => TimeSpan.FromSeconds(seconds);
 
+    /// <summary>For the intervals a rotation is measured in, which are not whole seconds.</summary>
+    public static TimeSpan Seconds(this double seconds) => TimeSpan.FromSeconds(seconds);
+
     public static TimeSpan Minutes(this int minutes) => TimeSpan.FromMinutes(minutes);
 
     public static TimeSpan Minutes(this int minutes, int seconds) => new(0, minutes, seconds);

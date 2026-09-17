@@ -45,6 +45,13 @@ public sealed class CombatLogScanner
     /// <summary>How short a stretch counts as losing a health pool all at once rather than over time.</summary>
     private const double SuddenSeconds = 2;
 
+    /// <summary>
+    /// What one cast costs in time before the next one can follow. Haste shortens it, so taking the
+    /// unhasted figure makes idle time an under-count - which is the direction to be wrong in when
+    /// the output is "you stood there doing nothing".
+    /// </summary>
+    private const double GlobalCooldown = 1.5;
+
     /// <summary>Abilities listed per death; the long tail of chip damage is noise.</summary>
     private const int MaxCauses = 6;
 
@@ -360,6 +367,11 @@ public sealed class CombatLogScanner
                 Healing = entry.Value.Healing,
                 DamageTaken = entry.Value.DamageTaken,
                 Deaths = entry.Value.Deaths.ToArray(),
+                Casts = entry.Value.Casts,
+                DeadSeconds = entry.Value.Dead,
+                Spells = entry.Value.Spells
+                    .Select(s => new SpellUse(s.Key, s.Value.Label, s.Value.Uses, s.Value.Shortest))
+                    .ToArray(),
             })
             .OrderByDescending(p => p.Damage)
             .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
@@ -453,6 +465,10 @@ public sealed class CombatLogScanner
         });
 
         victim.Hits.Clear();
+
+        // A corpse casts nothing, and counting that as idleness would make dying look like standing
+        // about. The next cast after this starts a fresh gap rather than closing the one across it.
+        victim.Died();
     }
 
     /// <summary>
@@ -471,12 +487,19 @@ public sealed class CombatLogScanner
         _fields.Split(line);
         if (_fields.Count < 11) return;
 
-        int sourceFlags = _fields.Hex(line, 3);
-        int affiliation = sourceFlags & AffiliationMask;
-        if (affiliation != 0 && affiliation != AffiliationOutsider && (sourceFlags & ControlPlayer) != 0) return;
-
         int spellId = _fields.Int(line, 9);
         if (spellId <= 0) return;
+
+        int sourceFlags = _fields.Hex(line, 3);
+        int affiliation = sourceFlags & AffiliationMask;
+
+        // What the group casts is its own business - nobody interrupts it - but it is the whole
+        // of what rotation reads: when they cast, how often, and what they went without.
+        if (affiliation != 0 && affiliation != AffiliationOutsider && (sourceFlags & ControlPlayer) != 0)
+        {
+            PlayerAt(line, 1)?.Cast(LogTimestamp.SecondsOfDay(line, eventStart), spellId, Label(line, 10));
+            return;
+        }
 
         _open!.Casts.Add(new CastRecord(spellId, Label(line, 10), Stopped: false, string.Empty,
             Elapsed(LogTimestamp.SecondsOfDay(line, eventStart))));
@@ -841,6 +864,9 @@ public sealed class CombatLogScanner
     /// </summary>
     private readonly record struct Hit(double At, string Label, long Amount, long Health, long MaxHealth);
 
+    /// <summary>One spell a player used, rolled up: how often, and the shortest gap ever seen.</summary>
+    private readonly record struct Casting(string Label, int Uses, double LastAt, double Shortest);
+
     private sealed class PlayerState
     {
         public required string Name { get; init; }
@@ -900,6 +926,57 @@ public sealed class CombatLogScanner
 
         /// <summary>The largest health the player was ever seen with, which is what a share is of.</summary>
         public long MaxHealth => Hits.Count == 0 ? 0 : Hits.Max(h => h.MaxHealth);
+
+        /// <summary>Everything this player cast, rolled up per spell rather than kept one by one.</summary>
+        public Dictionary<int, Casting> Spells { get; } = new();
+
+        public int Casts { get; private set; }
+
+        /// <summary>Seconds spent casting nothing at all, over and above the gaps a cast itself costs.</summary>
+        public double Dead { get; private set; }
+
+        private double _lastCast = -1;
+
+        /// <summary>Stops the gap being measured across a death.</summary>
+        public void Died() => _lastCast = -1;
+
+        /// <summary>
+        /// One cast. Two things come out of it: the gap since the last one, which is how idle time
+        /// is counted, and the gap since this same spell was last used - the shortest of those, over
+        /// a whole evening, is the spell's cooldown as the log demonstrates it rather than as a
+        /// database claims it.
+        /// </summary>
+        public void Cast(double at, int spellId, string label)
+        {
+            if (at < 0) return;
+
+            Casts++;
+
+            if (_lastCast >= 0)
+            {
+                double gap = at - _lastCast;
+                if (gap > GlobalCooldown) Dead += gap - GlobalCooldown;
+            }
+
+            _lastCast = at;
+
+            if (Spells.TryGetValue(spellId, out var casting))
+            {
+                double since = at - casting.LastAt;
+                Spells[spellId] = casting with
+                {
+                    Uses = casting.Uses + 1,
+                    LastAt = at,
+                    Shortest = since > 0 && (casting.Shortest <= 0 || since < casting.Shortest)
+                        ? since
+                        : casting.Shortest,
+                };
+            }
+            else
+            {
+                Spells[spellId] = new Casting(label, 1, at, 0);
+            }
+        }
 
         /// <summary>What landed on them in the last couple of seconds - a pool lost all at once.</summary>
         public long Sudden(double at)

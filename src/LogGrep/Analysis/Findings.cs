@@ -13,7 +13,7 @@ public static class Findings
 {
     public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls)
         => In(pulls, new MechanicDetector(), new AvoidableDamageDetector(), new InterruptDetector(),
-            new DeathDetector());
+            new DeathDetector(), new IdleDetector());
 
     public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls, params IDetector[] detectors)
     {

@@ -84,6 +84,32 @@ public sealed class PullBuilder
         return this;
     }
 
+    /// <summary>
+    /// A player casting steadily, which is what a rotation looks like from outside. The interval is
+    /// the whole point of it: the app reads how much of an attempt somebody spent casting nothing,
+    /// and that is the difference between one cast every two seconds and one every six.
+    /// </summary>
+    public PullBuilder Casting(string player, Ability spell, TimeSpan from, TimeSpan to, TimeSpan every)
+    {
+        for (var at = from; at <= to; at += every)
+        {
+            _log.Line(_start + at,
+                $"SPELL_CAST_SUCCESS,{_log.Units(player, _log.BossName)},{(int)spell}," +
+                $"\"{spell.NameOf()}\",0x1");
+        }
+
+        return this;
+    }
+
+    /// <summary>One cast by a player, at the moment the clock is on.</summary>
+    public PullBuilder Casts(string player, Ability spell)
+    {
+        _log.Line(_start + _at,
+            $"SPELL_CAST_SUCCESS,{_log.Units(player, _log.BossName)},{(int)spell}," +
+            $"\"{spell.NameOf()}\",0x1");
+        return this;
+    }
+
     /// <summary>A cast by the boss that nobody stopped.</summary>
     public PullBuilder BossCasts(Ability spell)
     {
