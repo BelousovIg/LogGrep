@@ -19,11 +19,18 @@ public sealed class ReadingTheNight : Scenario
         Damage("Nightblade", Spec.AssassinationRogue),
         Damage("Emberwild", Spec.ArcaneMage));
 
+    /// <summary>An attempt where the rogue does a fixed amount of damage.</summary>
+    private static CombatLogBuilder Dealing(CombatLogBuilder log, long amount)
+        => log.Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(1.Minutes()).Deals("Nightblade", to: Soulcoiler, amount: amount)
+            .Wipe());
+
     /// <summary>An attempt where one person takes a mechanic that is not theirs.</summary>
     private static CombatLogBuilder Sloppy(CombatLogBuilder log, string who)
         => log.Pull(Soulcoiler, Difficulty.Mythic, p => p
             .Lasting(3.Minutes())
-            .At(20.Seconds()).BossDebuffs("Rockjaw", with: Ability.PossessionBarrage, times: 4)
+            .At(20.Seconds()).BossDebuffs("Rockjaw", with: Ability.PossessionBarrage, times: 7)
             .At(1.Minutes(30)).BossDebuffs(who, with: Ability.PossessionBarrage)
             .Wipe());
 
@@ -31,7 +38,7 @@ public sealed class ReadingTheNight : Scenario
     private static CombatLogBuilder Clean(CombatLogBuilder log)
         => log.Pull(Soulcoiler, Difficulty.Mythic, p => p
             .Lasting(3.Minutes())
-            .At(20.Seconds()).BossDebuffs("Rockjaw", with: Ability.PossessionBarrage, times: 4)
+            .At(20.Seconds()).BossDebuffs("Rockjaw", with: Ability.PossessionBarrage, times: 7)
             .Wipe());
 
     /// <summary>An attempt where one named person goes down before anybody else.</summary>
@@ -119,6 +126,48 @@ public sealed class ReadingTheNight : Scenario
         Given.IOpenedLog(log);
 
         Then.TheNightSaysNothing();
+    }
+
+    [Fact]
+    public void A_night_that_swung_says_what_the_range_was()
+    {
+        // An average hides which night it was. Two people on the same figure can have got there
+        // from 90K every attempt or from 40K and 140K, and the second is worth knowing.
+        var log = ARaid();
+        for (int i = 0; i < 3; i++) Dealing(log, 12_000_000);
+        for (int i = 0; i < 3; i++) Dealing(log, 4_000_000);
+
+        Given.IOpenedLog(log);
+
+        Then.TheNightSays("Nightblade", "damage swung between 33.3K and 100K a second");
+    }
+
+    [Fact]
+    public void A_night_at_one_level_is_not_a_spread()
+    {
+        var log = ARaid();
+        for (int i = 0; i < 6; i++) Dealing(log, 12_000_000);
+
+        Given.IOpenedLog(log);
+
+        // They led every attempt, which is its own fact - but nothing swung.
+        Then.TheNightDoesNotSay("Nightblade", "swung");
+    }
+
+    [Fact]
+    public void One_mechanic_behind_most_of_the_evening_is_said_once()
+    {
+        // Thirteen separate findings that are all the same mechanic is a different problem from
+        // thirteen separate slips, and it is worth a word before the next pull instead of a word
+        // with each of the people in it.
+        var log = ARaid();
+        for (int i = 0; i < 6; i++) Sloppy(log, "Nightblade");
+        for (int i = 0; i < 6; i++) Sloppy(log, "Emberwild");
+
+        Given.IOpenedLog(log);
+
+        Then.TheNightSaysOfNobody("12 of the evening's 12 mistakes were the same thing: " +
+            "Possession Barrage - tank mechanic");
     }
 
     [Fact]

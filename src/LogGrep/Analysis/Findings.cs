@@ -15,13 +15,13 @@ public static class Findings
         => In(pulls, new MechanicDetector(), new AvoidableDamageDetector(), new InterruptDetector(),
             new DeathDetector(), new IdleDetector(), new CooldownDetector(),
             new UptimeDetector(), new BuildDetector(), new StackDetector(),
-            new FirstDeathDetector(), new LedDetector());
+            new FirstDeathDetector(), new LedDetector(), new SpreadDetector());
 
     /// <summary>
     /// The reviews, which run after the detectors and over what they found. Kept separate because
     /// they ask a different kind of question - one that needs the whole picture rather than the log.
     /// </summary>
-    private static readonly IReview[] Reviews = { new ImprovementReview() };
+    private static readonly IReview[] Reviews = { new ImprovementReview(), new TollReview() };
 
     public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls, params IDetector[] detectors)
     {

@@ -338,9 +338,26 @@ public sealed class Verification
                string.Join(", ", _page.ViewModel.Logs.Select(l => l.Name)));
     /// <summary>A fact about the evening rather than about one attempt.</summary>
     public void TheNightSays(string player, string expected)
+        => Assert.True(Nightly(player).Any(h => h == expected),
+            "The evening should have said '" + expected + "' about " + player + ". It said: " +
+            (Nightly(player).Count == 0 ? "nothing" : string.Join("; ", Nightly(player))));
+
+    public void TheNightDoesNotSay(string player, string fragment)
+        => Assert.True(!Nightly(player).Any(h => h.Contains(fragment, StringComparison.Ordinal)),
+            "The evening should not have mentioned '" + fragment + "' for " + player + ". It said: " +
+            string.Join("; ", Nightly(player)));
+
+    private List<string> Nightly(string player)
+        => _page.Findings
+            .Where(f => f.Category == "the night" && PlayerName.Character(f.Player) == player)
+            .Select(f => f.Headline)
+            .ToList();
+
+    /// <summary>A fact about the evening that belongs to nobody in particular.</summary>
+    public void TheNightSaysOfNobody(string expected)
         => Assert.Equal(expected, _page.Findings
-            .FirstOrDefault(f => f.Category == "the night" && PlayerName.Character(f.Player) == player)
-            ?.Headline ?? "nothing about " + player);
+            .FirstOrDefault(f => f.Category == "the night" && f.Player.Length == 0)
+            ?.Headline ?? "nothing about the evening");
 
     public void TheNightSaysNothing()
         => Assert.True(!_page.Findings.Any(f => f.Category == "the night"),

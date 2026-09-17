@@ -396,6 +396,18 @@ public sealed class Then
         return this;
     }
 
+    public Then TheNightDoesNotSay(string player, string fragment)
+    {
+        _check.TheNightDoesNotSay(player, fragment);
+        return this;
+    }
+
+    public Then TheNightSaysOfNobody(string expected)
+    {
+        _check.TheNightSaysOfNobody(expected);
+        return this;
+    }
+
     public Then TheNightSaysNothing()
     {
         _check.TheNightSaysNothing();
