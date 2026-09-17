@@ -466,7 +466,7 @@ stopped making their mistakes halfway through. No single mechanic accounted for 
 evening to be named, which is the right answer for a night whose 20 mechanic findings sit across
 two bosses.
 
-### 9. Rules that may rot, and the log that catches them
+### 9. Rules that may rot, and the log that catches them — done, less the shipped file
 
 A derived rule needs ten attempts. A written one works from the first pull and can carry the one
 thing derivation never will: what the mechanic is *for*. The two are not rivals - they fail in
@@ -521,6 +521,26 @@ The rule is stale or it was never about who it lands on. Findings from it are mu
 Nobody else can do this, for the plain reason that nobody else has a second, independent source of
 truth to check the first against. We do, and it is free.
 
+
+What it came out as: `RuleFile` reads the generated file, `Attempts.Written` carries it into the
+analysis, and `MechanicDetector` uses it for the two things it is actually good for.
+
+When the file and the log agree, Blizzard's own sentence replaces the app's generic line - which is
+the whole point of having a written source, because "face the boss away from the raid while this is
+up" is what a mechanic is *for*, and no amount of counting recovers it.
+
+When they disagree, the app says so and stops: "Possession Barrage - the file says healer, the log
+says tank", with the count behind it and the findings from that rule muted. A rule naming the wrong
+half of an ability would otherwise flag every tank in every pull, and only the log would ever
+notice.
+
+The roles in the file are deliberately not used as a claim about who an ability lands on. A section
+flagged for tanks means tanks should care, which is a different sentence, and treating it as the
+first would make the app confidently wrong about every raid-wide mechanic in the game.
+
+Not done: shipping a generated file with the release. The generator, the key handling and the
+refresh action all exist; what is missing is a file in the repository and an installer to put it
+beside the executable, which is the packaging job that was deferred.
 The worked example that proves the need: Possession Barrage is two spell ids. One marks a single
 player - a tank, 69 times in 71. The other damages the whole raid. A damage dealer hit by the second
 is normal; hit by the first, it is a mistake. The engine already keys rules on id rather than name
