@@ -64,12 +64,26 @@ what the window shows. It fails the moment anything formats a value itself, whic
 rule true rather than merely written down.
 
 ## Milestones
+`docs/ROADMAP.md` holds them, and each one records what it actually came out as - including where
+it departed from the plan and what the real log measured. Read that before starting one: several
+milestones turned out differently from how they were written, and the record of why is the point.
 
-`docs/ROADMAP.md` holds them. Starting one opens with a commit of its own: bump `<Version>` in
-`src/LogGrep/LogGrep.csproj` to `1.0.<the milestone just finished>`, commit that alone, and tag it
-`v1.0.<same>`. So the work of milestone 2 sits on top of `v1.0.1`, and the tag marks exactly the
-state the previous milestone left behind - `v1.0.0` is the app before any of them.
+Starting one opens with a commit of its own: bump `<Version>` in `src/LogGrep/LogGrep.csproj` and
+tag it. The tags run in order - `v1.0.1`, `v1.0.2` and so on - and each marks the state the previous
+milestone left behind. They are not numbered after the milestone: the work has not gone in order
+(11 was done before 8), and naming a tag after the milestone would send the version backwards.
 
+## Thresholds, and how they are checked
+
+Every detector rests on numbers that were guessed and then measured. Two habits keep them honest:
+
+- **Mutate each one and watch a test fail.** Change a threshold, run that file's scenarios, see
+  which test goes red. A threshold no test notices is either dead code or untested - both have
+  happened here, and both were found this way. **Commit before mutating**, because the restore is
+  `git checkout --` and it will take uncommitted work with it.
+- **Measure on the real log before believing a number.** `~/Downloads/WoWCombatLog-*.txt`. Detectors
+  written against synthetic logs alone have produced 551 findings in an evening and 129 in another;
+  both looked fine until the real file was read.
 ## Releases
 
 ```powershell
