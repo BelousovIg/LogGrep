@@ -678,6 +678,30 @@ advanced block reports current and maximum power on every event, so mana and res
 The risk is that a finding about what somebody did *not* do is far easier to get wrong than one
 about what they did, so it would have to be phrased against the player's own habit - "you usually
 press X here" - and never as advice about what to press.
+
+### Who the pull belonged to
+
+A rule that came in after the milestones, and the only one in the app that needs no run of attempts
+and no baseline: whoever damages the boss before the tank, or is damaged before the tank, made a
+mistake - and only at the start of a fight, because threat changes hands all night for good reasons.
+
+Written the obvious way it asked who was first, and answered on twenty-two of twenty-six attempts.
+A pull is a scramble: everybody starts at once, so a spell cast before the fight lands at 0.0 while
+the tank is still closing the distance and connects at 0.2. Measured across the evening, the gap
+between the first damage dealer and the first tank ran from -1.4 to 1.1 seconds and sat inside half
+a second either way. That is not a mistake being made twenty-two times, it is a pull looking like a
+pull. From the other end it was worse still: an untargeted pulse hits the whole group inside a
+single event, and the log has to write one of the names in it first.
+
+So the question became how far ahead rather than who was first, and the measure is a global
+cooldown - under that the tank had not yet had a turn, and being in front of somebody who has not
+moved is not being early. The scanner keeps a first strike and a first hit per player and leaves the
+comparing to the detector, which is the only part that knows the roles.
+
+On the real log: five findings over twenty-six attempts, two of them a pull opened by somebody who
+then died inside ten seconds of opening it, and three where the tank never touched the enemy at all.
+Total findings 172 to 177.
+
 ## What this means for the window
 
 The tree - encounters, attempts, players - is the spine and stays. It is how a night is shaped and
