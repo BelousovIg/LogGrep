@@ -228,6 +228,24 @@ public sealed class Then
         return this;
     }
 
+    public Then LostUptime(string player, Ability spell)
+    {
+        _check.LostUptime(player, spell);
+        return this;
+    }
+
+    public Then KeptTheirUptime(string player)
+    {
+        _check.KeptTheirUptime(player);
+        return this;
+    }
+
+    public Then TheUptimeFindingReads(string player, string expected)
+    {
+        _check.TheUptimeFindingReads(player, expected);
+        return this;
+    }
+
     public Then GotFewerUses(string player, Ability spell)
     {
         _check.GotFewerUses(player, spell);

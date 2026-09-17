@@ -242,6 +242,10 @@ public sealed class CombatLogScanner
                 if (_open != null) OnInterrupt(line, eventStart);
                 break;
 
+            case EventKind.AuraRemoved:
+                if (_open != null) OnAuraRemoved(line, eventStart);
+                break;
+
             case EventKind.Damage:
             case EventKind.Heal:
                 if (_open != null) Accumulate(line, eventStart, kind, prefixParams);
@@ -358,6 +362,9 @@ public sealed class CombatLogScanner
             ? reportedDuration
             : endTime > segment.StartTime ? endTime - segment.StartTime : TimeSpan.Zero;
 
+        // Whatever anybody was still holding when the fight ended was held until then.
+        foreach (var player in segment.Players.Values) player.Settle(segment.StartSeconds + duration.TotalSeconds);
+
         var roster = segment.Players
             .Select(entry => new PlayerStats
             {
@@ -371,6 +378,10 @@ public sealed class CombatLogScanner
                 DeadSeconds = entry.Value.Dead,
                 Spells = entry.Value.Spells
                     .Select(s => new SpellUse(s.Key, s.Value.Label, s.Value.Uses, s.Value.Shortest))
+                    .ToArray(),
+                Buffs = entry.Value.Buffs
+                    .Where(b => b.Value.Seconds > 0)
+                    .Select(b => new BuffUptime(b.Key, b.Value.Label, TimeSpan.FromSeconds(b.Value.Seconds)))
                     .ToArray(),
             })
             .OrderByDescending(p => p.Damage)
@@ -529,7 +540,11 @@ public sealed class CombatLogScanner
         if (_fields.Count < 13) return;
 
         // The aura type sits right after the spell school.
-        if (!_fields.Field(line, 12).SequenceEqual("DEBUFF"u8)) return;
+        if (!_fields.Field(line, 12).SequenceEqual("DEBUFF"u8))
+        {
+            OnSelfBuff(line, eventStart, up: true);
+            return;
+        }
 
         int affiliation = _fields.Hex(line, 3) & AffiliationMask;
         if (affiliation != 0 && affiliation != AffiliationOutsider) return; // one of ours cast it
@@ -542,6 +557,35 @@ public sealed class CombatLogScanner
             Label(line, 10),
             victim.Name,
             Elapsed(LogTimestamp.SecondsOfDay(line, eventStart))));
+    }
+
+    private void OnAuraRemoved(ReadOnlySpan<byte> line, int eventStart)
+    {
+        _fields.Split(line);
+        if (_fields.Count < 13) return;
+        if (_fields.Field(line, 12).SequenceEqual("DEBUFF"u8)) return;
+
+        OnSelfBuff(line, eventStart, up: false);
+    }
+
+    /// <summary>
+    /// A buff a player put on themselves. Only their own: a raid buff somebody else keeps up says
+    /// nothing about this player's rotation, and the whole point of reading uptime is that it is
+    /// theirs to hold.
+    /// </summary>
+    private void OnSelfBuff(ReadOnlySpan<byte> line, int eventStart, bool up)
+    {
+        var source = _fields.Field(line, 1);
+        if (!source.SequenceEqual(_fields.Field(line, 5))) return;
+
+        var player = PlayerAt(line, 1);
+        if (player == null) return;
+
+        double at = LogTimestamp.SecondsOfDay(line, eventStart);
+        if (at < 0) return;
+
+        if (up) player.BuffUp(at, _fields.Int(line, 9), Label(line, 10));
+        else player.BuffDown(at, _fields.Int(line, 9));
     }
 
     /// <summary>Time since the pull started, which is what deaths and debuffs are both stamped with.</summary>
@@ -797,6 +841,7 @@ public sealed class CombatLogScanner
         Heal,
         CastSuccess,
         Interrupt,
+        AuraRemoved,
     }
 
     /// <summary>
@@ -840,6 +885,7 @@ public sealed class CombatLogScanner
                 if (name.SequenceEqual("CHALLENGE_MODE_END"u8)) return EventKind.ChallengeEnd;
                 if (name.SequenceEqual("SPELL_AURA_APPLIED"u8)) return EventKind.AuraApplied;
                 if (name.SequenceEqual("SPELL_CAST_SUCCESS"u8)) return EventKind.CastSuccess;
+                if (name.SequenceEqual("SPELL_AURA_REMOVED"u8)) return EventKind.AuraRemoved;
                 break;
             case 19:
                 if (name.SequenceEqual("SPELL_PERIODIC_HEAL"u8)) { prefixParams = 3; return EventKind.Heal; }
@@ -866,6 +912,9 @@ public sealed class CombatLogScanner
 
     /// <summary>One spell a player used, rolled up: how often, and the shortest gap ever seen.</summary>
     private readonly record struct Casting(string Label, int Uses, double LastAt, double Shortest);
+
+    /// <summary>One buff a player holds on themselves: when it went up, and how long it has held.</summary>
+    private readonly record struct Holding(string Label, double Since, double Seconds);
 
     private sealed class PlayerState
     {
@@ -939,6 +988,39 @@ public sealed class CombatLogScanner
 
         /// <summary>Stops the gap being measured across a death.</summary>
         public void Died() => _lastCast = -1;
+
+        /// <summary>Buffs this player put on themselves, as seconds held rather than as events.</summary>
+        public Dictionary<int, Holding> Buffs { get; } = new();
+
+        public void BuffUp(double at, int spellId, string label)
+        {
+            if (Buffs.TryGetValue(spellId, out var held))
+            {
+                // A refresh while it is already up is not a second application of it.
+                if (held.Since < 0) Buffs[spellId] = held with { Since = at };
+            }
+            else
+            {
+                Buffs[spellId] = new Holding(label, at, 0);
+            }
+        }
+
+        public void BuffDown(double at, int spellId)
+        {
+            if (!Buffs.TryGetValue(spellId, out var held) || held.Since < 0) return;
+
+            Buffs[spellId] = held with { Since = -1, Seconds = held.Seconds + Math.Max(0, at - held.Since) };
+        }
+
+        /// <summary>Closes whatever is still up when the fight ends, which is most of it.</summary>
+        public void Settle(double at)
+        {
+            foreach (int spellId in Buffs.Keys.ToList())
+            {
+                var held = Buffs[spellId];
+                if (held.Since >= 0) Buffs[spellId] = held with { Since = -1, Seconds = held.Seconds + Math.Max(0, at - held.Since) };
+            }
+        }
 
         /// <summary>
         /// One cast. Two things come out of it: the gap since the last one, which is how idle time

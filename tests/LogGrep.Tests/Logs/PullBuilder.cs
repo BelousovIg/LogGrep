@@ -71,6 +71,19 @@ public sealed class PullBuilder
         return this;
     }
 
+    /// <summary>
+    /// A buff a player holds on themselves for a stretch of the fight. Uptime is read from the
+    /// application and the removal, so both have to be in the log for the span to mean anything.
+    /// </summary>
+    public PullBuilder Holds(string player, Ability spell, TimeSpan from, TimeSpan to)
+    {
+        _log.Line(_start + from,
+            $"SPELL_AURA_APPLIED,{_log.Units(player, player)},{(int)spell},\"{spell.NameOf()}\",0x1,BUFF");
+        _log.Line(_start + to,
+            $"SPELL_AURA_REMOVED,{_log.Units(player, player)},{(int)spell},\"{spell.NameOf()}\",0x1,BUFF");
+        return this;
+    }
+
     /// <summary>A friendly buff, which the app is expected to ignore when reading who took what.</summary>
     public PullBuilder Buffs(string source, string target, Ability with, int times = 1)
     {

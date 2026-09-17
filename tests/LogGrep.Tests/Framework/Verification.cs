@@ -189,6 +189,22 @@ public sealed class Verification
             $"{players} {(players == 1 ? "player." : "players.")}",
             _page.ViewModel.FindingsSummary);
 
+    /// <summary>An attempt where a buff the player normally holds up was not held up.</summary>
+    public void LostUptime(string player, Ability spell)
+        => Assert.True(Uptime(player).Any(f => f.Headline.StartsWith(spell.NameOf(), StringComparison.Ordinal)),
+            $"'{player}' should have been short on '{spell.NameOf()}'. " + What());
+
+    public void KeptTheirUptime(string player)
+        => Assert.True(!Uptime(player).Any(),
+            $"'{player}' should have had nothing said about uptime, and got: " +
+            string.Join(", ", Uptime(player).Select(f => f.Headline)));
+
+    public void TheUptimeFindingReads(string player, string expected)
+        => Assert.Equal(expected, Uptime(player).First().Headline);
+
+    private IEnumerable<Finding> Uptime(string player)
+        => _page.Findings.Where(f => f.Category == "uptime" && PlayerName.Character(f.Player) == player);
+
     /// <summary>An attempt where one of the player's own spells went out far less than it usually does.</summary>
     public void GotFewerUses(string player, Ability spell)
         => Assert.True(Cooldowns(player).Any(f => f.Headline.Contains(spell.NameOf(), StringComparison.Ordinal)),

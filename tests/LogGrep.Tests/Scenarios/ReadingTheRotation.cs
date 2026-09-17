@@ -136,6 +136,72 @@ public sealed class ReadingTheRotation : Scenario
         Then.GotNoCooldownFinding("Nightblade");
     }
 
+    /// <summary>A night where one buff was held for nearly the whole of every attempt.</summary>
+    private static CombatLogBuilder ANightOfUptime(int times = 6, TimeSpan? until = null)
+        => ARaid().Pulls(times, Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .Holds("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: until ?? 1.Minutes(50))
+            .Wipe());
+
+    [Fact]
+    public void A_buff_held_every_attempt_is_nobodys_mistake()
+    {
+        Given.IOpenedLog(ANightOfUptime(times: 8));
+
+        Then.NothingWasFound();
+    }
+
+    [Fact]
+    public void A_buff_that_fell_off_on_one_attempt_is_reported()
+    {
+        var log = ANightOfUptime().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .Holds("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 30.Seconds())
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.LostUptime("Nightblade", Ability.Reckoning)
+            .And.TheUptimeFindingReads("Nightblade", "Reckoning up 25% of it");
+    }
+
+    [Fact]
+    public void A_buff_nobody_holds_up_anyway_is_not_judged()
+    {
+        // Up for a third of the fight every time. That is a proc or a trinket, and its uptime is
+        // luck rather than a choice - so the attempt where it was worse says nothing.
+        var log = ARaid()
+            .Pulls(6, Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Holds("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 40.Seconds())
+                .Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Holds("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 5.Seconds())
+                .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.KeptTheirUptime("Nightblade");
+    }
+
+    [Fact]
+    public void A_buff_somebody_else_keeps_up_is_not_yours_to_answer_for()
+    {
+        // The healer holding something on the rogue is the healer's business. Only what a player
+        // put on themselves is read as theirs.
+        var log = ARaid()
+            .Pulls(6, Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .At(0.Seconds()).Buffs("Sunwell", target: "Nightblade", with: Ability.PowerWordFortitude)
+                .Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p.Lasting(2.Minutes()).Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.KeptTheirUptime("Nightblade");
+    }
+
     [Fact]
     public void A_night_at_one_pace_is_nobodys_mistake()
     {

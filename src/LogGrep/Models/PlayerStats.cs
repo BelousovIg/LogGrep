@@ -63,6 +63,12 @@ public readonly record struct SpellUse(int SpellId, string Spell, int Uses, doub
 }
 
 /// <summary>
+/// One buff a player kept on themselves during an attempt, and how long they held it. Only their
+/// own: a raid buff somebody else maintains says nothing about how this player played.
+/// </summary>
+public readonly record struct BuffUptime(int SpellId, string Spell, TimeSpan Held);
+
+/// <summary>
 /// One hostile debuff landing on a group member. This is where a pull records who took which
 /// mechanic: raid-wide damage says nothing, but the debuff picks its target.
 /// </summary>
@@ -107,6 +113,9 @@ public sealed class PlayerStats
 
     /// <summary>Each spell they used, with the cooldown the log demonstrates for it.</summary>
     public IReadOnlyList<SpellUse> Spells { get; set; } = Array.Empty<SpellUse>();
+
+    /// <summary>Buffs they put on themselves, and how long each was held.</summary>
+    public IReadOnlyList<BuffUptime> Buffs { get; set; } = Array.Empty<BuffUptime>();
 
     public string ClassName => Specs.ClassOf(SpecId);
     public string SpecName => Specs.SpecOf(SpecId);
