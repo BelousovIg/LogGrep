@@ -34,6 +34,23 @@ public sealed class ReadingTheNight : Scenario
             .At(1.Minutes(30)).BossDebuffs(who, with: Ability.PossessionBarrage)
             .Wipe());
 
+    /// <summary>
+    /// An attempt with both mechanics going out - each has to appear all evening before the app
+    /// will call either one a rule - and at most one of them landing on the wrong person.
+    /// </summary>
+    private static CombatLogBuilder Both(CombatLogBuilder log, string? barrage, string? strikes)
+        => log.Pull(Soulcoiler, Difficulty.Mythic, p =>
+        {
+            p.Lasting(3.Minutes())
+             .At(20.Seconds()).BossDebuffs("Rockjaw", with: Ability.PossessionBarrage, times: 7)
+             .At(40.Seconds()).BossDebuffs("Rockjaw", with: Ability.HollowingStrikes, times: 7);
+
+            if (barrage != null) p.At(1.Minutes(30)).BossDebuffs(barrage, with: Ability.PossessionBarrage);
+            if (strikes != null) p.At(1.Minutes(40)).BossDebuffs(strikes, with: Ability.HollowingStrikes);
+
+            p.Wipe();
+        });
+
     /// <summary>The same attempt with the mechanic going where it belongs.</summary>
     private static CombatLogBuilder Clean(CombatLogBuilder log)
         => log.Pull(Soulcoiler, Difficulty.Mythic, p => p
@@ -167,6 +184,21 @@ public sealed class ReadingTheNight : Scenario
         Given.IOpenedLog(log);
 
         Then.TheNightSaysOfNobody("12 of the evening's 12 mistakes were the same thing: " +
+            "Possession Barrage - tank mechanic");
+    }
+
+    [Fact]
+    public void Half_the_evening_on_one_mechanic_is_still_the_story()
+    {
+        // Two mechanics, six findings each. Neither accounts for all of it, and the larger share is
+        // still worth naming - the bar is "most of the night", not "all of it".
+        var log = ARaid();
+        for (int i = 0; i < 6; i++) Both(log, barrage: "Nightblade", strikes: null);
+        for (int i = 0; i < 6; i++) Both(log, barrage: null, strikes: "Emberwild");
+
+        Given.IOpenedLog(log);
+
+        Then.TheNightSaysOfNobody("6 of the evening's 12 mistakes were the same thing: " +
             "Possession Barrage - tank mechanic");
     }
 
