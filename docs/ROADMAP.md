@@ -222,7 +222,7 @@ times out of 133 and let through 17. Avoidable damage found nothing there at all
 that boss either lands on most of the group or belongs to the tanks - which is the honest answer for
 that log and not a demonstration that the rule works.
 
-### 4. Why somebody died
+### 4. Why somebody died — half done
 
 A death is the loudest thing in a log and the app currently says only what landed beforehand. The
 first question is not what killed them, it is **whether it was their death at all**.
@@ -280,6 +280,24 @@ The engineering note: the scanner reads the damage payload today but skips the h
 advanced block. They are the whole basis of this milestone and cost nothing to start keeping.
 
 Ends with: a death that explains itself - whether it was the raid's or the player's, and if the
+
+Half of it is done: whose death it was, and two of the three shapes.
+
+`DeathDetector` asks the first question first. A death counts as one person's only when few others
+fell alongside it and the attempt carried on afterwards - both, because either alone lets a wipe
+through. The end-of-fight test turned out to be the stronger of the two on the real log: a naive
+crowd share called deaths with seven neighbours "personal", while "did the raid fight on past it"
+sorted them correctly. The scanner now keeps the health the advanced block was already carrying, so
+"that took 60% of them" is read rather than guessed, and every death carries the walk back to the
+last moment the player was whole.
+
+Still to come: the third shape. Unhealable needs the demonstrated healing ceiling - the largest
+healing the group landed in any window of that length all evening - and until that exists a death
+that is neither a burst nor a grind reads only as "died while the raid fought on", which is thin.
+The stack question is untouched.
+
+Measured on the real log: 315 deaths, of which 97 are reported as somebody's own. Every threshold in
+this milestone is still a placeholder, as the plan said it would be.
 player's, whether they were bursted, ground down, or beyond saving.
 
 ### 5. Execution, without knowing the class
