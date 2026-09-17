@@ -63,6 +63,13 @@ public readonly record struct SpellUse(int SpellId, string Spell, int Uses, doub
 }
 
 /// <summary>
+/// The highest a hostile debuff ever stacked on one player during an attempt, and the moment it
+/// got there. A stack that expires and re-lands starts at one again, so this is a real high-water
+/// mark rather than a count of applications.
+/// </summary>
+public readonly record struct StackPeak(int SpellId, string Spell, int Peak, TimeSpan At);
+
+/// <summary>
 /// One buff a player kept on themselves during an attempt, and how long they held it. Only their
 /// own: a raid buff somebody else maintains says nothing about how this player played.
 /// </summary>
@@ -113,6 +120,9 @@ public sealed class PlayerStats
 
     /// <summary>Each spell they used, with the cooldown the log demonstrates for it.</summary>
     public IReadOnlyList<SpellUse> Spells { get; set; } = Array.Empty<SpellUse>();
+
+    /// <summary>The highest any hostile debuff stacked on them, and when it got there.</summary>
+    public IReadOnlyList<StackPeak> Stacks { get; set; } = Array.Empty<StackPeak>();
 
     /// <summary>Buffs they put on themselves, and how long each was held.</summary>
     public IReadOnlyList<BuffUptime> Buffs { get; set; } = Array.Empty<BuffUptime>();

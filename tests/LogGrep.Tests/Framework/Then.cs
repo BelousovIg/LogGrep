@@ -228,6 +228,24 @@ public sealed class Then
         return this;
     }
 
+    public Then TheStackFindingReads(string player, string expected)
+    {
+        _check.TheStackFindingReads(player, expected);
+        return this;
+    }
+
+    public Then TheStackEvidenceReads(string player, string expected)
+    {
+        _check.TheStackEvidenceReads(player, expected);
+        return this;
+    }
+
+    public Then NothingWasSaidAboutStacks()
+    {
+        _check.NothingWasSaidAboutStacks();
+        return this;
+    }
+
     public Then TheBuildFindingReads(string player, string expected)
     {
         _check.TheBuildFindingReads(player, expected);

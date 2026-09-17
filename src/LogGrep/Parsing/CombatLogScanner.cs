@@ -246,6 +246,10 @@ public sealed class CombatLogScanner
                 if (_open != null) OnAuraRemoved(line, eventStart);
                 break;
 
+            case EventKind.AuraDose:
+                if (_open != null) OnAuraDose(line, eventStart);
+                break;
+
             case EventKind.Damage:
             case EventKind.Heal:
                 if (_open != null) Accumulate(line, eventStart, kind, prefixParams);
@@ -379,6 +383,9 @@ public sealed class CombatLogScanner
                 DeadSeconds = entry.Value.Dead,
                 Spells = entry.Value.Spells
                     .Select(s => new SpellUse(s.Key, s.Value.Label, s.Value.Uses, s.Value.Shortest))
+                    .ToArray(),
+                Stacks = entry.Value.Stacks
+                    .Select(s => new StackPeak(s.Key, s.Value.Label, s.Value.Peak, s.Value.At))
                     .ToArray(),
                 Buffs = entry.Value.Buffs
                     .Where(b => b.Value.Seconds > 0)
@@ -563,6 +570,31 @@ public sealed class CombatLogScanner
             Label(line, 10),
             victim.Name,
             Elapsed(LogTimestamp.SecondsOfDay(line, eventStart))));
+    }
+
+    /// <summary>
+    /// A debuff stacking higher on somebody. The count is the last field on the line, so how many
+    /// of a thing a player was carrying is read rather than inferred - and because a stack that
+    /// expires and re-lands starts at one again, the peak is a real high-water mark rather than a
+    /// running total.
+    /// </summary>
+    private void OnAuraDose(ReadOnlySpan<byte> line, int eventStart)
+    {
+        _fields.Split(line);
+        if (_fields.Count < 14) return;
+        if (!_fields.Field(line, 12).SequenceEqual("DEBUFF"u8)) return;
+
+        int affiliation = _fields.Hex(line, 3) & AffiliationMask;
+        if (affiliation != 0 && affiliation != AffiliationOutsider) return; // one of ours cast it
+
+        var victim = PlayerAt(line, 5);
+        if (victim == null) return;
+
+        int stacks = _fields.Int(line, 13);
+        if (stacks <= 0) return;
+
+        victim.Stacked(_fields.Int(line, 9), Label(line, 10), stacks,
+            Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)));
     }
 
     private void OnAuraRemoved(ReadOnlySpan<byte> line, int eventStart)
@@ -848,6 +880,7 @@ public sealed class CombatLogScanner
         CastSuccess,
         Interrupt,
         AuraRemoved,
+        AuraDose,
     }
 
     /// <summary>
@@ -898,6 +931,9 @@ public sealed class CombatLogScanner
                 break;
             case 20:
                 if (name.SequenceEqual("CHALLENGE_MODE_START"u8)) return EventKind.ChallengeStart;
+                break;
+            case 23:
+                if (name.SequenceEqual("SPELL_AURA_APPLIED_DOSE"u8)) return EventKind.AuraDose;
                 break;
             case 21:
                 if (name.SequenceEqual("SPELL_PERIODIC_DAMAGE"u8)) { prefixParams = 3; return EventKind.Damage; }
@@ -994,6 +1030,16 @@ public sealed class CombatLogScanner
 
         /// <summary>Stops the gap being measured across a death.</summary>
         public void Died() => _lastCast = -1;
+
+        /// <summary>The highest any hostile debuff ever stacked on this player, and when.</summary>
+        public Dictionary<int, (string Label, int Peak, TimeSpan At)> Stacks { get; } = new();
+
+        public void Stacked(int spellId, string label, int stacks, TimeSpan at)
+        {
+            if (Stacks.TryGetValue(spellId, out var held) && held.Peak >= stacks) return;
+
+            Stacks[spellId] = (label, stacks, at);
+        }
 
         /// <summary>Buffs this player put on themselves, as seconds held rather than as events.</summary>
         public Dictionary<int, Holding> Buffs { get; } = new();

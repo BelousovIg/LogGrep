@@ -84,6 +84,23 @@ public sealed class PullBuilder
         return this;
     }
 
+    /// <summary>
+    /// A debuff stacking up on somebody, one application a second. The count rides on the end of
+    /// each line, which is how the app reads how many of a thing a player was carrying - and a
+    /// stack that expires and re-lands starts at one again, so a peak is a real high-water mark.
+    /// </summary>
+    public PullBuilder BossStacks(string target, Ability with, int to)
+    {
+        for (int stack = 2; stack <= to; stack++)
+        {
+            _log.Line(_start + _at + TimeSpan.FromSeconds(stack - 1),
+                $"SPELL_AURA_APPLIED_DOSE,{_log.Units(_log.BossName, target)},{(int)with}," +
+                $"\"{with.NameOf()}\",0x1,DEBUFF,{stack}");
+        }
+
+        return this;
+    }
+
     /// <summary>A friendly buff, which the app is expected to ignore when reading who took what.</summary>
     public PullBuilder Buffs(string source, string target, Ability with, int times = 1)
     {

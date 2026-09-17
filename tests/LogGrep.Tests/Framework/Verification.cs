@@ -189,6 +189,22 @@ public sealed class Verification
             $"{players} {(players == 1 ? "player." : "players.")}",
             _page.ViewModel.FindingsSummary);
 
+    /// <summary>A stack count this fight turned out to stop forgiving.</summary>
+    public void TheStackFindingReads(string player, string expected)
+        => Assert.Equal(expected, Stacks(player).FirstOrDefault()?.Headline ??
+            throw new InvalidOperationException("Nothing was said about " + player + "'s stacks. " + What()));
+
+    public void TheStackEvidenceReads(string player, string expected)
+        => Assert.Equal(expected, Stacks(player).First().Evidence);
+
+    public void NothingWasSaidAboutStacks()
+        => Assert.True(!_page.Findings.Any(f => f.Category == "stacks"),
+            "Stacks should have gone unmentioned, and this was said: " +
+            string.Join(", ", _page.Findings.Where(f => f.Category == "stacks").Select(f => f.Line)));
+
+    private IEnumerable<Finding> Stacks(string player)
+        => _page.Findings.Where(f => f.Category == "stacks" && PlayerName.Character(f.Player) == player);
+
     /// <summary>A talent change the numbers moved with.</summary>
     public void TheBuildFindingReads(string player, string expected)
         => Assert.Equal(expected, Builds(player).FirstOrDefault()?.Headline ??
