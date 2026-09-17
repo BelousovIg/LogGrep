@@ -120,6 +120,10 @@ different problems, and the `2/3` column already hints at the distinction.
 
 Each ends with something usable. None is a rewrite of what exists.
 
+All eleven are closed. Nine were built, one (10) was decided against with its condition for reopening
+written down, and one (9) is built but still needs a generated rules file committed and an installer
+to place it - the only step left that needs a Blizzard key, which belongs to whoever holds one.
+
 ### 1. A finding worth reading — done
 
 Give the finding its four fields: category, evidence, estimated cost, written fix. Turn
@@ -567,7 +571,7 @@ did not", which is a different detector and a different sentence.
 Ends with: coverage from the first pull, an advice line written by the people who made the fight,
 and a rule file that announces its own decay.
 
-### 10. Reference data, if it turns out to be wanted
+### 10. Reference data, if it turns out to be wanted — decided against, for now
 
 Only here, and only if "what should good look like" is still missing by then. This is where an
 Archon-style aggregate would plug in, and the terms of use of whoever provides it are a real
@@ -575,6 +579,29 @@ question rather than a footnote.
 
 Ends with: "against the top percentile" as an option, never as the foundation.
 
+
+Decided: not now, and the decision is the deliverable.
+
+The gap this was meant to fill - "what should good look like" - is real and still open. Nothing in
+the app can tell you about the cooldown nobody in your raid uses well, because every baseline it has
+is drawn from your own raid. That was named honestly at the top of this document and it has not
+changed.
+
+What has changed is how much is reachable without it. Three baselines exist now: your own attempts,
+another player of your spec in the same log, and the group within one attempt. Between them they
+cover the questions people actually ask after a night - was that my fault, did I get worse, did we
+lose this to one mechanic - and none of them needs a corpus, a subscription, or anybody's terms of
+use.
+
+What stands in the way is not effort. Archon refuses automated requests, which is on record in this
+document's own research; its aggregate is a compilation and compilations are protectable even where
+the underlying facts are not. Building against it would mean either asking permission or taking
+something that is not ours, and neither is a thing to do speculatively on the chance it turns out
+useful.
+
+So the condition for opening this stays as written: only if the missing yardstick is felt in
+practice, and only with the provider's terms settled first. Until then the honest position is that
+the app compares you to your raid and says so, rather than implying it knows what good looks like.
 ### 11. The logs you have open — done
 
 The toolbar still carries a read-only box holding one file path, which is a leftover from when the
