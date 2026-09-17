@@ -50,6 +50,43 @@ public sealed class ExplainingADeath : Scenario
     }
 
     [Fact]
+    public void A_group_falling_together_is_one_event_even_when_the_fight_goes_on()
+    {
+        // Three of ten inside five seconds, and the attempt still had two minutes in it. The fight
+        // carrying on is not enough on its own - whatever caught three people at once caught them,
+        // and pinning it on each of them separately says the same thing three times.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(1.Minutes()).Kills("Nightblade")
+            .At(1.Minutes(2)).Kills("Emberwild")
+            .At(1.Minutes(4)).Kills("Moonfire")
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.NothingWasFound();
+    }
+
+    [Fact]
+    public void The_same_three_deaths_spread_out_are_three_separate_ones()
+    {
+        // Same people, same attempt, half a minute apart. Nothing caught them together, so each
+        // one is their own.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(30.Seconds()).Kills("Nightblade")
+            .At(1.Minutes()).Kills("Emberwild")
+            .At(1.Minutes(30)).Kills("Moonfire")
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.ADeathWasReported("Nightblade", at: 30.Seconds())
+            .And.ADeathWasReported("Emberwild", at: 1.Minutes())
+            .And.ADeathWasReported("Moonfire", at: 1.Minutes(30));
+    }
+
+    [Fact]
     public void A_death_the_raid_fought_on_past_belongs_to_the_player()
     {
         // One person dies a third of the way in and the fight runs another two minutes. Whatever
