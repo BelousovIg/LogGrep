@@ -228,6 +228,24 @@ public sealed class Then
         return this;
     }
 
+    public Then GotFewerUses(string player, Ability spell)
+    {
+        _check.GotFewerUses(player, spell);
+        return this;
+    }
+
+    public Then GotNoCooldownFinding(string player)
+    {
+        _check.GotNoCooldownFinding(player);
+        return this;
+    }
+
+    public Then TheCooldownFindingReads(string player, string expected)
+    {
+        _check.TheCooldownFindingReads(player, expected);
+        return this;
+    }
+
     public Then WasIdle(string player)
     {
         _check.WasIdle(player);

@@ -33,6 +33,9 @@ public enum Ability
     /// <summary>What a rogue or a monk stops a cast with; the same spell all night.</summary>
     Kick = 3107,
 
+    /// <summary>Something with a long cooldown, used a handful of times in a fight.</summary>
+    Reckoning = 3108,
+
     PossessionBarrage = 3201,
     HollowingStrikes = 3202,
     CreepingRot = 3203,

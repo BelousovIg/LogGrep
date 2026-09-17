@@ -189,6 +189,22 @@ public sealed class Verification
             $"{players} {(players == 1 ? "player." : "players.")}",
             _page.ViewModel.FindingsSummary);
 
+    /// <summary>An attempt where one of the player's own spells went out far less than it usually does.</summary>
+    public void GotFewerUses(string player, Ability spell)
+        => Assert.True(Cooldowns(player).Any(f => f.Headline.Contains(spell.NameOf(), StringComparison.Ordinal)),
+            $"'{player}' should have been short of '{spell.NameOf()}'. " + What());
+
+    public void GotNoCooldownFinding(string player)
+        => Assert.True(!Cooldowns(player).Any(),
+            $"'{player}' should have had nothing said about their cooldowns, and got: " +
+            string.Join(", ", Cooldowns(player).Select(f => f.Headline)));
+
+    public void TheCooldownFindingReads(string player, string expected)
+        => Assert.Equal(expected, Cooldowns(player).First().Headline);
+
+    private IEnumerable<Finding> Cooldowns(string player)
+        => _page.Findings.Where(f => f.Category == "cooldowns" && PlayerName.Character(f.Player) == player);
+
     /// <summary>An attempt where the app says this player stood about far more than they usually do.</summary>
     public void WasIdle(string player)
         => Assert.True(Idle(player).Any(),

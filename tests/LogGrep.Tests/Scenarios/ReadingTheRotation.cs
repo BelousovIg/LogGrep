@@ -33,6 +33,75 @@ public sealed class ReadingTheRotation : Scenario
             .Casting("Emberwild", Ability.Strike, from: 0.Seconds(), to: 2.Minutes(), every: Steady)
             .Wipe());
 
+    /// <summary>
+    /// A night where one spell went out every half minute. Five uses an attempt, which is a
+    /// cooldown's worth rather than a filler's.
+    /// </summary>
+    private static CombatLogBuilder ANightOfCooldowns(int times = 6, TimeSpan? every = null)
+        => ARaid().Pulls(times, Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(),
+                every: every ?? 30.Seconds())
+            .Wipe());
+
+    [Fact]
+    public void A_spell_used_at_its_usual_rate_is_nobodys_mistake()
+    {
+        Given.IOpenedLog(ANightOfCooldowns(times: 8));
+
+        Then.NothingWasFound();
+    }
+
+    [Fact]
+    public void A_spell_that_barely_went_out_on_one_attempt_is_reported()
+    {
+        // Five uses every attempt, then two. Nothing here knows what Reckoning does.
+        var log = ANightOfCooldowns().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes())
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.GotFewerUses("Nightblade", Ability.Reckoning)
+            .And.TheCooldownFindingReads("Nightblade", "used Reckoning twice where 5 times is your usual");
+    }
+
+    [Fact]
+    public void One_use_fewer_than_usual_is_not_worth_saying()
+    {
+        // Two an attempt, then one. That is the length of the pull or the phase it reached, and a
+        // finding for it would bury the ones that mean something.
+        var log = ANightOfCooldowns(every: 2.Minutes()).Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(0.Seconds()).Casts("Nightblade", Ability.Reckoning)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.GotNoCooldownFinding("Nightblade");
+    }
+
+    [Fact]
+    public void A_filler_cast_constantly_is_not_a_cooldown()
+    {
+        // Twenty a minute is not a cooldown, and half as many of it is a pace question - which the
+        // idle rule already asks better.
+        var log = ARaid()
+            .Pulls(6, Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Casting("Nightblade", Ability.Strike, from: 0.Seconds(), to: 2.Minutes(), every: 3.Seconds())
+                .Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Casting("Nightblade", Ability.Strike, from: 0.Seconds(), to: 2.Minutes(), every: 12.Seconds())
+                .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.GotNoCooldownFinding("Nightblade");
+    }
+
     [Fact]
     public void A_night_at_one_pace_is_nobodys_mistake()
     {
