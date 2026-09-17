@@ -58,6 +58,12 @@ public static class Display
     /// <summary>A raw total, scaled the same way as a rate.</summary>
     public static string Amount(long value) => Rate(value);
 
+    /// <summary>
+    /// A share, whole-numbered. A hit can land for more than a full health pool, and rounding that
+    /// down to 100% would hide exactly how far past survivable it was.
+    /// </summary>
+    public static string Percent(double value) => Math.Round(value * 100).ToString("0", Inv) + "%";
+
     /// <summary>Time inside a pull as "m:ss", the shape death times are read in.</summary>
     public static string Clock(TimeSpan value)
     {

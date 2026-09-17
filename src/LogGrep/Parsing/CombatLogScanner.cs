@@ -428,13 +428,14 @@ public sealed class CombatLogScanner
         double at = LogTimestamp.SecondsOfDay(line, eventStart);
 
         var elapsed = Elapsed(at);
-        var (span, damage, biggest) = victim.Event(at, elapsed);
+        var (span, damage, biggest, from) = victim.Event(at, elapsed);
 
         victim.Deaths.Add(new DeathRecord(elapsed, victim.Causes(at))
         {
             Span = span,
             Damage = damage,
             Biggest = biggest,
+            BiggestFrom = from,
             MaxHealth = victim.MaxHealth,
         });
 
@@ -847,10 +848,11 @@ public sealed class CombatLogScanner
         /// damage is one conversation, a long span spent low is another, and the last three seconds
         /// of a death are the symptom of either.
         /// </summary>
-        public (TimeSpan Span, long Damage, long Biggest) Event(double at, TimeSpan elapsed)
+        public (TimeSpan Span, long Damage, long Biggest, string From) Event(double at, TimeSpan elapsed)
         {
             long damage = 0;
             long biggest = 0;
+            string from_ = string.Empty;
             double from = at;
 
             foreach (var hit in Hits.Reverse())
@@ -858,7 +860,12 @@ public sealed class CombatLogScanner
                 if (at >= 0 && hit.At > at) continue;
 
                 damage += hit.Amount;
-                if (hit.Amount > biggest) biggest = hit.Amount;
+                if (hit.Amount > biggest)
+                {
+                    biggest = hit.Amount;
+                    from_ = hit.Label;
+                }
+
                 from = hit.At;
 
                 // The hit that left them whole is where the trouble started, not before it.
@@ -866,7 +873,7 @@ public sealed class CombatLogScanner
             }
 
             var span = at >= 0 ? TimeSpan.FromSeconds(Math.Max(0, at - from)) : TimeSpan.Zero;
-            return (span > elapsed ? elapsed : span, damage, biggest);
+            return (span > elapsed ? elapsed : span, damage, biggest, from_);
         }
 
         /// <summary>The largest health the player was ever seen with, which is what a share is of.</summary>

@@ -30,6 +30,9 @@ public sealed record DeathRecord(TimeSpan At, IReadOnlyList<DamageCause> Causes)
     /// </summary>
     public long Biggest { get; init; }
 
+    /// <summary>What dealt that hit.</summary>
+    public string BiggestFrom { get; init; } = string.Empty;
+
     /// <summary>That hit as a share of the pool: "this took 52% of them".</summary>
     public double BiggestShare => MaxHealth > 0 ? Biggest / (double)MaxHealth : 0;
 }

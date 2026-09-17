@@ -228,6 +228,30 @@ public sealed class Then
         return this;
     }
 
+    public Then ADeathWasReported(string player, TimeSpan at)
+    {
+        _check.ADeathWasReported(player, at);
+        return this;
+    }
+
+    public Then TheDeathReads(string player, string expected)
+    {
+        _check.TheDeathReads(player, expected);
+        return this;
+    }
+
+    public Then DeathEvidenceReads(string player, string expected)
+    {
+        _check.DeathEvidenceReads(player, expected);
+        return this;
+    }
+
+    public Then DeathAdvises(string player, string expected)
+    {
+        _check.DeathAdvises(player, expected);
+        return this;
+    }
+
     public Then NothingWasFound()
     {
         _check.NothingWasFound();

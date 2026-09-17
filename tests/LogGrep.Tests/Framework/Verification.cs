@@ -189,6 +189,27 @@ public sealed class Verification
             $"{players} {(players == 1 ? "player." : "players.")}",
             _page.ViewModel.FindingsSummary);
 
+    /// <summary>A death the app decided was that player's own rather than the attempt ending.</summary>
+    public void ADeathWasReported(string player, TimeSpan at)
+        => Assert.True(Deaths(player).Any(f => f.At == at),
+            $"'{player}' should have a death reported at {Display.Clock(at)}. " + What());
+
+    public void TheDeathReads(string player, string expected)
+        => Assert.Equal(expected, TheDeath(player).Headline);
+
+    public void DeathEvidenceReads(string player, string expected)
+        => Assert.Equal(expected, TheDeath(player).Evidence);
+
+    public void DeathAdvises(string player, string expected)
+        => Assert.Contains(expected, TheDeath(player).Advice, StringComparison.Ordinal);
+
+    private IEnumerable<Finding> Deaths(string player)
+        => _page.Findings.Where(f => f.Category == "deaths" && PlayerName.Character(f.Player) == player);
+
+    private Finding TheDeath(string player)
+        => Deaths(player).FirstOrDefault()
+           ?? throw new InvalidOperationException($"No death was reported for '{player}'. " + What());
+
     public void NothingWasFound()
         => Assert.True(_page.Findings.Count == 0,
             "Nothing should have been found, but these were: " +

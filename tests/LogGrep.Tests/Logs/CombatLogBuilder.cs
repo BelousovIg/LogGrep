@@ -28,7 +28,11 @@ public sealed class CombatLogBuilder
     private const string BossFlags = "0xa48";        // outsider, hostile, NPC
     private const string NoRaidFlags = "0x80000000";
 
+    /// <summary>Everybody's health pool. One number for the raid keeps a scenario's arithmetic readable.</summary>
+    public const long HealthPool = 1_000_000;
+
     private readonly StringBuilder _text = new();
+    private readonly Dictionary<string, long> _health = new(StringComparer.Ordinal);
     private readonly List<Fighter> _roster = new();
     private DateTime _start = Evening(2026, 9, 15);
     private DateTime _origin = Evening(2026, 9, 15) - TimeSpan.FromMinutes(1);
@@ -107,6 +111,9 @@ public sealed class CombatLogBuilder
                          $"{(int)Ability.WellFed},\"{Ability.WellFed.NameOf()}\",0x1,BUFF");
         }
 
+        // Everybody starts an attempt whole.
+        _health.Clear();
+
         var pull = new PullBuilder(this, _start);
         body(pull);
 
@@ -179,6 +186,37 @@ public sealed class CombatLogBuilder
            $"{Actor(target)},\"{ActorName(target)}\",{Flags(target)},{NoRaidFlags}";
 
     internal string Nobody => $"0000000000000000,nil,{NoRaidFlags},{NoRaidFlags}";
+
+    /// <summary>
+    /// The advanced parameter block the game puts on every damage event, which is where the target's
+    /// health lives. The app reads that health to say how much of somebody one hit took, so a
+    /// generator that leaves the block out writes a log nothing can be concluded from.
+    ///
+    /// Health is tracked as the fight goes: the hit is applied here, and what the block reports is
+    /// what is left afterwards, which is what the game reports too.
+    /// </summary>
+    internal string Advanced(string target, long amount)
+    {
+        _health.TryGetValue(target, out long left);
+        if (left <= 0) left = HealthPool;
+
+        left = Math.Max(0, left - amount);
+        _health[target] = left;
+
+        // infoGUID, ownerGUID, currentHP, maxHP, then the stats nothing reads, then the position
+        // fields that close the block - the app anchors on the first decimal to find the end.
+        return $"{Actor(target)},0000000000000000,{left},{HealthPool},0,0,0,0,0,0,0,0," +
+               "1234.56,789.01,2000,3.14,80";
+    }
+
+    /// <summary>Healing puts it back, so a fight can be a grind rather than one long slide.</summary>
+    internal void Healed(string target, long amount)
+    {
+        _health.TryGetValue(target, out long left);
+        if (left <= 0) left = HealthPool;
+
+        _health[target] = Math.Min(HealthPool, left + amount);
+    }
 
     internal string Victim(string name)
         => $"{Actor(name)},\"{ActorName(name)}\",{Flags(name)},{NoRaidFlags}";

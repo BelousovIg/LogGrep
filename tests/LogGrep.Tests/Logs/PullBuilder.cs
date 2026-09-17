@@ -51,6 +51,7 @@ public sealed class PullBuilder
     public PullBuilder Heals(
         string source, string target, long amount, long overheal = 0, Ability with = Ability.Mending)
     {
+        _log.Healed(target, amount - overheal);
         _log.Line(_start + _at,
             $"SPELL_HEAL,{_log.Units(source, target)},{(int)with},\"{with.NameOf()}\",0x2," +
             $"{amount},{amount},{overheal},0,nil");
@@ -112,7 +113,8 @@ public sealed class PullBuilder
     public PullBuilder BossSwingsAt(string target, long amount)
     {
         _log.Line(_start + _at,
-            $"SWING_DAMAGE,{_log.Units(_log.BossName, target)},{amount},0,1,0,0,0,nil,nil,nil");
+            $"SWING_DAMAGE,{_log.Units(_log.BossName, target)},{_log.Advanced(target, amount)}," +
+            $"{amount},0,1,0,0,0,nil,nil,nil");
         return this;
     }
 
@@ -139,5 +141,5 @@ public sealed class PullBuilder
     private void Damage(string source, string target, long amount, Ability spell)
         => _log.Line(_start + _at,
             $"SPELL_DAMAGE,{_log.Units(source, target)},{(int)spell}," +
-            $"\"{spell.NameOf()}\",0x1,{amount},0,1,0,0,0,nil,nil,nil");
+            $"\"{spell.NameOf()}\",0x1,{_log.Advanced(target, amount)},{amount},0,1,0,0,0,nil,nil,nil");
 }
