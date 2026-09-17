@@ -411,7 +411,7 @@ a comparison at all, and their output moved 1.7%, 8.8% and 13.1% - all under the
 says nothing about builds on this log, which is the honest blank the milestone asked for rather
 than an absence of the feature.
 
-### 8. The night, summed up — started
+### 8. The night, summed up — done
 
 Everything so far answers "what went wrong here". An evening also has a shape, and it is the shape
 a raid leader argues about afterwards.
@@ -454,7 +454,17 @@ healing is not (8 of 12, said). Two players stopped making their mistakes halfwa
 mistakes in the first 6 attempts, none in the last 7" - which is exactly the good news that until
 now read identically to five mistakes spread evenly.
 
-Still to do: consistency as the spread of somebody's output, and mistakes split by mechanic.
+`SpreadDetector` says what an output ranged between, because an average hides which night it was:
+two people on the same figure can have got there from 90K every attempt or from 40K and 140K.
+`TollReview` says when one mechanic accounts for most of the evening's mistakes, which is a
+different problem from the same number of separate slips - a word before the next pull rather than
+a word with each of the people in it. Nobody's name is on that one: it belongs to the group.
+
+Five facts came out of the real log: one player led the healing, two nights swung (one from 5K to
+143K, which is somebody who spent attempts dead rather than somebody inconsistent), and two people
+stopped making their mistakes halfway through. No single mechanic accounted for enough of the
+evening to be named, which is the right answer for a night whose 20 mechanic findings sit across
+two bosses.
 
 ### 9. Rules that may rot, and the log that catches them
 
