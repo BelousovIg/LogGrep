@@ -88,6 +88,22 @@ public sealed class OpeningThePull : Scenario
     }
 
     [Fact]
+    public void A_first_hit_that_came_a_minute_in_is_not_the_opening()
+    {
+        // Nothing touched the group for a minute, and then the boss went for the rogue. That is a
+        // mechanic, or an add, or a phase - it is not how the pull began.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
+            .At(1.Minutes()).BossHits("Nightblade", 300_000)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.ThePullWasClean();
+    }
+
+    [Fact]
     public void A_group_with_no_tank_in_it_cannot_pull_wrong()
     {
         var log = new CombatLogBuilder()
