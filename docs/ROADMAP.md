@@ -310,6 +310,19 @@ died, nobody below it did. On the real log not one debuff separates - people die
 something and lived holding twenty - so the app says nothing, which was the predicted answer and is
 the right one.
 
+A death also carries a likely reason when one stands out. If somebody died holding far more of a
+debuff than the damage and the healers were carrying - tanks excluded, they hold more of everything
+by design - the count is named, as a likelihood rather than a rule: one attempt cannot prove a stack
+count kills. Half again above the group's average, and at least three, because everybody who dies
+was carrying more of something than average and a plainer bar would append a guess to every death.
+
+That is the single-death half of the question. The whole-raid half cannot be answered from one
+fight at all, and is not attempted there: `StackDetector` needs a run of attempts and a clean split
+before it will name a number.
+
+On the real log: 15 of the 97 deaths get a likely reason, and they read as
+"likely the 20 stacks of Hollowing Strikes on you, against 0.2 on the rest of the group".
+
 ### 5. Execution, without knowing the class — done
 
 Three signals that need no class knowledge at all:
