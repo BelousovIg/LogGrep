@@ -367,13 +367,32 @@ app previously had nothing to say about. It also turned up a formatting bug: a r
 with the machine's own decimal separator, so a Russian locale read 2,5 where the rest of the app
 writes 2.5.
 
-### 7. Talents and builds
+### 7. Talents and builds — done, less what the log cannot carry
 
 The tree is in the log, so what was run is known exactly. Without a corpus we can still say what
 changed between attempts and whether output followed, and whether a talent sat unused - a node taken
 and its spell never cast is a finding needing no reference data whatsoever.
 
 Ends with: build findings that are certain, and an honest blank where certainty is not available.
+
+What it came out as: half the plan, and the other half turned out not to be available.
+
+The half that works is the build change. The talent array is hashed per attempt, so a respec is
+visible without understanding one number in it, and `BuildDetector` compares what a player managed
+on the build before against the build after - damage for most, healing for a healer, since a healer
+whose damage moved has told nobody anything. It never says which build is better or what to pick:
+only that the two did not perform the same here, for you, on this fight.
+
+The half that does not: "a node taken and its spell never cast" needs to know which spell a node
+gives, and the log does not carry that. The array is `(nodeID, entryID, rank)` and nothing else -
+no spell id, no name, nothing a person would recognise. Recovering the mapping empirically would
+mean watching who casts what across many builds, which is a corpus by another name, and the plan's
+own premise was that this finding needed no reference data. It does.
+
+Measured on the real log: 15 players changed talents at some point, three of them often enough for
+a comparison at all, and their output moved 1.7%, 8.8% and 13.1% - all under the bar. So the app
+says nothing about builds on this log, which is the honest blank the milestone asked for rather
+than an absence of the feature.
 
 ### 8. The night, summed up
 
