@@ -440,15 +440,21 @@ count. "Best player" is an opinion and does not belong here.
 Ends with: an evening a raid leader can read in one screen, with the good and the bad held to the
 same evidence.
 
-Started, not finished. The first piece is in: `FirstDeathDetector` counts who opened each attempt
-and says so when one person did it for most of the evening - "first to die in 9 of 13 attempts",
-which is a count rather than an opinion and is a different question from whether any one of those
-deaths was avoidable.
+Three of the five pieces are in.
 
-Still to do: mistakes split by player, by mechanic and by half of the evening; consistency as the
-spread of somebody's output; what a player led; and the counterweight of things that went right.
-That last one matters as much as the rest and is the easiest to leave for later, which is exactly
-why it is written down here.
+`FirstDeathDetector` counts who opened each attempt. `LedDetector` counts what somebody led - the
+counterweight, held to the same standard as the blame: "top healing in 8 of 12" is a count, "best
+player" is an opinion and is not here. `ImprovementReview` compares the halves of the evening, which
+needed a second kind of pass: `IReview` runs after the detectors and over what they found, because
+"did this stop happening" is a question about the findings and no detector can see past its own.
+
+Measured on the real log, and the thresholds hold up: top damage changes hands (4 of 12 for two
+people, so nothing is said), first death is spread evenly (2 of 12 at most, nothing said), top
+healing is not (8 of 12, said). Two players stopped making their mistakes halfway through - "5
+mistakes in the first 6 attempts, none in the last 7" - which is exactly the good news that until
+now read identically to five mistakes spread evenly.
+
+Still to do: consistency as the spread of somebody's output, and mistakes split by mechanic.
 
 ### 9. Rules that may rot, and the log that catches them
 
