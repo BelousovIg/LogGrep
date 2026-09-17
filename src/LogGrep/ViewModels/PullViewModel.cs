@@ -30,7 +30,7 @@ public sealed class PullViewModel : ObservableObject
 
     public bool HasMistakes => _mistakes.Count > 0;
 
-    public string MistakesText => _mistakes.Count == 0 ? "—" : _mistakes.Count.ToString();
+    public string MistakesText => _mistakes.Count == 0 ? "—" : Display.Count(_mistakes.Count);
 
     /// <summary>
     /// Hands the attempt what the analysis found. The player rows are dropped rather than patched:

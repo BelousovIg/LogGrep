@@ -45,7 +45,7 @@ public sealed class EncounterViewModel : ObservableObject
     /// <summary>What the pull rows are bound to; the collection itself keeps its natural order.</summary>
     public ICollectionView PullsView => _pullsView;
 
-    public string PullCountText => Pulls.Count.ToString();
+    public string PullCountText => Display.Count(Pulls.Count);
 
     public bool HasKill => Pulls.Any(p => p.Record.Success);
 
@@ -75,13 +75,13 @@ public sealed class EncounterViewModel : ObservableObject
             if (sizes.Count == 0) return "—";
             int min = sizes.Min();
             int max = sizes.Max();
-            return min == max ? min.ToString() : min + "–" + max;
+            return min == max ? Display.Count(min) : Display.Count(min) + "–" + Display.Count(max);
         }
     }
 
 
     /// <summary>How many attempts had a mistake in them, out of how many there were.</summary>
-    public string MistakesText => Pulls.Count == 0 ? "—" : PullsWithMistakes + "/" + Pulls.Count;
+    public string MistakesText => Pulls.Count == 0 ? "—" : Display.Count(PullsWithMistakes) + "/" + Display.Count(Pulls.Count);
 
     public int PullsWithMistakes => Pulls.Count(p => p.HasMistakes);
 

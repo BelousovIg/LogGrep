@@ -1,3 +1,4 @@
+using LogGrep.ViewModels;
 using LogGrep.Models;
 
 namespace LogGrep.Analysis;
@@ -53,7 +54,7 @@ public sealed class StackDetector : IDetector
     private Finding Report(Attempts attempts, Held peak, int tolerance, int survived)
         => new(
             Category,
-            "carried " + peak.Count + " stacks of " + peak.Spell,
+            "carried " + Display.Count(peak.Count) + " stacks of " + peak.Spell,
             "everybody who reached " + tolerance + " died within ten seconds; nobody who stopped at " +
             survived + " did",
             "Nothing here knows what this debuff does. It knows where this fight stopped " +

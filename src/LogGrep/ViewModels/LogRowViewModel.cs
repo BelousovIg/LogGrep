@@ -47,9 +47,9 @@ public sealed class LogRowViewModel : ObservableObject
         }
     }
 
-    public string PullsText => Missing ? "—" : Source is { } s ? s.Pulls.ToString() : string.Empty;
+    public string PullsText => Missing ? "—" : Source is { } s ? Display.Count(s.Pulls) : string.Empty;
 
-    public string EncountersText => Missing ? "—" : Source is { } s ? s.Encounters.ToString() : string.Empty;
+    public string EncountersText => Missing ? "—" : Source is { } s ? Display.Count(s.Encounters) : string.Empty;
 
     /// <summary>When the first attempt in this file started - not when the file was opened.</summary>
     public string StartedText => Missing

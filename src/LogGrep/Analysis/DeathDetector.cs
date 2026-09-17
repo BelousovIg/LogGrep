@@ -192,7 +192,7 @@ public sealed class DeathDetector : IDetector
         double usual = group.Average();
         if (worst.Peak < Math.Max(Noticeable, usual * Carrying)) return string.Empty;
 
-        return "; likely the " + worst.Peak + " stacks of " + worst.Spell + " on you, against " +
+        return "; likely the " + Display.Count(worst.Peak) + " stacks of " + worst.Spell + " on you, against " +
                Display.Decimal(usual) + " on the rest of the group";
     }
 
