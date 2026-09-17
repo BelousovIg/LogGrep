@@ -64,6 +64,7 @@ what the window shows. It fails the moment anything formats a value itself, whic
 rule true rather than merely written down.
 
 ## Milestones
+
 `docs/ROADMAP.md` holds them, and each one records what it actually came out as - including where
 it departed from the plan and what the real log measured. Read that before starting one: several
 milestones turned out differently from how they were written, and the record of why is the point.
