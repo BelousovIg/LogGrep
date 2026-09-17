@@ -55,8 +55,17 @@ public sealed record DeathRecord(TimeSpan At, IReadOnlyList<DamageCause> Causes)
 /// casts. That gap is the spell's cooldown as the log demonstrates it - no database, no class
 /// knowledge, and it stays right through a patch that changes the number.
 /// </summary>
-public readonly record struct SpellUse(int SpellId, string Spell, int Uses, double Cooldown)
+/// <param name="Output">
+/// What the spell did - damage dealt or healing that landed. A spell with none is a movement or a
+/// utility and cannot be under-used in any sense the app can measure; a spell with very little is
+/// a filler, and pressing it twice instead of four times costs nothing worth a sentence. Matched by
+/// spell id, so an ability whose cast and whose effect carry different ids reads as having none.
+/// </param>
+public readonly record struct SpellUse(int SpellId, string Spell, int Uses, double Cooldown, long Output = 0)
 {
+    /// <summary>What one use of it was worth on average.</summary>
+    public long Each => Uses > 0 ? Output / Uses : 0;
+
     /// <summary>How many times it could have gone out over a fight of that length.</summary>
     public int Room(TimeSpan duration)
         => Cooldown <= 0 ? Uses : (int)Math.Floor(duration.TotalSeconds / Cooldown) + 1;

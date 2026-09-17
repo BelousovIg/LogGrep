@@ -29,6 +29,19 @@ public sealed class CooldownDetector : IDetector
     /// </summary>
     private const double Filler = 4;
 
+    /// <summary>
+    /// How much of a player's own output a spell has to account for before missing it is worth a
+    /// sentence.
+    ///
+    /// Counting uses alone reads a spell nobody has a reason to press as a cooldown, because a
+    /// spell nobody has a reason to press is used rarely. On the real log that put Holy Nova in the
+    /// list - 3830 casts for five million healing across an evening, half a percent of what those
+    /// healers did, 1427 a cast - beside Death Pact, which did nine million in twenty-five. And
+    /// Charge, Fel Rush, Demonic Circle and Angelic Feather, which do nothing measurable at all and
+    /// cannot be under-used in any sense this app can support.
+    /// </summary>
+    private const double Worthwhile = 0.02;
+
     /// <summary>How far below their own usual rate the attempt has to fall.</summary>
     private const double Short = 0.5;
 
@@ -54,6 +67,14 @@ public sealed class CooldownDetector : IDetector
             var yardstick = Yardstick.Of(
                 seen.Select(u => new Measured(u.Pull, u.Player, u.SpecId, u.PerMinute)), MinimumAttempts);
 
+            // What this spell is worth to the people who cast it, over the whole evening. A spell
+            // that does nothing, or almost nothing, is not a cooldown however rarely it goes out.
+            long output = seen.Sum(u => u.Output);
+            long theirs = seen.Sum(u => u.Whole);
+            if (output <= 0 || theirs <= 0 || output < theirs * Worthwhile) continue;
+
+            long each = output / Math.Max(1, seen.Sum(u => u.Count));
+
             foreach (var use in seen)
             {
                 var usual = yardstick.For(use.Player, use.SpecId);
@@ -63,12 +84,12 @@ public sealed class CooldownDetector : IDetector
                 double expected = usual.Value * use.Minutes;
                 if (expected - use.Count < Missing) continue;
 
-                yield return Report(attempts, use with { Usual = usual.Value }, expected, usual);
+                yield return Report(attempts, use with { Usual = usual.Value }, expected, usual, each);
             }
         }
     }
 
-    private Finding Report(Attempts attempts, Use use, double expected, Normal usual)
+    private Finding Report(Attempts attempts, Use use, double expected, Normal usual, long each)
         => new(
             Category,
             "used " + use.Spell + " " + Times(use.Count) + " where " + Times(Math.Round(expected)) +
@@ -77,7 +98,7 @@ public sealed class CooldownDetector : IDetector
             Display.Decimal(usual.Value) + " a minute of it",
             "Nothing here knows what this spell does or when it should go out - only that you " +
             "normally get more of it out of an attempt this long than you did here.",
-            Cost.Nothing("no damage to put on it"),
+            Cost.Damage((long)((expected - use.Count) * each)),
             attempts.NumberOf(use.Pull),
             use.Pull,
             use.Player,
@@ -107,7 +128,8 @@ public sealed class CooldownDetector : IDetector
                 foreach (var spell in player.Spells)
                 {
                     yield return new Use(pull, player.Name, player.SpecId, spell.SpellId, spell.Spell,
-                        spell.Uses, minutes, spell.Uses / minutes, 0);
+                        spell.Uses, minutes, spell.Uses / minutes, 0, spell.Output,
+                        player.Damage + player.Healing);
                 }
             }
         }
@@ -115,5 +137,5 @@ public sealed class CooldownDetector : IDetector
 
     private readonly record struct Use(
         PullRecord Pull, string Player, int SpecId, int SpellId, string Spell,
-        int Count, double Minutes, double PerMinute, double Usual);
+        int Count, double Minutes, double PerMinute, double Usual, long Output = 0, long Whole = 0);
 }

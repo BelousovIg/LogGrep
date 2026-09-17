@@ -384,7 +384,8 @@ public sealed class CombatLogScanner
                 Casts = entry.Value.Casts,
                 DeadSeconds = entry.Value.Dead,
                 Spells = entry.Value.Spells
-                    .Select(s => new SpellUse(s.Key, s.Value.Label, s.Value.Uses, s.Value.Shortest))
+                    .Select(s => new SpellUse(s.Key, s.Value.Label, s.Value.Uses, s.Value.Shortest,
+                        entry.Value.Output.TryGetValue(s.Key, out long did) ? did : 0))
                     .ToArray(),
                 Stacks = entry.Value.Stacks
                     .Select(s => new StackPeak(s.Key, s.Value.Label, s.Value.Peak, s.Value.At))
@@ -694,6 +695,11 @@ public sealed class CombatLogScanner
                 _open!.Damage += amount;
                 if (actor != null) actor.Damage += amount;
             }
+
+            // What this particular spell actually did. Without it there is no telling a cooldown
+            // from a filler: the app was calling a spell a cooldown for being used rarely, which is
+            // exactly what a spell nobody has a reason to press looks like.
+            if (actor != null && prefixParams >= 3) actor.Did(_fields.Int(line, 9), amount);
         }
 
         // Healing our players received. Who cast it is already counted above; what matters here is
@@ -1032,6 +1038,17 @@ public sealed class CombatLogScanner
 
         /// <summary>Stops the gap being measured across a death.</summary>
         public void Died() => _lastCast = -1;
+
+        /// <summary>What each of this player's spells actually did, in damage or effective healing.</summary>
+        public Dictionary<int, long> Output { get; } = new();
+
+        public void Did(int spellId, long amount)
+        {
+            if (spellId <= 0 || amount <= 0) return;
+
+            Output.TryGetValue(spellId, out long had);
+            Output[spellId] = had + amount;
+        }
 
         /// <summary>The highest any hostile debuff ever stacked on this player, and when.</summary>
         public Dictionary<int, (string Label, int Peak, TimeSpan At)> Stacks { get; } = new();

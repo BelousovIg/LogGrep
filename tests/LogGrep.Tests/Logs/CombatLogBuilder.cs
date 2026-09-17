@@ -43,6 +43,9 @@ public sealed class CombatLogBuilder
 
     internal string BossName => _boss.NameOf();
 
+    /// <summary>Which boss the current attempt is against, for events that need it as a target.</summary>
+    internal Boss BossOf() => _boss;
+
     /// <summary>When the log itself says it was written - the first line, and every line after it.</summary>
     internal DateTime Recorded => _origin;
 

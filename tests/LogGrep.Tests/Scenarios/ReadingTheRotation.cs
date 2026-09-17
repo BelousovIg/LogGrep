@@ -41,7 +41,7 @@ public sealed class ReadingTheRotation : Scenario
         => ARaid().Pulls(times, Soulcoiler, Difficulty.Mythic, p => p
             .Lasting(2.Minutes())
             .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(),
-                every: every ?? 30.Seconds())
+                every: every ?? 30.Seconds(), dealing: 500_000)
             .Wipe());
 
     [Fact]
@@ -58,7 +58,7 @@ public sealed class ReadingTheRotation : Scenario
         // Five uses every attempt, then two. Nothing here knows what Reckoning does.
         var log = ANightOfCooldowns().Pull(Soulcoiler, Difficulty.Mythic, p => p
             .Lasting(2.Minutes())
-            .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes())
+            .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes(), dealing: 500_000)
             .Wipe());
 
         Given.IOpenedLog(log);
@@ -90,11 +90,11 @@ public sealed class ReadingTheRotation : Scenario
         var log = ARaid()
             .Pulls(6, Soulcoiler, Difficulty.Mythic, p => p
                 .Lasting(2.Minutes())
-                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 20.Seconds())
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 20.Seconds(), dealing: 500_000)
                 .Wipe())
             .Pull(Soulcoiler, Difficulty.Mythic, p => p
                 .Lasting(2.Minutes())
-                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 40.Seconds())
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 40.Seconds(), dealing: 500_000)
                 .Wipe());
 
         Given.IOpenedLog(log);
@@ -115,12 +115,12 @@ public sealed class ReadingTheRotation : Scenario
                 Damage("Shadowstep", Spec.AssassinationRogue))
             .Pulls(6, Soulcoiler, Difficulty.Mythic, p => p
                 .Lasting(2.Minutes())
-                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 30.Seconds())
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 30.Seconds(), dealing: 500_000)
                 .Wipe())
             .Pull(Soulcoiler, Difficulty.Mythic, p => p
                 .Lasting(2.Minutes())
-                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 30.Seconds())
-                .Casting("Shadowstep", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes())
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 30.Seconds(), dealing: 500_000)
+                .Casting("Shadowstep", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes(), dealing: 500_000)
                 .Wipe());
 
         Given.IOpenedLog(log);
@@ -136,8 +136,59 @@ public sealed class ReadingTheRotation : Scenario
         // Three attempts and a bad one. Four numbers do not make a habit to depart from.
         var log = ANightOfCooldowns(times: 3).Pull(Soulcoiler, Difficulty.Mythic, p => p
             .Lasting(2.Minutes())
-            .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes())
+            .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes(), dealing: 500_000)
             .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.GotNoCooldownFinding("Nightblade");
+    }
+
+    [Fact]
+    public void A_spell_that_does_nothing_is_never_under_used()
+    {
+        // Holy Nova on the real log: rare, so the count alone called it a cooldown. Charge, Fel Rush
+        // and Demonic Circle were in the same list and do nothing measurable at all - there is no
+        // sense in which a rush can be pressed too few times.
+        var log = ARaid()
+            .Pulls(6, Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Casting("Nightblade", Ability.Strike, from: 0.Seconds(), to: 2.Minutes(), every: Steady,
+                    dealing: 500_000)
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 30.Seconds())
+                .Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Casting("Nightblade", Ability.Strike, from: 0.Seconds(), to: 2.Minutes(), every: Steady,
+                    dealing: 500_000)
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes())
+                .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.GotNoCooldownFinding("Nightblade");
+    }
+
+    [Fact]
+    public void A_spell_worth_almost_nothing_is_not_worth_a_sentence()
+    {
+        // It does something, but half a percent of what this player did all evening. Pressing it
+        // twice instead of five times costs nothing anybody should read about.
+        var log = ARaid()
+            .Pulls(6, Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Casting("Nightblade", Ability.Strike, from: 0.Seconds(), to: 2.Minutes(), every: Steady,
+                    dealing: 1_000_000)
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 30.Seconds(),
+                    dealing: 1_000)
+                .Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Casting("Nightblade", Ability.Strike, from: 0.Seconds(), to: 2.Minutes(), every: Steady,
+                    dealing: 1_000_000)
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes(),
+                    dealing: 1_000)
+                .Wipe());
 
         Given.IOpenedLog(log);
 

@@ -119,13 +119,24 @@ public sealed class PullBuilder
     /// the whole point of it: the app reads how much of an attempt somebody spent casting nothing,
     /// and that is the difference between one cast every two seconds and one every six.
     /// </summary>
-    public PullBuilder Casting(string player, Ability spell, TimeSpan from, TimeSpan to, TimeSpan every)
+    public PullBuilder Casting(string player, Ability spell, TimeSpan from, TimeSpan to, TimeSpan every,
+        long dealing = 0)
     {
         for (var at = from; at <= to; at += every)
         {
             _log.Line(_start + at,
                 $"SPELL_CAST_SUCCESS,{_log.Units(player, _log.BossName)},{(int)spell}," +
                 $"\"{spell.NameOf()}\",0x1");
+
+            // A spell that does nothing cannot be under-used in any sense the app can measure, so
+            // a scenario about under-using one has to give it something to do.
+            if (dealing > 0)
+            {
+                var was = _at;
+                _at = at;
+                Deals(player, _log.BossOf(), dealing, spell);
+                _at = was;
+            }
         }
 
         return this;
