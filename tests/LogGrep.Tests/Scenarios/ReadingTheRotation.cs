@@ -166,6 +166,35 @@ public sealed class ReadingTheRotation : Scenario
     }
 
     [Fact]
+    public void A_buff_held_slightly_less_than_usual_is_not_a_finding()
+    {
+        // Ninety-two percent most attempts, eighty on this one. Nobody holds anything perfectly,
+        // and a finding for that is a finding every attempt.
+        var log = ANightOfUptime().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .Holds("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 1.Minutes(36))
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.KeptTheirUptime("Nightblade");
+    }
+
+    [Fact]
+    public void A_handful_of_attempts_is_not_a_usual_uptime()
+    {
+        // Three attempts and a bad one. Four numbers do not say what somebody normally holds.
+        var log = ANightOfUptime(times: 3).Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .Holds("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 20.Seconds())
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.KeptTheirUptime("Nightblade");
+    }
+
+    [Fact]
     public void A_buff_nobody_holds_up_anyway_is_not_judged()
     {
         // Up for a third of the fight every time. That is a proc or a trinket, and its uptime is
