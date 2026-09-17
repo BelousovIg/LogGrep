@@ -75,6 +75,37 @@ public sealed class ReadingTheRotation : Scenario
     }
 
     [Fact]
+    public void Slightly_worse_than_usual_is_not_worth_saying()
+    {
+        // A tenth off the pace. The measure is coarse enough that calling this a mistake would be
+        // reading noise aloud, so the bar is a half again rather than any difference at all.
+        var log = ASteadyNight().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .Casting("Nightblade", Ability.Strike, from: 0.Seconds(), to: 2.Minutes(), every: 2.2.Seconds())
+            .Casting("Emberwild", Ability.Strike, from: 0.Seconds(), to: 2.Minutes(), every: Steady)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.WasNotIdle("Nightblade");
+    }
+
+    [Fact]
+    public void A_short_attempt_is_left_out_even_when_it_looks_terrible()
+    {
+        // Half a minute, and barely a cast in it. A pull that short is a reset, and judging a
+        // rotation on it would put a finding on everybody who ever pulled and ran.
+        var log = ASteadyNight().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(30.Seconds())
+            .Casting("Nightblade", Ability.Strike, from: 0.Seconds(), to: 30.Seconds(), every: 10.Seconds())
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.WasNotIdle("Nightblade");
+    }
+
+    [Fact]
     public void Time_spent_dead_is_not_time_spent_standing_about()
     {
         // Killed a third of the way in, and of course cast nothing afterwards. Counting that as
