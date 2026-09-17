@@ -109,6 +109,7 @@ public sealed class CountingStacks : Scenario
         AnAttempt(log, "Frostbite", 11, dies: true);
         AnAttempt(log, "Nightblade", 4, dies: false);
         AnAttempt(log, "Emberwild", 3, dies: false);
+        AnAttempt(log, "Moonfire", 5, dies: false);
 
         Given.IOpenedLog(log);
 
