@@ -13,6 +13,8 @@ public sealed class PullViewModel : ObservableObject
     private bool _isExpanded;
     private ListCollectionView? _playersView;
     private IReadOnlyList<Finding> _mistakes = Array.Empty<Finding>();
+    private Scorecards? _cards;
+    private IReadOnlyList<TimeSpan> _collective = Array.Empty<TimeSpan>();
 
     public PullViewModel(PullRecord record, EncounterViewModel owner)
     {
@@ -36,16 +38,70 @@ public sealed class PullViewModel : ObservableObject
     /// Hands the attempt what the analysis found. The player rows are dropped rather than patched:
     /// they are built on demand anyway, and nothing has opened them this early in a scan.
     /// </summary>
-    internal void SetMistakes(IEnumerable<Finding> mistakes)
+    internal void SetMistakes(IEnumerable<Finding> mistakes, Scorecards? cards = null)
     {
         _mistakes = mistakes.OrderBy(f => f.At).ToArray();
+        _cards = cards;
+        _collective = LaneMark.Shared(_mistakes, Record.Roster.Count, Together);
         _playersView = null;
 
         OnPropertyChanged(nameof(MistakeCount));
         OnPropertyChanged(nameof(HasMistakes));
         OnPropertyChanged(nameof(MistakesText));
         OnPropertyChanged(nameof(PlayersView));
+        OnPropertyChanged(nameof(Axes));
+        OnPropertyChanged(nameof(HasCard));
+        OnPropertyChanged(nameof(PoolsText));
+        OnPropertyChanged(nameof(Blame));
     }
+
+    /// <summary>
+    /// How close together two findings have to be to count as the same moment. A mechanic goes out
+    /// once and lands on everybody it catches inside a heartbeat; anything wider than this would
+    /// start reading two unrelated mistakes as one raid event.
+    /// </summary>
+    private static readonly TimeSpan Together = TimeSpan.FromSeconds(2);
+
+    /// <summary>The attempt's own card - one number, then the axes under it.</summary>
+    public IReadOnlyList<Score> Axes => _cards?.For(Record).Axes ?? Array.Empty<Score>();
+
+    public bool HasCard => _cards != null;
+
+    /// <summary>What the attempt cost, in health pools, over everybody in it.</summary>
+    public string PoolsText => _cards == null
+        ? "—"
+        : Display.Decimal(_cards.For(Record).Pools) + " health pools lost";
+
+    /// <summary>
+    /// Who it went to. Not an average of the players - an average hides the one person who lost the
+    /// attempt behind nineteen who did not - but the loss itself, named and sorted.
+    /// </summary>
+    public IReadOnlyList<BlameViewModel> Blame
+    {
+        get
+        {
+            if (_cards == null) return Array.Empty<BlameViewModel>();
+
+            return Record.Roster
+                .Select(p => new { Player = p, Card = _cards.For(Record, p) })
+                .Where(e => e.Card.Pools > 0.01)
+                .OrderByDescending(e => e.Card.Pools)
+                .Take(5)
+                .Select(e => new BlameViewModel(
+                    PlayerName.Character(e.Player.Name),
+                    Display.Decimal(e.Card.Pools) + " pools",
+                    e.Card.Worst?.Headline ?? string.Empty))
+                .ToArray();
+        }
+    }
+
+    /// <summary>The moments one thing caught much of the group, drawn as a band on the enemy's lane.</summary>
+    public IReadOnlyList<TimeSpan> Collective => _collective;
+
+    /// <summary>What the enemy cast, so a cause can be seen standing over its consequence.</summary>
+    public IReadOnlyList<LaneMark> EnemyMarks => LaneMark.Enemy(Record);
+
+    public double Seconds => Record.Duration.TotalSeconds;
     /// <summary>Shared sort state, reached through the owner so the player headers can bind to it.</summary>
     public Sorting Sorting => Owner.Sorting;
 
@@ -110,18 +166,25 @@ public sealed class PullViewModel : ObservableObject
     private static int Group(PlayerRowViewModel player) => player.IsTank ? 0 : player.IsHealer ? 1 : 2;
 
     /// <summary>Within a group, by what that group is there to do: healing for the healers, damage for the rest.</summary>
-    private static double Score(PlayerRowViewModel player) => player.IsHealer ? player.HpsValue : player.DpsValue;
+    private static double Rank(PlayerRowViewModel player) => player.IsHealer ? player.HpsValue : player.DpsValue;
 
     private ListCollectionView CreatePlayersView()
     {
         var mistakes = _mistakes.ToLookup(m => m.Player, StringComparer.Ordinal);
         var rows = Record.Roster
-            .Select(stats => new PlayerRowViewModel(stats, Record.Duration, Owner.Report, mistakes[stats.Name].ToArray()))
+            .Select(stats => new PlayerRowViewModel(stats, Record.Duration, Owner.Report,
+                mistakes[stats.Name].ToArray(), _cards?.For(Record, stats), _collective))
             .OrderBy(Group)
-            .ThenByDescending(Score)
+            .ThenByDescending(Rank)
             .ThenBy(p => p.Name, StringComparer.CurrentCulture)
             .ToList();
 
         return new ListCollectionView(rows) { CustomSort = Sorting.Players.Comparer };
     }
 }
+
+/// <summary>
+/// One line of where an attempt's losses went. Named rather than averaged: a mean over a roster
+/// hides the one person who lost the pull behind nineteen who did not.
+/// </summary>
+public sealed record BlameViewModel(string Name, string PoolsText, string Headline);

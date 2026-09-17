@@ -355,8 +355,13 @@
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerHps}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" MinWidth="60" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" MinWidth="76" />
-                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="150" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="120" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerOutput}" MinWidth="44" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerSurvival}" MinWidth="44" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerMechanics}" MinWidth="44" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDuty}" MinWidth="44" />
                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerMistakes}" MinWidth="80" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerLane}" MinWidth="120" />
                                                         </Grid.ColumnDefinitions>
 
                                                         <ctl:SortHeader Grid.Column="1" Column="Name" Title="PLAYER"
@@ -382,9 +387,28 @@
                                                         <ctl:SortHeader Grid.Column="8" Column="Causes" Title="KILLED BY"
                                                                         Sort="{Binding Sorting.Players}"
                                                                         ToolTip="Damage taken over the last 10 seconds before each death" />
-                                                        <ctl:SortHeader Grid.Column="9" Column="Mistakes" Title="MISTAKES"
+                                                        <ctl:SortHeader Grid.Column="9" Column="Output" Title="OUT"
                                                                         Sort="{Binding Sorting.Players}"
-                                                                        ToolTip="Mechanics this player took that belong to another role" />
+                                                                        HorizontalContentAlignment="Right" Padding="0,0,10,0"
+                                                                        ToolTip="Damage, or healing for a healer, against the best they have shown on this fight" />
+                                                        <ctl:SortHeader Grid.Column="10" Column="Survival" Title="SRV"
+                                                                        Sort="{Binding Sorting.Players}"
+                                                                        HorizontalContentAlignment="Right" Padding="0,0,10,0"
+                                                                        ToolTip="Of everything that hit them, how much was not theirs to avoid" />
+                                                        <ctl:SortHeader Grid.Column="11" Column="Mechanics" Title="MCH"
+                                                                        Sort="{Binding Sorting.Players}"
+                                                                        HorizontalContentAlignment="Right" Padding="0,0,10,0"
+                                                                        ToolTip="Of the times a mechanic went out, how often it missed them" />
+                                                        <ctl:SortHeader Grid.Column="12" Column="Duty" Title="DTY"
+                                                                        Sort="{Binding Sorting.Players}"
+                                                                        HorizontalContentAlignment="Right" Padding="0,0,10,0"
+                                                                        ToolTip="The job the role was there to do: threat for a tank, deaths held for a healer, uptime for the rest" />
+                                                        <ctl:SortHeader Grid.Column="13" Column="Mistakes" Title="WORST"
+                                                                        Sort="{Binding Sorting.Players}"
+                                                                        ToolTip="The most expensive thing that happened to them. Sorted by what the attempt cost them, in health pools" />
+                                                        <TextBlock Grid.Column="14" Style="{StaticResource MutedText}"
+                                                                   Text="THE FIGHT" Margin="6,0,0,0"
+                                                                   ToolTip="Everything that happened, on the attempt's own clock. Hover a mark to read it" />
 
                                                         <GridSplitter Grid.Column="1" Style="{StaticResource ColumnSplitter}" />
                                                         <GridSplitter Grid.Column="2" Style="{StaticResource ColumnSplitter}" />
@@ -394,7 +418,89 @@
                                                         <GridSplitter Grid.Column="6" Style="{StaticResource ColumnSplitter}" />
                                                         <GridSplitter Grid.Column="7" Style="{StaticResource ColumnSplitter}" />
                                                         <GridSplitter Grid.Column="8" Style="{StaticResource ColumnSplitter}" />
+                                                        <GridSplitter Grid.Column="13" Style="{StaticResource ColumnSplitter}" />
                                                     </Grid>
+
+                                                    <!-- The enemy's own lane, on the same axis as every player's below it, so a
+                                                         cause stands directly over its consequence. The bands are the moments one
+                                                         thing caught much of the group at once. -->
+                                                    <Grid Height="18" Margin="0,2,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="{StaticResource ColRosterIndent}" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerName}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerClass}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerSpec}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDps}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerHps}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" MinWidth="60" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" MinWidth="76" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="120" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerOutput}" MinWidth="44" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerSurvival}" MinWidth="44" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerMechanics}" MinWidth="44" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDuty}" MinWidth="44" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerMistakes}" MinWidth="80" />
+                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerLane}" MinWidth="120" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <TextBlock Grid.Column="1" Style="{StaticResource MutedText}"
+                                                                   Text="{Binding Record.EncounterName}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center" Margin="0,0,10,0"
+                                                                   ToolTip="What the enemy cast, and where the group was caught together" />
+                                                        <TextBlock Grid.Column="13" Style="{StaticResource MutedText}"
+                                                                   Text="{Binding PoolsText}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center" Margin="0,0,6,0"
+                                                                   ToolTip="Everything the attempt cost, counted in the players' own health pools" />
+                                                        <ctl:FightLane Grid.Column="14"
+                                                                       Marks="{Binding EnemyMarks}"
+                                                                       Bands="{Binding Collective}"
+                                                                       Seconds="{Binding Seconds}"
+                                                                       Margin="6,0,6,0" />
+                                                    </Grid>
+
+                                                    <!-- The attempt's own card. Not an average of the players below it: an
+                                                         average hides the one person who lost the pull behind nineteen who
+                                                         did not, so this is the loss itself, and then who it went to. -->
+                                                    <ItemsControl ItemsSource="{Binding Axes}" Margin="0,0,0,4">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel Orientation="Horizontal" />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Background="{StaticResource InputBrush}" CornerRadius="3"
+                                                                        Margin="0,0,6,0" Padding="8,3,8,3"
+                                                                        ToolTip="{Binding Facts}">
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock Style="{StaticResource MutedText}"
+                                                                                   Text="{Binding Axis}" Margin="0,0,8,0" />
+                                                                        <TextBlock Style="{StaticResource MutedText}"
+                                                                                   Foreground="{StaticResource FgBrush}"
+                                                                                   Text="{Binding Text}" />
+                                                                    </StackPanel>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+
+                                                    <ItemsControl ItemsSource="{Binding Blame}" Margin="0,0,0,6">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,1">
+                                                                    <TextBlock Style="{StaticResource MutedText}" Width="150"
+                                                                               Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                                    <TextBlock Style="{StaticResource MutedText}" Width="90"
+                                                                               Foreground="{StaticResource DangerBrush}"
+                                                                               Text="{Binding PoolsText}" />
+                                                                    <TextBlock Style="{StaticResource MutedText}"
+                                                                               Text="{Binding Headline}" TextTrimming="CharacterEllipsis" />
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
 
                                                     <ItemsControl ItemsSource="{Binding PlayersView}">
                                                         <ItemsControl.ItemTemplate>
@@ -411,8 +517,13 @@
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerHps}" MinWidth="60" />
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" MinWidth="60" />
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDied}" MinWidth="76" />
-                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="150" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerCauses}" MinWidth="120" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerOutput}" MinWidth="44" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerSurvival}" MinWidth="44" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerMechanics}" MinWidth="44" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDuty}" MinWidth="44" />
                                                                             <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerMistakes}" MinWidth="80" />
+                                                                            <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerLane}" MinWidth="120" />
                                                                         </Grid.ColumnDefinitions>
 
                                                                         <Button Grid.Column="1"
@@ -458,14 +569,38 @@
                                                                                    Margin="0,0,6,0"
                                                                                    ToolTip="{Binding CausesTooltip}"
                                                                                    ToolTipService.ShowDuration="60000" />
+                                                                        <TextBlock Grid.Column="9" Style="{StaticResource NumberText}"
+                                                                                   Text="{Binding OutputText}"
+                                                                                   ToolTip="{Binding OutputTooltip}"
+                                                                                   ToolTipService.ShowDuration="60000" />
+                                                                        <TextBlock Grid.Column="10" Style="{StaticResource NumberText}"
+                                                                                   Text="{Binding SurvivalText}"
+                                                                                   ToolTip="{Binding SurvivalTooltip}"
+                                                                                   ToolTipService.ShowDuration="60000" />
+                                                                        <TextBlock Grid.Column="11" Style="{StaticResource NumberText}"
+                                                                                   Text="{Binding MechanicsText}"
+                                                                                   ToolTip="{Binding MechanicsTooltip}"
+                                                                                   ToolTipService.ShowDuration="60000" />
+                                                                        <TextBlock Grid.Column="12" Style="{StaticResource NumberText}"
+                                                                                   Text="{Binding DutyText}"
+                                                                                   ToolTip="{Binding DutyTooltip}"
+                                                                                   ToolTipService.ShowDuration="60000" />
+
+                                                                        <!-- One sentence, not a list. A list in a cell does not
+                                                                             survive a fourteenth rule being added; a maximum does. -->
                                                                         <TextBlock x:Name="MistakesCell"
-                                                                                   Grid.Column="9"
+                                                                                   Grid.Column="13"
                                                                                    Style="{StaticResource MutedText}"
-                                                                                   Text="{Binding MistakesText}"
+                                                                                   Text="{Binding WorstText}"
                                                                                    TextTrimming="CharacterEllipsis"
                                                                                    Margin="0,0,6,0"
                                                                                    ToolTip="{Binding MistakesTooltip}"
                                                                                    ToolTipService.ShowDuration="60000" />
+
+                                                                        <ctl:FightLane Grid.Column="14"
+                                                                                       Marks="{Binding Marks}"
+                                                                                       Seconds="{Binding Seconds}"
+                                                                                       Margin="6,0,6,0" />
                                                                     </Grid>
                                                                 </Border>
 

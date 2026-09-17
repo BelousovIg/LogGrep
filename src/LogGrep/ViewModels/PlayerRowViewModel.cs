@@ -12,14 +12,78 @@ public sealed class PlayerRowViewModel
     private readonly double _seconds;
     private readonly Action<string> _report;
     private readonly IReadOnlyList<Finding> _mistakes;
+    private readonly Scorecard? _card;
 
     public PlayerRowViewModel(PlayerStats stats, TimeSpan duration, Action<string> report,
-        IReadOnlyList<Finding> mistakes)
+        IReadOnlyList<Finding> mistakes, Scorecard? card = null,
+        IReadOnlyList<TimeSpan>? collective = null)
     {
         _stats = stats;
         _seconds = duration.TotalSeconds;
         _report = report;
         _mistakes = mistakes;
+        _card = card;
+        Marks = LaneMark.For(stats, mistakes, collective ?? Array.Empty<TimeSpan>());
+    }
+
+    /// <summary>How long the attempt ran, which is what the lane's width stands for.</summary>
+    public double Seconds => _seconds;
+
+    /// <summary>Everything that happened to them, placed on the fight's own clock.</summary>
+    public IReadOnlyList<LaneMark> Marks { get; }
+
+    /// <summary>
+    /// The four axes, as text. A dash where there is not enough behind a number to print one, which
+    /// is a real answer rather than a gap - the tooltip says which it is and why.
+    /// </summary>
+    public string OutputText => Axis(Analysis.Axis.Output).Text;
+
+    public string SurvivalText => Axis(Analysis.Axis.Survival).Text;
+
+    public string MechanicsText => Axis(Analysis.Axis.Mechanics).Text;
+
+    public string DutyText => Axis(Analysis.Axis.Duty).Text;
+
+    /// <summary>The raw numbers behind the four cells, so the columns sort on them. Null sorts last.</summary>
+    public double? OutputValue => Axis(Analysis.Axis.Output).Value;
+
+    public double? SurvivalValue => Axis(Analysis.Axis.Survival).Value;
+
+    public double? MechanicsValue => Axis(Analysis.Axis.Mechanics).Value;
+
+    public double? DutyValue => Axis(Analysis.Axis.Duty).Value;
+
+    /// <summary>What the attempt cost them, in their own health pools.</summary>
+    public double PoolsValue => _card?.Pools ?? 0;
+
+    public string OutputTooltip => Explain(Analysis.Axis.Output, "Output");
+
+    public string SurvivalTooltip => Explain(Analysis.Axis.Survival, "Survival");
+
+    public string MechanicsTooltip => Explain(Analysis.Axis.Mechanics, "Mechanics");
+
+    public string DutyTooltip => Explain(Analysis.Axis.Duty, "Duty");
+
+    /// <summary>
+    /// The single most expensive thing that happened to them, which is the only sentence the row
+    /// shows. A list in a cell does not survive a fourteenth rule being added; a maximum does.
+    /// </summary>
+    public string WorstText => _card?.Worst is { } worst ? worst.Line : "—";
+
+    public bool HasWorst => _card?.Worst != null;
+
+    private Score Axis(Axis axis)
+        => _card?[axis] ?? Score.Missing(axis, "nothing has been analysed yet");
+
+    private string Explain(Axis axis, string title)
+    {
+        var score = Axis(axis);
+
+        string head = title + ": " + score.Text;
+        if (!score.Known) return head + Environment.NewLine + score.Facts;
+
+        return head + Environment.NewLine + score.Facts +
+            (score.Against.Length == 0 ? string.Empty : Environment.NewLine + score.Against);
     }
 
     /// <summary>The character on its own; the realm lives in the tooltip.</summary>

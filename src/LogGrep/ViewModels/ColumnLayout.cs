@@ -36,8 +36,23 @@ public sealed class ColumnLayout : ObservableObject
     private GridLength _playerHps = new(85);
     private GridLength _playerDtps = new(85);
     private GridLength _playerDied = new(100);
-    private GridLength _playerCauses = Fill;
-    private GridLength _playerMistakes = new(300);
+    private GridLength _playerCauses = new(200);
+
+    // The four axes. Narrow on purpose: they hold "63%" and a dash, and everything behind them is
+    // a hover away.
+    private GridLength _playerOutput = new(52);
+    private GridLength _playerSurvival = new(52);
+    private GridLength _playerMechanics = new(52);
+    private GridLength _playerDuty = new(52);
+
+    private GridLength _playerMistakes = new(230);
+
+    /// <summary>
+    /// The lane takes whatever is left, because it is the one column whose job is comparison down
+    /// the table rather than reading across a row - and the wider it is, the finer the moments it
+    /// can separate.
+    /// </summary>
+    private GridLength _playerLane = Fill;
 
     public GridLength EncounterName { get => _encounterName; set => Set(ref _encounterName, value); }
     public GridLength EncounterDifficulty { get => _encounterDifficulty; set => Set(ref _encounterDifficulty, value); }
@@ -62,5 +77,10 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength PlayerDtps { get => _playerDtps; set => Set(ref _playerDtps, value); }
     public GridLength PlayerDied { get => _playerDied; set => Set(ref _playerDied, value); }
     public GridLength PlayerCauses { get => _playerCauses; set => Set(ref _playerCauses, value); }
+    public GridLength PlayerOutput { get => _playerOutput; set => Set(ref _playerOutput, value); }
+    public GridLength PlayerSurvival { get => _playerSurvival; set => Set(ref _playerSurvival, value); }
+    public GridLength PlayerMechanics { get => _playerMechanics; set => Set(ref _playerMechanics, value); }
+    public GridLength PlayerDuty { get => _playerDuty; set => Set(ref _playerDuty, value); }
     public GridLength PlayerMistakes { get => _playerMistakes; set => Set(ref _playerMistakes, value); }
+    public GridLength PlayerLane { get => _playerLane; set => Set(ref _playerLane, value); }
 }

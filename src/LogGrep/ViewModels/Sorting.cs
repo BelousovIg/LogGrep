@@ -48,6 +48,15 @@ public sealed class Sorting
         // A survivor has no killing blow at all, so they stay at the bottom here either way.
         ["Causes"] = new(row => ((PlayerRowViewModel)row).TopCause),
 
-        ["Mistakes"] = new(row => ((PlayerRowViewModel)row).MistakeCount, DescendingFirst: true),
+        // The four axes. A dash is not a low score, so a row that has no number for one of them
+        // sorts to the bottom of that column either way rather than pretending to be a zero.
+        ["Output"] = new(row => ((PlayerRowViewModel)row).OutputValue, DescendingFirst: true),
+        ["Survival"] = new(row => ((PlayerRowViewModel)row).SurvivalValue, DescendingFirst: true),
+        ["Mechanics"] = new(row => ((PlayerRowViewModel)row).MechanicsValue, DescendingFirst: true),
+        ["Duty"] = new(row => ((PlayerRowViewModel)row).DutyValue, DescendingFirst: true),
+
+        // The column shows the worst thing that happened, so it sorts on what the attempt cost
+        // them rather than on the wording of it.
+        ["Mistakes"] = new(row => ((PlayerRowViewModel)row).PoolsValue, DescendingFirst: true),
     });
 }

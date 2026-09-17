@@ -90,7 +90,13 @@ public sealed class EncounterViewModel : ObservableObject
     /// <summary>Hands each attempt the mistakes the analysis pinned on it.</summary>
     internal void ApplyMistakes(ILookup<PullRecord, Finding> byPull)
     {
-        foreach (var pull in Pulls) pull.SetMistakes(byPull[pull.Record]);
+        // The scores are built here rather than per attempt, because a ceiling is drawn from the
+        // whole encounter: what somebody's best is only exists across their attempts at this boss.
+        var records = Pulls.Select(p => p.Record).ToList();
+        var cards = Scorecards.Of(
+            new Attempts(records), records.SelectMany(r => byPull[r]).ToArray());
+
+        foreach (var pull in Pulls) pull.SetMistakes(byPull[pull.Record], cards);
 
         OnPropertyChanged(nameof(MistakesText));
         OnPropertyChanged(nameof(PullsWithMistakes));
