@@ -6,8 +6,33 @@ public readonly record struct DamageCause(string Label, long Amount);
 /// <summary>
 /// One death: when it happened, measured from the start of the pull, and what had been
 /// hitting the player over the seconds leading up to it.
+///
+/// <see cref="Span"/> is how long they had been in trouble - the walk back to the last moment they
+/// were whole - and <see cref="Damage"/> is what landed in that time. The two together are what
+/// separates somebody bursted from somebody ground down, and the last three seconds of a death tell
+/// neither story: they are the symptom of both.
 /// </summary>
-public sealed record DeathRecord(TimeSpan At, IReadOnlyList<DamageCause> Causes);
+public sealed record DeathRecord(TimeSpan At, IReadOnlyList<DamageCause> Causes)
+{
+    /// <summary>How long the player had been below full when they died.</summary>
+    public TimeSpan Span { get; init; }
+
+    /// <summary>What landed on them over that span.</summary>
+    public long Damage { get; init; }
+
+    /// <summary>Their health pool, which is what a share of a hit is measured against.</summary>
+    public long MaxHealth { get; init; }
+
+    /// <summary>
+    /// The largest single hit inside the span. One hit, not an ability's total over ten seconds -
+    /// a bleed ticking forty times can add up past a health pool without any tick being a burst,
+    /// and it is the one big hit that says a defensive was not pressed.
+    /// </summary>
+    public long Biggest { get; init; }
+
+    /// <summary>That hit as a share of the pool: "this took 52% of them".</summary>
+    public double BiggestShare => MaxHealth > 0 ? Biggest / (double)MaxHealth : 0;
+}
 
 
 /// <summary>

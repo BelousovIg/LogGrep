@@ -25,6 +25,16 @@ public sealed class CombatLogScanner
     /// <summary>How far back a death looks for the hits that caused it.</summary>
     private const double CauseWindowSeconds = 10;
 
+    /// <summary>
+    /// How far back the hits are kept at all. Longer than the causes window, because how long
+    /// somebody had been in trouble is the question that separates a burst from a grind, and that
+    /// span can run well past ten seconds.
+    /// </summary>
+    private const double HistorySeconds = 45;
+
+    /// <summary>How close to full counts as whole, when walking back to find where trouble began.</summary>
+    private const double WholeShare = 0.95;
+
     /// <summary>Abilities listed per death; the long tail of chip damage is noise.</summary>
     private const int MaxCauses = 6;
 
@@ -417,7 +427,17 @@ public sealed class CombatLogScanner
 
         double at = LogTimestamp.SecondsOfDay(line, eventStart);
 
-        victim.Deaths.Add(new DeathRecord(Elapsed(at), victim.Causes(at)));
+        var elapsed = Elapsed(at);
+        var (span, damage, biggest) = victim.Event(at, elapsed);
+
+        victim.Deaths.Add(new DeathRecord(elapsed, victim.Causes(at))
+        {
+            Span = span,
+            Damage = damage,
+            Biggest = biggest,
+            MaxHealth = victim.MaxHealth,
+        });
+
         victim.Hits.Clear();
     }
 
@@ -564,7 +584,15 @@ public sealed class CombatLogScanner
         victim.DamageTaken += amount;
 
         double at = LogTimestamp.SecondsOfDay(line, eventStart);
-        if (at >= 0) victim.Hit(at, prefixParams >= 3 ? Label(line, 10) : "Melee", amount);
+        if (at >= 0)
+        {
+            // The advanced block runs infoGUID, ownerGUID, currentHP, maxHP - so the two fields
+            // after the owner are the target's health at the moment of the hit.
+            long health = advancedAt >= 0 ? _fields.Long(line, advancedAt + 2) : 0;
+            long maxHealth = advancedAt >= 0 ? _fields.Long(line, advancedAt + 3) : 0;
+
+            victim.Hit(at, prefixParams >= 3 ? Label(line, 10) : "Melee", amount, health, maxHealth);
+        }
 
         // Enemy spell damage, rolled up per spell and person. A swing has no spell id and cannot
         // be avoided by standing elsewhere, so it is left out of this.
@@ -783,7 +811,12 @@ public sealed class CombatLogScanner
     }
 
     /// <summary>One hit a player took, kept only long enough to explain a death.</summary>
-    private readonly record struct Hit(double At, string Label, long Amount);
+    /// <summary>
+    /// One hit a player took. The health is what the advanced block reported on that event, which
+    /// makes "that took 52% of them" a fact in the log rather than an estimate - and lets a death
+    /// be walked back to the last moment the player was whole.
+    /// </summary>
+    private readonly record struct Hit(double At, string Label, long Amount, long Health, long MaxHealth);
 
     private sealed class PlayerState
     {
@@ -796,13 +829,48 @@ public sealed class CombatLogScanner
         /// <summary>Rolling window of recent hits; anything older than the window is dropped on the spot.</summary>
         public Queue<Hit> Hits { get; } = new();
 
-        public void Hit(double at, string label, long amount)
+        public void Hit(double at, string label, long amount, long health, long maxHealth)
         {
-            Hits.Enqueue(new Hit(at, label, amount));
+            Hits.Enqueue(new Hit(at, label, amount, health, maxHealth));
 
-            double cutoff = at - CauseWindowSeconds;
+            // Kept longer than the causes window, because the event that killed somebody can be
+            // longer than the last ten seconds of it - a player ground down over half a minute is
+            // a different story from one bursted in two, and reading only the end tells the first
+            // as though it were the second.
+            double cutoff = at - HistorySeconds;
             while (Hits.Count > 0 && Hits.Peek().At < cutoff) Hits.Dequeue();
         }
+
+        /// <summary>
+        /// How long the player had been in trouble, and how much landed in that time. Walks back to
+        /// the last hit that left them near full: that span is the event. A short span with huge
+        /// damage is one conversation, a long span spent low is another, and the last three seconds
+        /// of a death are the symptom of either.
+        /// </summary>
+        public (TimeSpan Span, long Damage, long Biggest) Event(double at, TimeSpan elapsed)
+        {
+            long damage = 0;
+            long biggest = 0;
+            double from = at;
+
+            foreach (var hit in Hits.Reverse())
+            {
+                if (at >= 0 && hit.At > at) continue;
+
+                damage += hit.Amount;
+                if (hit.Amount > biggest) biggest = hit.Amount;
+                from = hit.At;
+
+                // The hit that left them whole is where the trouble started, not before it.
+                if (hit.MaxHealth > 0 && hit.Health >= hit.MaxHealth * WholeShare) break;
+            }
+
+            var span = at >= 0 ? TimeSpan.FromSeconds(Math.Max(0, at - from)) : TimeSpan.Zero;
+            return (span > elapsed ? elapsed : span, damage, biggest);
+        }
+
+        /// <summary>The largest health the player was ever seen with, which is what a share is of.</summary>
+        public long MaxHealth => Hits.Count == 0 ? 0 : Hits.Max(h => h.MaxHealth);
 
         /// <summary>The heaviest abilities that landed inside the window, largest first.</summary>
         public IReadOnlyList<DamageCause> Causes(double at)
