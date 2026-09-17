@@ -40,6 +40,18 @@ public sealed class PullRecord
     /// <summary>Enemy damage that landed on group members, one entry per spell and person.</summary>
     public IReadOnlyList<Blow> Blows { get; set; } = Array.Empty<Blow>();
 
+    /// <summary>
+    /// Who landed the first blow on the enemy, and who the enemy landed its first blow on. A pull
+    /// belongs to the tank at both ends, and the opening seconds are the only time it matters.
+    /// </summary>
+    public string Opened { get; set; } = string.Empty;
+
+    public TimeSpan OpenedAt { get; set; }
+
+    public string FirstHit { get; set; } = string.Empty;
+
+    public TimeSpan FirstHitAt { get; set; }
+
     /// <summary>Enemy casts, and whether each one went off or was stopped.</summary>
     public IReadOnlyList<CastRecord> Casts { get; set; } = Array.Empty<CastRecord>();
 

@@ -379,6 +379,25 @@ public sealed class Verification
             "The rules should have passed without remark, and this was said: " +
             string.Join("; ", _page.Findings.Where(f => f.Category == "rules").Select(f => f.Headline)));
 
+    /// <summary>What the app says about how the fight began.</summary>
+    public void ThePullSays(string player, string expected)
+        => Assert.True(Pulls(player).Any(f => f.Headline == expected),
+            "The pull should have said '" + expected + "' about " + player + ". It said: " +
+            (Pulls(player).Count == 0 ? "nothing" : string.Join("; ", Pulls(player).Select(f => f.Headline))));
+
+    public void ThePullWasClean()
+        => Assert.True(!_page.Findings.Any(f => f.Category == "the pull"),
+            "The pull should have opened cleanly, and this was said: " +
+            string.Join("; ", _page.Findings.Where(f => f.Category == "the pull").Select(f => f.Headline)));
+
+    public void ThePullCost(string player, string expected)
+        => Assert.Equal(expected, Pulls(player).First().Cost.Text);
+
+    private List<Finding> Pulls(string player)
+        => _page.Findings
+            .Where(f => f.Category == "the pull" && PlayerName.Character(f.Player) == player)
+            .ToList();
+
     public void NothingWasFound()
     {
         var blame = _page.Findings.Where(f => f.Category != "the night").ToList();

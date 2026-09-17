@@ -419,6 +419,10 @@ public sealed class CombatLogScanner
             Blows = segment.Blows.Values.ToArray(),
             HealCeiling = segment.Players.Values.Count == 0 ? 0 : segment.Players.Values.Max(p => p.BestHealing),
             Casts = segment.Casts.ToArray(),
+            Opened = segment.Opened,
+            OpenedAt = segment.OpenedAt,
+            FirstHit = segment.FirstHit,
+            FirstHitAt = segment.FirstHitAt,
             Damage = segment.Damage,
             Healing = segment.Healing,
             StartOffset = segment.StartOffset,
@@ -700,6 +704,13 @@ public sealed class CombatLogScanner
             // from a filler: the app was calling a spell a cooldown for being used rarely, which is
             // exactly what a spell nobody has a reason to press looks like.
             if (actor != null && prefixParams >= 3) actor.Did(_fields.Int(line, 9), amount);
+
+            // Who opened on the boss. A pull belongs to the tank: whoever lands the first blow takes
+            // the threat with it, and on the first seconds of a fight that is the whole story.
+            if (actor != null && kind == EventKind.Damage)
+            {
+                _open!.Struck(actor.Name, Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)));
+            }
         }
 
         // Healing our players received. Who cast it is already counted above; what matters here is
@@ -720,6 +731,10 @@ public sealed class CombatLogScanner
         victim.DamageTaken += amount;
 
         double at = LogTimestamp.SecondsOfDay(line, eventStart);
+
+        // And who the enemy hit first, which is the same question read from the other end.
+        if (!fromTheGroup) _open!.WasHit(victim.Name, Elapsed(at));
+
         if (at >= 0)
         {
             // The advanced block runs infoGUID, ownerGUID, currentHP, maxHP - so the two fields
@@ -1224,6 +1239,31 @@ public sealed class CombatLogScanner
 
         /// <summary>One entry per enemy spell and person it landed on, keyed so it stays one entry.</summary>
         public Dictionary<(int Spell, string Player), Blow> Blows { get; } = new();
+
+        /// <summary>Who struck the enemy first, and who the enemy struck first. Each set once.</summary>
+        public string Opened { get; private set; } = string.Empty;
+
+        public string FirstHit { get; private set; } = string.Empty;
+
+        public TimeSpan OpenedAt { get; private set; }
+
+        public TimeSpan FirstHitAt { get; private set; }
+
+        public void Struck(string player, TimeSpan at)
+        {
+            if (Opened.Length > 0) return;
+
+            Opened = player;
+            OpenedAt = at;
+        }
+
+        public void WasHit(string player, TimeSpan at)
+        {
+            if (FirstHit.Length > 0) return;
+
+            FirstHit = player;
+            FirstHitAt = at;
+        }
 
         /// <summary>Specialization per player GUID hash, learned from COMBATANT_INFO.</summary>
         public Dictionary<ulong, int> Specs { get; } = new();

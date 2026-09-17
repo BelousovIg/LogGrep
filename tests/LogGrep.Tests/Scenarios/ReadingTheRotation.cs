@@ -40,6 +40,8 @@ public sealed class ReadingTheRotation : Scenario
     private static CombatLogBuilder ANightOfCooldowns(int times = 6, TimeSpan? every = null)
         => ARaid().Pulls(times, Soulcoiler, Difficulty.Mythic, p => p
             .Lasting(2.Minutes())
+            // The tank pulls, as they do - otherwise the app is right to say the rogue opened it.
+            .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 1000)
             .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(),
                 every: every ?? 30.Seconds(), dealing: 500_000)
             .Wipe());

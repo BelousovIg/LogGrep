@@ -426,6 +426,24 @@ public sealed class Then
         return this;
     }
 
+    public Then ThePullSays(string player, string expected)
+    {
+        _check.ThePullSays(player, expected);
+        return this;
+    }
+
+    public Then ThePullWasClean()
+    {
+        _check.ThePullWasClean();
+        return this;
+    }
+
+    public Then ThePullCost(string player, string expected)
+    {
+        _check.ThePullCost(player, expected);
+        return this;
+    }
+
     public Then NothingWasFound()
     {
         _check.NothingWasFound();

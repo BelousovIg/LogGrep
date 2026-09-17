@@ -17,7 +17,8 @@ public static class Findings
         => In(pulls, written, new MechanicDetector(), new AvoidableDamageDetector(), new InterruptDetector(),
             new DeathDetector(), new IdleDetector(), new CooldownDetector(),
             new UptimeDetector(), new BuildDetector(), new StackDetector(),
-            new FirstDeathDetector(), new LedDetector(), new SpreadDetector());
+            new FirstDeathDetector(), new LedDetector(), new SpreadDetector(),
+            new OpeningDetector());
 
     /// <summary>
     /// The reviews, which run after the detectors and over what they found. Kept separate because
