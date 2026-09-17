@@ -704,6 +704,11 @@ Total findings 172 to 177.
 
 ## What this means for the window
 
+`ANALYSIS.md` carries this further, and is where the work after these milestones comes from: what
+the numbers are allowed to mean, why there is no percentage of a maximum, and the score sheet that
+replaces the column of mistakes. What follows here is the part that was already settled when the
+milestones were written.
+
 The tree - encounters, attempts, players - is the spine and stays. It is how a night is shaped and
 the app reads it well.
 
