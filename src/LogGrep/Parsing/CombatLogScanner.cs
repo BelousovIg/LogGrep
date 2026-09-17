@@ -383,6 +383,8 @@ public sealed class CombatLogScanner
                 Deaths = entry.Value.Deaths.ToArray(),
                 Casts = entry.Value.Casts,
                 DeadSeconds = entry.Value.Dead,
+                MaxHealth = entry.Value.MaxHealth,
+                MeleeTaken = entry.Value.MeleeTaken,
                 Struck = entry.Value.Struck,
                 WasHit = entry.Value.WasHit,
                 Spells = entry.Value.Spells
@@ -703,6 +705,11 @@ public sealed class CombatLogScanner
             // exactly what a spell nobody has a reason to press looks like.
             if (actor != null && prefixParams >= 3) actor.Did(_fields.Int(line, 9), amount);
 
+            // Their own health pool, read off their own advanced block. Somebody who was never hit
+            // all fight would otherwise have no pool at all, and a healer who stood out of every
+            // mechanic is exactly the person that happens to.
+            if (actor != null && advancedAt >= 0) actor.Pool(_fields.Long(line, advancedAt + 3));
+
             // Who opened on the boss. A pull belongs to the tank: whoever lands the first blow takes
             // the threat with it, and on the first seconds of a fight that is the whole story.
             if (actor != null && kind == EventKind.Damage)
@@ -731,7 +738,15 @@ public sealed class CombatLogScanner
         double at = LogTimestamp.SecondsOfDay(line, eventStart);
 
         // And who the enemy hit first, which is the same question read from the other end.
-        if (!fromTheGroup) victim.Took(Elapsed(at));
+        if (!fromTheGroup)
+        {
+            victim.Took(Elapsed(at));
+
+            // A swing carries no spell id, which is exactly what makes it worth counting on its
+            // own: it is the enemy hitting whoever it is looking at, and where it lands is the only
+            // reading the log gives of who is holding its attention.
+            if (prefixParams < 3) victim.Swung(amount);
+        }
 
         if (at >= 0)
         {
@@ -1001,12 +1016,31 @@ public sealed class CombatLogScanner
 
         public void Took(TimeSpan at) => WasHit ??= at;
 
+        /// <summary>
+        /// The largest health pool the log ever reported for this player. It is the unit everything
+        /// a mistake cost is counted in, so it is worth taking the largest rather than the latest:
+        /// a pool shrinks mid-fight when a buff drops, and a hit measured against the shrunken one
+        /// would read as heavier than it was.
+        /// </summary>
+        public long MaxHealth { get; private set; }
+
+        public void Pool(long maxHealth)
+        {
+            if (maxHealth > MaxHealth) MaxHealth = maxHealth;
+        }
+
+        /// <summary>Enemy melee that landed on them, which is the log's only account of threat.</summary>
+        public long MeleeTaken { get; private set; }
+
+        public void Swung(long amount) => MeleeTaken += amount;
+
         /// <summary>Rolling window of recent hits; anything older than the window is dropped on the spot.</summary>
         public Queue<Hit> Hits { get; } = new();
 
         public void Hit(double at, string label, long amount, long health, long maxHealth)
         {
             Hits.Enqueue(new Hit(at, label, amount, health, maxHealth));
+            Pool(maxHealth);
 
             // Kept longer than the causes window, because the event that killed somebody can be
             // longer than the last ten seconds of it - a player ground down over half a minute is
@@ -1049,9 +1083,6 @@ public sealed class CombatLogScanner
             var span = at >= 0 ? TimeSpan.FromSeconds(Math.Max(0, at - from)) : TimeSpan.Zero;
             return (span > elapsed ? elapsed : span, damage, biggest, from_);
         }
-
-        /// <summary>The largest health the player was ever seen with, which is what a share is of.</summary>
-        public long MaxHealth => Hits.Count == 0 ? 0 : Hits.Max(h => h.MaxHealth);
 
         /// <summary>Everything this player cast, rolled up per spell rather than kept one by one.</summary>
         public Dictionary<int, Casting> Spells { get; } = new();

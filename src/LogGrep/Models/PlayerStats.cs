@@ -115,6 +115,22 @@ public sealed class PlayerStats
     public long Healing { get; set; }
     public long DamageTaken { get; set; }
 
+    /// <summary>
+    /// The largest health pool the log reported for them during the attempt, and the unit everything
+    /// a mistake cost is counted in. Raw damage does not compare across a raid - the same hit is
+    /// half a rogue and a fifth of a tank - and it does not compare across a patch either, whereas
+    /// a share of somebody's own pool means the same thing in any tier. Zero when the log never
+    /// reported one, which is the signal to show nothing rather than to divide by it.
+    /// </summary>
+    public long MaxHealth { get; set; }
+
+    /// <summary>
+    /// Enemy melee that landed on them. A swing has no spell id and cannot be avoided by standing
+    /// somewhere else - it goes wherever the enemy is looking - so where the swings landed is the
+    /// log's only account of who was holding the fight's attention.
+    /// </summary>
+    public long MeleeTaken { get; set; }
+
     public IReadOnlyList<DeathRecord> Deaths { get; set; } = Array.Empty<DeathRecord>();
 
     /// <summary>How many times they cast anything at all during the attempt.</summary>

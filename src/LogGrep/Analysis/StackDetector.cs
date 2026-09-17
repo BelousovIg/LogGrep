@@ -64,7 +64,8 @@ public sealed class StackDetector : IDetector
             peak.Pull,
             peak.Player,
             peak.SpecId,
-            peak.At);
+            peak.At,
+            peak.SpellId);
 
     private static IEnumerable<Held> Peaks(Attempts attempts)
     {

@@ -79,7 +79,8 @@ public sealed class InterruptDetector : IDetector
             missed.Pull,
             player,
             attempts.SpecOf(missed.Pull, player),
-            missed.Cast.At);
+            missed.Cast.At,
+            missed.Cast.SpellId);
 
     private static IEnumerable<Seen> Casts(Attempts attempts)
     {

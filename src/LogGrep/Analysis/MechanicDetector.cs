@@ -124,7 +124,8 @@ public sealed class MechanicDetector : IDetector
             off.Pull,
             off.Player,
             off.SpecId,
-            off.At);
+            off.At,
+            off.SpellId);
     }
 
     /// <summary>Names the mechanic as the killer only when it is actually among the causes.</summary>

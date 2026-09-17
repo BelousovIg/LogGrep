@@ -103,6 +103,34 @@ public sealed class Yardstick
         return Normal.None;
     }
 
+    /// <summary>
+    /// The best that has actually been shown, in the same order of preference. A score wants a
+    /// ceiling rather than a normal - "how close to your best was this" - and the one thing the log
+    /// cannot supply is the best that was possible. It can only ever report the best that happened,
+    /// which is why 100% here means "your best so far" and never "perfect".
+    /// </summary>
+    public Normal Best(string player, int specId)
+    {
+        if (_mine.TryGetValue(player, out var mine) && mine.Count >= _minimum)
+        {
+            return new Normal(mine.Max(), "your best of " + mine.Count + " attempts");
+        }
+
+        if (specId > 0 && _spec.TryGetValue(specId, out var spec))
+        {
+            var others = spec.Where(e => !string.Equals(e.Player, player, StringComparison.Ordinal))
+                .Select(e => e.Value)
+                .ToList();
+
+            if (others.Count >= Borrowed)
+            {
+                return new Normal(others.Max(), "the best another " + Specs.SpecOf(specId) + " managed here");
+            }
+        }
+
+        return Normal.None;
+    }
+
     public static double Median(List<double> values)
     {
         if (values.Count == 0) return 0;

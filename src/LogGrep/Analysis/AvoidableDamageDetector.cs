@@ -101,7 +101,8 @@ public sealed class AvoidableDamageDetector : IDetector
             landing.Pull,
             blow.Player,
             attempts.SpecOf(landing.Pull, blow.Player),
-            blow.First);
+            blow.First,
+            blow.SpellId);
     }
 
     private static string? Blamed(DeathRecord death, string spell)
