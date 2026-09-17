@@ -29,6 +29,13 @@ public sealed class Given
         return this;
     }
 
+    /// <summary>A rules file already sitting where the app looks for one.</summary>
+    public Given ARulesFileSaying(Ability spell, string roles, string advice)
+    {
+        _act.WriteRule(spell, roles, advice);
+        return this;
+    }
+
     public Given IExpandedEncounter(Boss boss)
     {
         _act.ToggleEncounter(boss);

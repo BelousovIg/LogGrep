@@ -1,4 +1,5 @@
 using LogGrep.Models;
+using LogGrep.Services;
 
 namespace LogGrep.Analysis;
 
@@ -11,8 +12,9 @@ namespace LogGrep.Analysis;
 /// </summary>
 public static class Findings
 {
-    public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls)
-        => In(pulls, new MechanicDetector(), new AvoidableDamageDetector(), new InterruptDetector(),
+    public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls,
+        IReadOnlyList<WrittenRule>? written = null)
+        => In(pulls, written, new MechanicDetector(), new AvoidableDamageDetector(), new InterruptDetector(),
             new DeathDetector(), new IdleDetector(), new CooldownDetector(),
             new UptimeDetector(), new BuildDetector(), new StackDetector(),
             new FirstDeathDetector(), new LedDetector(), new SpreadDetector());
@@ -23,13 +25,14 @@ public static class Findings
     /// </summary>
     private static readonly IReview[] Reviews = { new ImprovementReview(), new TollReview() };
 
-    public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls, params IDetector[] detectors)
+    public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls,
+        IReadOnlyList<WrittenRule>? written, params IDetector[] detectors)
     {
         var found = new List<Finding>();
 
         foreach (var encounter in pulls.GroupBy(p => p.GroupKey, StringComparer.Ordinal))
         {
-            var attempts = new Attempts(encounter.OrderBy(p => p.StartOffset).ToList());
+            var attempts = new Attempts(encounter.OrderBy(p => p.StartOffset).ToList(), written);
 
             var mine = new List<Finding>();
             foreach (var detector in detectors) mine.AddRange(detector.Look(attempts));

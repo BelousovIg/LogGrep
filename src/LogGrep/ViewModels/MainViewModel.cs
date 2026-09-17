@@ -603,7 +603,11 @@ public sealed class MainViewModel : ObservableObject
     /// </summary>
     private void BuildFindings(IReadOnlyList<PullRecord> pulls)
     {
-        Findings = Analysis.Findings.In(pulls);
+        // The written rules when there are any: they carry what a mechanic is for, which derivation
+        // never will, and they are what the log audits itself against.
+        var written = new RuleFile(_fileSystem).Read(new SettingsService(_fileSystem).RulesPath);
+
+        Findings = Analysis.Findings.In(pulls, written);
 
         // Pushed down the tree so every row can show its own share of them.
         var byPull = Findings.ToLookup(f => f.Pull);

@@ -414,6 +414,18 @@ public sealed class Then
         return this;
     }
 
+    public Then TheRulesSay(string expected)
+    {
+        _check.TheRulesSay(expected);
+        return this;
+    }
+
+    public Then TheRulesSayNothing()
+    {
+        _check.TheRulesSayNothing();
+        return this;
+    }
+
     public Then NothingWasFound()
     {
         _check.NothingWasFound();

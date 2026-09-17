@@ -1,4 +1,5 @@
 using LogGrep.Models;
+using LogGrep.Services;
 
 namespace LogGrep.Analysis;
 
@@ -11,8 +12,11 @@ public sealed class Attempts
 {
     private readonly Dictionary<PullRecord, int> _numbers = new();
 
-    public Attempts(IReadOnlyList<PullRecord> pulls)
+    public Attempts(IReadOnlyList<PullRecord> pulls, IReadOnlyList<WrittenRule>? written = null)
     {
+        Written = written?.GroupBy(r => r.SpellId).ToDictionary(g => g.Key, g => g.First())
+            ?? new Dictionary<int, WrittenRule>();
+
         Pulls = pulls;
         Encounter = pulls.Count > 0 ? pulls[0].EncounterName : string.Empty;
 
@@ -21,6 +25,13 @@ public sealed class Attempts
     }
 
     public IReadOnlyList<PullRecord> Pulls { get; }
+
+    /// <summary>
+    /// What the journal says about each ability, when a rules file is present. The roles in it are
+    /// who should care rather than who it lands on - those are different claims, and only the log
+    /// can settle the second one.
+    /// </summary>
+    public IReadOnlyDictionary<int, WrittenRule> Written { get; }
 
     public string Encounter { get; }
 

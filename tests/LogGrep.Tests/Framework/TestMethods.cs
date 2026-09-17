@@ -32,6 +32,8 @@ public sealed class TestMethods
 
     public void DeleteFile(string name) => _page.DeleteFile(name);
 
+    public void WriteRule(Ability spell, string roles, string advice) => _page.WriteRule(spell, roles, advice);
+
     /// <summary>Opens an encounter and one of its pulls in one go, which most scenarios want.</summary>
     public void OpenPull(Boss boss, int number)
     {

@@ -70,6 +70,23 @@ public sealed class LogGrepPage
 
     public void DeleteFile(string name) => _disk.File.Delete(Folder + name);
 
+    /// <summary>
+    /// Writes a rules file where the app looks for one, in the shape the journal generator produces:
+    /// an id, a name and the roles, with Blizzard's own sentence indented under it.
+    /// </summary>
+    public void WriteRule(Ability spell, string roles, string advice)
+    {
+        string path = new LogGrep.Services.SettingsService(_disk).RulesPath;
+        string existing = _disk.File.Exists(path)
+            ? _disk.File.ReadAllText(path)
+            : "# rules" + Environment.NewLine;
+
+        _disk.Directory.CreateDirectory(_disk.Path.GetDirectoryName(path)!);
+        _disk.File.WriteAllText(path,
+            existing + (int)spell + "  " + spell.NameOf() + "  " + roles + Environment.NewLine +
+            "    " + advice + Environment.NewLine);
+    }
+
     public void RemoveLog(string name)
     {
         var row = ViewModel.Logs.FirstOrDefault(l => l.Name == name)

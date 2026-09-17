@@ -1,4 +1,5 @@
 using LogGrep.Models;
+using LogGrep.Services;
 using LogGrep.ViewModels;
 
 namespace LogGrep.Analysis;
@@ -67,12 +68,45 @@ public sealed class MechanicDetector : IDetector
 
             var rule = new MechanicRule(spell.Key, seen[0].Spell, owner.Key, owner.Count(), seen.Count, runs);
 
+            // A written rule and the log are two independent sources, and where they disagree the
+            // honest thing is to say so and stop rather than to report against one of them. Nobody
+            // else can do this check, for the plain reason that nobody else has the second source.
+            if (attempts.Written.TryGetValue(spell.Key, out var written)
+                && written.Roles.Count > 0
+                && !written.Roles.Contains(owner.Key))
+            {
+                yield return Disagreement(attempts, rule, written, seen[^1]);
+                continue;
+            }
+
             foreach (var off in seen.Where(a => a.Role != owner.Key))
             {
                 yield return Report(attempts, rule, off);
             }
         }
     }
+
+    /// <summary>
+    /// The file and the log do not agree about this ability. Either the file is stale, or it was
+    /// never a claim about who the thing lands on - a section flagged for tanks means tanks should
+    /// care, which is not the same as saying it picks one. Findings from it are muted either way:
+    /// a rule naming the wrong half of an ability would flag every damage dealer in every pull, and
+    /// only the log would ever notice.
+    /// </summary>
+    private Finding Disagreement(Attempts attempts, MechanicRule rule, WrittenRule written, Application last)
+        => new(
+            "rules",
+            written.Spell + " - the file says " + string.Join(" and ", written.Roles.Select(Specs.NameOf)) +
+            ", the log says " + Specs.NameOf(rule.Owner),
+            rule.Evidence,
+            "The rule is stale, or it was never about who it lands on. Findings from it are muted " +
+            "until the two agree.",
+            Cost.Nothing("nothing was reported from it"),
+            attempts.NumberOf(last.Pull),
+            last.Pull,
+            string.Empty,
+            0,
+            TimeSpan.Zero);
 
     private Finding Report(Attempts attempts, MechanicRule rule, Application off)
     {
@@ -82,7 +116,7 @@ public sealed class MechanicDetector : IDetector
             Category,
             rule.Spell + " - " + Specs.NameOf(rule.Owner) + " mechanic",
             "went to " + Specs.PersonOf(off.Role) + "; " + rule.Evidence,
-            Advice(rule.Owner),
+            Advice(attempts, rule),
             death == null
                 ? Cost.Nothing("survived it")
                 : Cost.Death(death.At, Blamed(death, rule.Spell)),
@@ -98,9 +132,15 @@ public sealed class MechanicDetector : IDetector
         => death.Causes.Any(c => string.Equals(c.Label, spell, StringComparison.OrdinalIgnoreCase)) ? spell : null;
 
     /// <summary>
-    /// The one line nothing can derive. Written per role rather than per boss, which is why there
-    /// are three of them rather than a table that grows with the game.
+    /// Blizzard's own sentence about the ability when the rules file has one, because it says what
+    /// the mechanic is for - the one thing derivation will never recover. Failing that, the written
+    /// line for the role, which is the same three sentences for every boss in the game.
     /// </summary>
+    private static string Advice(Attempts attempts, MechanicRule rule)
+        => attempts.Written.TryGetValue(rule.SpellId, out var written) && written.Advice.Length > 0
+            ? written.Advice
+            : Advice(rule.Owner);
+
     private static string Advice(Role owner) => owner switch
     {
         Role.Tank => "This one follows the tank. On anybody else it means a swap went wrong, " +

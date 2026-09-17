@@ -369,6 +369,16 @@ public sealed class Verification
     /// are not mistakes, and a scenario about mechanics or rotation should not have to care that
     /// somebody also happened to top the healing.
     /// </summary>
+    /// <summary>What the app says about its own rules file rather than about anybody's play.</summary>
+    public void TheRulesSay(string expected)
+        => Assert.Equal(expected, _page.Findings.FirstOrDefault(f => f.Category == "rules")?.Headline
+            ?? "nothing about the rules");
+
+    public void TheRulesSayNothing()
+        => Assert.True(!_page.Findings.Any(f => f.Category == "rules"),
+            "The rules should have passed without remark, and this was said: " +
+            string.Join("; ", _page.Findings.Where(f => f.Category == "rules").Select(f => f.Headline)));
+
     public void NothingWasFound()
     {
         var blame = _page.Findings.Where(f => f.Category != "the night").ToList();
@@ -386,9 +396,17 @@ public sealed class Verification
         => Assert.Equal(expected,
             _page.FindingsFor(spell).Select(f => PlayerName.Character(f.Player)).Distinct().ToArray());
 
+    /// <summary>
+    /// Nobody was accused over this spell. What the app says about its own rules file is not an
+    /// accusation, so it does not count here - and a muted rule says exactly that.
+    /// </summary>
     public void MechanicWasNotFlagged(Ability spell)
-        => Assert.True(_page.FindingsFor(spell).Count == 0,
-            $"'{spell.NameOf()}' should not have been flagged, but was.");
+    {
+        var blamed = _page.FindingsFor(spell).Where(f => f.Category == "mechanics").ToList();
+        Assert.True(blamed.Count == 0,
+            "'" + spell.NameOf() + "' should not have been flagged, and was: " +
+            string.Join("; ", blamed.Select(f => f.Line)));
+    }
 
     public void FindingPointsAt(Ability spell, string player, int pull, TimeSpan at)
     {
