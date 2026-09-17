@@ -111,6 +111,24 @@ public sealed class CountingStacks : Scenario
     }
 
     [Fact]
+    public void Two_stacks_against_nobody_elses_is_still_two_stacks()
+    {
+        // Nobody else had it at all, so the comparison is against zero and anything clears it. Two
+        // of something is not a story, whatever the arithmetic says.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(20.Seconds()).BossDebuffs("Nightblade", with: Rot)
+            .At(20.Seconds()).BossStacks("Nightblade", with: Rot, to: 2)
+            .At(40.Seconds()).Kills("Nightblade", with: Rot)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.DeathEvidenceReads("Nightblade",
+            "nobody else died within five seconds, and the attempt ran 2:20 longer");
+    }
+
+    [Fact]
     public void A_tank_holding_more_than_everybody_does_not_raise_the_bar()
     {
         // The tank carries twelve of it every attempt because they are the tank. Counting that in
