@@ -390,6 +390,18 @@ public sealed class Then
         return this;
     }
 
+    public Then TheNightSays(string player, string expected)
+    {
+        _check.TheNightSays(player, expected);
+        return this;
+    }
+
+    public Then TheNightSaysNothing()
+    {
+        _check.TheNightSaysNothing();
+        return this;
+    }
+
     public Then NothingWasFound()
     {
         _check.NothingWasFound();

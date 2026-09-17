@@ -336,6 +336,17 @@ public sealed class Verification
            ?? throw new InvalidOperationException(
                "No log called '" + name + "' is open. These are: " +
                string.Join(", ", _page.ViewModel.Logs.Select(l => l.Name)));
+    /// <summary>A fact about the evening rather than about one attempt.</summary>
+    public void TheNightSays(string player, string expected)
+        => Assert.Equal(expected, _page.Findings
+            .FirstOrDefault(f => f.Category == "the night" && PlayerName.Character(f.Player) == player)
+            ?.Headline ?? "nothing about " + player);
+
+    public void TheNightSaysNothing()
+        => Assert.True(!_page.Findings.Any(f => f.Category == "the night"),
+            "The evening should have gone unremarked, and this was said: " +
+            string.Join(", ", _page.Findings.Where(f => f.Category == "the night").Select(f => f.Headline)));
+
     public void NothingWasFound()
         => Assert.True(_page.Findings.Count == 0,
             "Nothing should have been found, but these were: " +

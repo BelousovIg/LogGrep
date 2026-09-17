@@ -14,7 +14,8 @@ public static class Findings
     public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls)
         => In(pulls, new MechanicDetector(), new AvoidableDamageDetector(), new InterruptDetector(),
             new DeathDetector(), new IdleDetector(), new CooldownDetector(),
-            new UptimeDetector(), new BuildDetector(), new StackDetector());
+            new UptimeDetector(), new BuildDetector(), new StackDetector(),
+            new FirstDeathDetector());
 
     public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls, params IDetector[] detectors)
     {
