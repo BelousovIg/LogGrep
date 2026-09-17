@@ -411,7 +411,7 @@ a comparison at all, and their output moved 1.7%, 8.8% and 13.1% - all under the
 says nothing about builds on this log, which is the honest blank the milestone asked for rather
 than an absence of the feature.
 
-### 8. The night, summed up
+### 8. The night, summed up — started
 
 Everything so far answers "what went wrong here". An evening also has a shape, and it is the shape
 a raid leader argues about afterwards.
@@ -439,6 +439,16 @@ count. "Best player" is an opinion and does not belong here.
 
 Ends with: an evening a raid leader can read in one screen, with the good and the bad held to the
 same evidence.
+
+Started, not finished. The first piece is in: `FirstDeathDetector` counts who opened each attempt
+and says so when one person did it for most of the evening - "first to die in 9 of 13 attempts",
+which is a count rather than an opinion and is a different question from whether any one of those
+deaths was avoidable.
+
+Still to do: mistakes split by player, by mechanic and by half of the evening; consistency as the
+spread of somebody's output; what a player led; and the counterweight of things that went right.
+That last one matters as much as the rest and is the easiest to leave for later, which is exactly
+why it is written down here.
 
 ### 9. Rules that may rot, and the log that catches them
 
