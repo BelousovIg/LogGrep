@@ -529,6 +529,34 @@ question rather than a footnote.
 
 Ends with: "against the top percentile" as an option, never as the foundation.
 
+### 11. The logs you have open
+
+The toolbar still carries a read-only box holding one file path, which is a leftover from when the
+app could only hold one log. Milestone 2 made the reading a set of files; the window never caught
+up, and the path box now shows "3 logs, starting with ..." - a sentence written to fit a control
+that should not exist.
+
+Replace it with the list itself.
+
+- **The path box goes.** Nothing replaces it in the toolbar.
+- **"Open log" adds rather than replaces.** Picking files appends them to the list; the reading is
+  whatever the list holds.
+- **The list is a table in an expandable panel**, closed by default once it has been read, because
+  the fights are what somebody came to look at. Columns: file name, attempts, encounters, and the
+  moment the first attempt in that file started. The file name's tooltip carries the full path,
+  which is the only thing the old box was good for.
+- **The last three columns fill in as the reading happens**, and stand empty until then - a file
+  that has been added but not yet read is a real state and the table should show it as one.
+- **Each row has a remove.** Taking a file out re-reads what is left, which is not the same as
+  never having added it: the duplicate rules and the ordering both change with the set.
+- **The list survives a restart.** Paths only, in the settings folder beside `settings.json`. A
+  file that has since been moved or deleted comes back as a row that says so rather than as a
+  silent absence, and removing it is the one action that row offers.
+
+Ends with: the window saying which logs it is reading, instead of a box that used to say where one
+of them was.
+
+
 ## What this means for the window
 
 The tree - encounters, attempts, players - is the spine and stays. It is how a night is shaped and
