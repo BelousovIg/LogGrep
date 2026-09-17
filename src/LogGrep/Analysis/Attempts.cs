@@ -29,6 +29,13 @@ public sealed class Attempts
 
     public int NumberOf(PullRecord pull) => _numbers.TryGetValue(pull, out int number) ? number : 0;
 
+    /// <summary>
+    /// The most healing this group ever landed on one player in five seconds, over every attempt.
+    /// Taken across the evening rather than per attempt, because what they are capable of does not
+    /// change between pulls - and the attempt where somebody died is the least likely to show it.
+    /// </summary>
+    public double HealingCeiling => Pulls.Count == 0 ? 0 : Pulls.Max(p => p.HealCeiling) / 5.0;
+
     public int SpecOf(PullRecord pull, string player)
         => pull.Roster.FirstOrDefault(p => string.Equals(p.Name, player, StringComparison.Ordinal))?.SpecId ?? 0;
 

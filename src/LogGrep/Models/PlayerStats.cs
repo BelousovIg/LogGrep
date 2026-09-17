@@ -35,6 +35,18 @@ public sealed record DeathRecord(TimeSpan At, IReadOnlyList<DamageCause> Causes)
 
     /// <summary>That hit as a share of the pool: "this took 52% of them".</summary>
     public double BiggestShare => MaxHealth > 0 ? Biggest / (double)MaxHealth : 0;
+
+    /// <summary>What landed over the last couple of seconds, however many hits it took to do it.</summary>
+    public long Sudden { get; init; }
+
+    /// <summary>That as a share of the pool: a whole health bar gone at once is its own kind of death.</summary>
+    public double SuddenShare => MaxHealth > 0 ? Sudden / (double)MaxHealth : 0;
+
+    /// <summary>Healing that actually reached this player over the span.</summary>
+    public long Healing { get; init; }
+
+    /// <summary>Damage per second over the span, which is what a healing ceiling is compared against.</summary>
+    public double Rate => Span.TotalSeconds > 0.5 ? Damage / Span.TotalSeconds : Damage * 2;
 }
 
 

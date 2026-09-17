@@ -35,6 +35,16 @@ public sealed class CombatLogScanner
     /// <summary>How close to full counts as whole, when walking back to find where trouble began.</summary>
     private const double WholeShare = 0.95;
 
+    /// <summary>
+    /// The window the healing ceiling is measured over. What the group has actually landed on one
+    /// player inside five seconds, at its best all evening, is what they have demonstrated they can
+    /// do - no class, no spell list, no assumption about cooldowns.
+    /// </summary>
+    private const double CeilingSeconds = 5;
+
+    /// <summary>How short a stretch counts as losing a health pool all at once rather than over time.</summary>
+    private const double SuddenSeconds = 2;
+
     /// <summary>Abilities listed per death; the long tail of chip damage is noise.</summary>
     private const int MaxCauses = 6;
 
@@ -373,6 +383,7 @@ public sealed class CombatLogScanner
             Roster = roster,
             Debuffs = segment.Debuffs.ToArray(),
             Blows = segment.Blows.Values.ToArray(),
+            HealCeiling = segment.Players.Values.Count == 0 ? 0 : segment.Players.Values.Max(p => p.BestHealing),
             Casts = segment.Casts.ToArray(),
             Damage = segment.Damage,
             Healing = segment.Healing,
@@ -437,6 +448,8 @@ public sealed class CombatLogScanner
             Biggest = biggest,
             BiggestFrom = from,
             MaxHealth = victim.MaxHealth,
+            Sudden = victim.Sudden(at),
+            Healing = victim.HealingOver(at, span.TotalSeconds),
         });
 
         victim.Hits.Clear();
@@ -574,6 +587,15 @@ public sealed class CombatLogScanner
                 _open!.Damage += amount;
                 if (actor != null) actor.Damage += amount;
             }
+        }
+
+        // Healing our players received. Who cast it is already counted above; what matters here is
+        // who it landed on, because the ceiling is what one player can be held up with.
+        if (kind == EventKind.Heal)
+        {
+            double when = LogTimestamp.SecondsOfDay(line, eventStart);
+            if (when >= 0) PlayerAt(line, 5)?.Heal(when, amount);
+            return;
         }
 
         // Damage our players took, whoever dealt it - this is what the death breakdown is built from.
@@ -878,6 +900,48 @@ public sealed class CombatLogScanner
 
         /// <summary>The largest health the player was ever seen with, which is what a share is of.</summary>
         public long MaxHealth => Hits.Count == 0 ? 0 : Hits.Max(h => h.MaxHealth);
+
+        /// <summary>What landed on them in the last couple of seconds - a pool lost all at once.</summary>
+        public long Sudden(double at)
+        {
+            long amount = 0;
+            foreach (var hit in Hits)
+            {
+                if (hit.At >= at - SuddenSeconds && (at < 0 || hit.At <= at)) amount += hit.Amount;
+            }
+
+            return amount;
+        }
+
+        /// <summary>Healing this player received, kept only as a rolling sum over the ceiling window.</summary>
+        private readonly Queue<(double At, long Amount)> _heals = new();
+        private long _healed;
+
+        /// <summary>The most healing this player ever received inside one ceiling window.</summary>
+        public long BestHealing { get; private set; }
+
+        public void Heal(double at, long amount)
+        {
+            _heals.Enqueue((at, amount));
+            _healed += amount;
+
+            double cutoff = at - CeilingSeconds;
+            while (_heals.Count > 0 && _heals.Peek().At < cutoff) _healed -= _heals.Dequeue().Amount;
+
+            if (_healed > BestHealing) BestHealing = _healed;
+        }
+
+        /// <summary>Healing that reached them over the window that killed them.</summary>
+        public long HealingOver(double at, double seconds)
+        {
+            long amount = 0;
+            foreach (var heal in _heals)
+            {
+                if (heal.At >= at - seconds && (at < 0 || heal.At <= at)) amount += heal.Amount;
+            }
+
+            return amount;
+        }
 
         /// <summary>The heaviest abilities that landed inside the window, largest first.</summary>
         public IReadOnlyList<DamageCause> Causes(double at)

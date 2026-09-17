@@ -43,6 +43,13 @@ public sealed class PullRecord
     /// <summary>Enemy casts, and whether each one went off or was stopped.</summary>
     public IReadOnlyList<CastRecord> Casts { get; set; } = Array.Empty<CastRecord>();
 
+    /// <summary>
+    /// The most healing that reached any one player inside five seconds during this attempt. Not a
+    /// theoretical maximum - what this group actually landed, which is the only ceiling that can be
+    /// argued with. Against a pool drained faster than that, the question is not the healers'.
+    /// </summary>
+    public long HealCeiling { get; set; }
+
     public long Damage { get; set; }
     public long Healing { get; set; }
 

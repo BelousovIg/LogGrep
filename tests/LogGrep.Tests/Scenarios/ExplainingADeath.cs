@@ -124,7 +124,7 @@ public sealed class ExplainingADeath : Scenario
         // the hit was six hundred thousand.
         var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
             .Lasting(3.Minutes())
-            .At(58.Seconds()).BossHits("Nightblade", 600_000, with: Ability.BlastWave)
+            .At(50.Seconds()).BossHits("Nightblade", 600_000, with: Ability.BlastWave)
             .At(1.Minutes()).Kills("Nightblade", with: Ability.BlastWave, amount: 400_000)
             .Wipe());
 
@@ -132,6 +132,79 @@ public sealed class ExplainingADeath : Scenario
 
         Then.TheDeathReads("Nightblade", "Blast Wave took 60% in one hit")
             .And.DeathAdvises("Nightblade", "a defensive that was not pressed");
+    }
+
+    [Fact]
+    public void A_whole_health_bar_in_two_seconds_is_nobodys_reaction_time()
+    {
+        // Not one hit - several, close enough together that no reaction of any kind fits between
+        // them. This is read before the burst rule, because it needs no ceiling to settle.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(58.Seconds()).BossHits("Nightblade", 400_000, with: Ability.CreepingRot)
+            .At(59.Seconds()).BossHits("Nightblade", 300_000, with: Ability.CreepingRot)
+            .At(1.Minutes()).Kills("Nightblade", with: Ability.CreepingRot, amount: 300_000)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.TheDeathReads("Nightblade", "lost 100% in two seconds")
+            .And.DeathAdvises("Nightblade", "Nobody reacts to that");
+    }
+
+    [Fact]
+    public void Damage_past_what_the_healers_have_ever_covered_is_not_theirs_to_answer_for()
+    {
+        // The ceiling is not a guess about classes: it is the most healing this group has actually
+        // landed on one player in five seconds, all evening. Against more than that, the question
+        // moves back a step - to why so much reached somebody.
+        var log = ARaid()
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(1.Minutes())
+                .At(30.Seconds()).BossHits("Rockjaw", 500_000, with: Ability.Cleave)
+                .At(31.Seconds()).Heals("Sunwell", target: "Rockjaw", amount: 500_000)
+                .Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(3.Minutes())
+                .At(50.Seconds()).BossHits("Nightblade", 250_000, with: Ability.CreepingRot)
+                .At(52.Seconds()).BossHits("Nightblade", 250_000, with: Ability.CreepingRot)
+                .At(54.Seconds()).BossHits("Nightblade", 250_000, with: Ability.CreepingRot)
+                .At(56.Seconds()).Kills("Nightblade", with: Ability.CreepingRot, amount: 250_000)
+                .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.TheDeathReads("Nightblade", "took more than the healers have ever covered")
+            .And.DeathEvidenceReads("Nightblade",
+                "nobody else died within five seconds, and the attempt ran 2:04 longer; " +
+                "166.7K a second incoming against the 100K the healers have landed at their best")
+            .And.DeathAdvises("Nightblade", "this is not the healers");
+    }
+
+    [Fact]
+    public void The_same_damage_against_a_group_that_heals_harder_is_not_past_saving()
+    {
+        // Identical death, and a night that showed four times the healing. Now the damage was
+        // within what they have covered before, so the answer is not "unhealable".
+        var log = ARaid()
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(1.Minutes())
+                .At(30.Seconds()).BossHits("Rockjaw", 900_000, with: Ability.Cleave)
+                .At(31.Seconds()).Heals("Sunwell", target: "Rockjaw", amount: 900_000)
+                .At(32.Seconds()).BossHits("Rockjaw", 900_000, with: Ability.Cleave)
+                .At(33.Seconds()).Heals("Sunwell", target: "Rockjaw", amount: 900_000)
+                .Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(3.Minutes())
+                .At(50.Seconds()).BossHits("Nightblade", 250_000, with: Ability.CreepingRot)
+                .At(52.Seconds()).BossHits("Nightblade", 250_000, with: Ability.CreepingRot)
+                .At(54.Seconds()).BossHits("Nightblade", 250_000, with: Ability.CreepingRot)
+                .At(56.Seconds()).Kills("Nightblade", with: Ability.CreepingRot, amount: 250_000)
+                .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.TheDeathReads("Nightblade", "died while the raid fought on");
     }
 
     [Fact]

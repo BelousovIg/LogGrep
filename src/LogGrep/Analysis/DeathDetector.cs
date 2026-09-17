@@ -36,6 +36,19 @@ public sealed class DeathDetector : IDetector
     /// <summary>How much of a health pool one hit has to take before it is a burst rather than a share.</summary>
     private const double Burst = 0.5;
 
+    /// <summary>
+    /// How much of a health pool can go in the last couple of seconds before the death was decided
+    /// there. A whole bar at once is nobody's reaction time - it is the damage that is the question.
+    /// </summary>
+    private const double Sudden = 1.0;
+
+    /// <summary>
+    /// How close to the demonstrated healing ceiling the incoming damage has to run before healing
+    /// was never going to cover it. Below the ceiling and the question is why little healing reached
+    /// this player; above it the question moves back a step, to why that much landed at all.
+    /// </summary>
+    private const double PastSaving = 0.8;
+
     /// <summary>How long below full counts as having been ground down rather than caught out.</summary>
     private static readonly TimeSpan Ground = TimeSpan.FromSeconds(15);
 
@@ -64,14 +77,13 @@ public sealed class DeathDetector : IDetector
 
     private Finding Report(Attempts attempts, PullRecord pull, PlayerStats player, DeathRecord death, int others)
     {
-        bool bursted = death.BiggestShare >= Burst;
-        bool ground = !bursted && death.Span >= Ground;
+        var shape = Shape(attempts, death);
 
         return new Finding(
             Category,
-            Headline(death, bursted, ground),
-            Evidence(pull, death, others),
-            Advice(bursted, ground),
+            Headline(death, shape),
+            Evidence(pull, death, others, attempts.HealingCeiling, shape),
+            Advice(shape),
             Cost.Death(death.At, death.Causes.Count > 0 ? death.Causes[0].Label : null),
             attempts.NumberOf(pull),
             pull,
@@ -80,41 +92,71 @@ public sealed class DeathDetector : IDetector
             death.At);
     }
 
-    private static string Headline(DeathRecord death, bool bursted, bool ground)
+    /// <summary>
+    /// Which of the four this death was. The order is the order of certainty: a whole health bar
+    /// gone at once, or one hit taking half of it, needs no ceiling to settle. Only when neither
+    /// holds does the arithmetic against what the healers have demonstrated get a say.
+    /// </summary>
+    private static Kind Shape(Attempts attempts, DeathRecord death)
     {
-        if (bursted)
-        {
-            string from = death.BiggestFrom.Length > 0 ? death.BiggestFrom : "one hit";
-            return from + " took " + Display.Percent(death.BiggestShare) + " in one hit";
-        }
+        if (death.SuddenShare >= Sudden) return Kind.Sudden;
+        if (death.BiggestShare >= Burst) return Kind.Burst;
 
-        return ground
-            ? "ground down over " + Display.Clock(death.Span)
-            : "died while the raid fought on";
+        double ceiling = attempts.HealingCeiling;
+        if (ceiling > 0 && death.Rate >= ceiling * PastSaving) return Kind.PastSaving;
+
+        return death.Span >= Ground ? Kind.Ground : Kind.Plain;
+    }
+
+    private static string Headline(DeathRecord death, Kind shape) => shape switch
+    {
+        Kind.Sudden => "lost " + Display.Percent(death.SuddenShare) + " in two seconds",
+        Kind.Burst => (death.BiggestFrom.Length > 0 ? death.BiggestFrom : "one hit") +
+                      " took " + Display.Percent(death.BiggestShare) + " in one hit",
+        Kind.PastSaving => "took more than the healers have ever covered",
+        Kind.Ground => "ground down over " + Display.Clock(death.Span),
+        _ => "died while the raid fought on",
+    };
+
+    private enum Kind
+    {
+        Plain,
+        Sudden,
+        Burst,
+        PastSaving,
+        Ground,
     }
 
     /// <summary>
     /// Why this reads as one person's death rather than the attempt ending. Both halves of the case
     /// are in it, because either one alone would be arguable.
     /// </summary>
-    private static string Evidence(PullRecord pull, DeathRecord death, int others)
+    private static string Evidence(PullRecord pull, DeathRecord death, int others, double ceiling, Kind shape)
     {
         string alongside = others == 0
             ? "nobody else died within five seconds"
             : others + (others == 1 ? " other died" : " others died") + " within five seconds";
 
-        return alongside + ", and the attempt ran " + Display.Clock(pull.Duration - death.At) + " longer";
+        string mine = alongside + ", and the attempt ran " + Display.Clock(pull.Duration - death.At) + " longer";
+
+        // The arithmetic only belongs in the sentence when it is what decided the answer.
+        return shape == Kind.PastSaving
+            ? mine + "; " + Display.Rate(death.Rate) + " a second incoming against the " +
+              Display.Rate(ceiling) + " the healers have landed at their best"
+            : mine;
     }
 
-    private static string Advice(bool bursted, bool ground)
+    private static string Advice(Kind shape) => shape switch
     {
-        if (bursted) return "One hit took more than half of you. That is a defensive that was not " +
-                            "pressed, or a hit that should not have been taken at all.";
-
-        return ground
-            ? "You were below full for a long time before this, which is as much a conversation for " +
-              "the healers as for you."
-            : "The raid fought on afterwards, so this was not the wipe taking you with it. What " +
-              "landed is worth a look.";
-    }
+        Kind.Sudden => "A whole health bar went in two seconds. Nobody reacts to that - the " +
+                       "question is what was allowed to land, not who failed to heal it.",
+        Kind.Burst => "One hit took more than half of you. That is a defensive that was not " +
+                      "pressed, or a hit that should not have been taken at all.",
+        Kind.PastSaving => "More was coming in than this group has ever healed through, so this " +
+                           "is not the healers. Ask why that much reached you.",
+        Kind.Ground => "You were below full for a long time before this, which is as much a " +
+                       "conversation for the healers as for you.",
+        _ => "The raid fought on afterwards, so this was not the wipe taking you with it. What " +
+             "landed is worth a look.",
+    };
 }
