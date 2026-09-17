@@ -529,7 +529,7 @@ question rather than a footnote.
 
 Ends with: "against the top percentile" as an option, never as the foundation.
 
-### 11. The logs you have open
+### 11. The logs you have open — done
 
 The toolbar still carries a read-only box holding one file path, which is a leftover from when the
 app could only hold one log. Milestone 2 made the reading a set of files; the window never caught
@@ -555,6 +555,19 @@ Replace it with the list itself.
 
 Ends with: the window saying which logs it is reading, instead of a box that used to say where one
 of them was.
+
+What it came out as: the path box is gone and the toolbar carries a toggle reading "3 logs", which
+opens a table of them. Each row is the file name with its full path in the tooltip, what it
+contributed, and when its first attempt began - the last three empty until the reading reaches that
+file. Removing a row re-reads the rest, because the ordering and the duplicate rules both depend on
+the set. The list is paths only, in `logs.txt` beside `settings.json`; everything a row shows about
+contents is read from the file each time, so nothing stale can be shown as current.
+
+The panel opens itself while there is nothing to look at and closes once there is.
+
+It also turned up a third instance of the locale bug the yardstick milestone found: the first-pull
+date was written with the machine's own month names, so a Russian install read "15 вер. 20:00". Dates
+in this app are technical and get pasted into chats; they are invariant now like the numbers.
 
 
 ## What this means for the window

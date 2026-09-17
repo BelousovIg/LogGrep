@@ -12,6 +12,7 @@ using LogGrep.Analysis;
 using LogGrep.Export;
 using LogGrep.Models;
 using LogGrep.Parsing;
+using LogGrep.Services;
 using Microsoft.Win32;
 
 namespace LogGrep.ViewModels;
@@ -26,7 +27,8 @@ public sealed class MainViewModel : ObservableObject
     private Reading _reading = Reading.Nothing;
     private CancellationTokenSource? _cancellation;
 
-    private string _logPath = string.Empty;
+    private readonly OpenLogs _openLogs;
+    private bool _logsExpanded = true;
     private string _status = "Open a World of Warcraft combat log to begin.";
     private double _progress;
     private bool _isBusy;
@@ -41,6 +43,7 @@ public sealed class MainViewModel : ObservableObject
     {
         _fileSystem = fileSystem;
         _exporter = new LogExporter(fileSystem);
+        _openLogs = new OpenLogs(fileSystem, new SettingsService(fileSystem).DataDirectory);
 
         OpenCommand = new RelayCommand(Open, () => !IsBusy);
         ExportCommand = new RelayCommand(Export, () => !IsBusy && SelectedPullCount > 0);
@@ -107,11 +110,28 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand CollapseAllCommand { get; }
     public RelayCommand ExportFindingsCommand { get; }
 
-    public string LogPath
+    /// <summary>
+    /// The logs the window has open. Adding is what "Open log" does now - the reading is whatever
+    /// this list holds, which is why removing a row re-reads the rest rather than just hiding it:
+    /// the ordering and the duplicate rules both depend on the set.
+    /// </summary>
+    public ObservableCollection<LogRowViewModel> Logs { get; } = new();
+
+    public bool HasLogs => Logs.Count > 0;
+
+    /// <summary>Open while there is nothing to read yet, closed once the fights are worth looking at.</summary>
+    public bool LogsExpanded
     {
-        get => _logPath;
-        private set => Set(ref _logPath, value);
+        get => _logsExpanded;
+        set => Set(ref _logsExpanded, value);
     }
+
+    public string LogsSummary => Logs.Count switch
+    {
+        0 => "No logs open",
+        1 => "1 log",
+        _ => Logs.Count + " logs",
+    };
 
     public string Status
     {
@@ -155,18 +175,90 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>Opens a log that came from the command line or was dropped on the window.</summary>
     public void Load(string path) => _ = LoadAsync(path);
 
-    /// <summary>The same, awaitable, which is how a test knows the scan has finished.</summary>
+    /// <summary>
+    /// Puts back the list from last time and reads it. Called by the window rather than done in the
+    /// constructor, because reading a gigabyte is not something to start while a control tree is
+    /// still being built.
+    /// </summary>
+    public Task RestoreAsync()
+    {
+        foreach (string path in _openLogs.Load())
+        {
+            if (Logs.Any(l => string.Equals(l.Path, path, StringComparison.OrdinalIgnoreCase))) continue;
+
+            Logs.Add(new LogRowViewModel(path, _fileSystem.Path.GetFileName(path)));
+        }
+
+        OnPropertyChanged(nameof(HasLogs));
+        OnPropertyChanged(nameof(LogsSummary));
+
+        return Logs.Count == 0 ? Task.CompletedTask : ScanAsync();
+    }
+
+    /// <summary>
+    /// Adds files to the list and reads everything in it. The same file named twice is one file:
+    /// reading it twice would cost a second pass over a gigabyte and have to be undone at the other
+    /// end.
+    /// </summary>
     public Task LoadAsync(params string[] paths)
     {
-        // The same file named twice is one file. Reading it twice would cost a second pass over a
-        // gigabyte and then have to be undone at the other end, and nothing is learned by it.
-        var present = paths
-            .Where(_fileSystem.File.Exists)
-            .Select(_fileSystem.Path.GetFullPath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        if (IsBusy) return Task.CompletedTask;
 
-        return IsBusy || present.Count == 0 ? Task.CompletedTask : ScanAsync(present);
+        foreach (string path in paths)
+        {
+            string full = Full(path);
+            if (Logs.Any(l => string.Equals(l.Path, full, StringComparison.OrdinalIgnoreCase))) continue;
+
+            Logs.Add(new LogRowViewModel(full, _fileSystem.Path.GetFileName(full)));
+        }
+
+        RaiseLogsChanged();
+        return Logs.Count == 0 ? Task.CompletedTask : ScanAsync();
+    }
+
+    /// <summary>
+    /// Takes one file back out and reads what is left. Not the same as never having added it - the
+    /// order of the evening and which duplicates were dropped both change with the set.
+    /// </summary>
+    public Task RemoveAsync(LogRowViewModel log)
+    {
+        if (IsBusy) return Task.CompletedTask;
+
+        Logs.Remove(log);
+        RaiseLogsChanged();
+
+        if (Logs.Count == 0)
+        {
+            Encounters.Clear();
+            _groups.Clear();
+            Findings = Array.Empty<Finding>();
+            _reading = Reading.Nothing;
+            Status = "Open a log to start.";
+            RaiseSelectionChanged();
+            return Task.CompletedTask;
+        }
+
+        return ScanAsync();
+    }
+
+    /// <summary>A path the settings folder can keep, and that two spellings of one file agree on.</summary>
+    private string Full(string path)
+    {
+        try
+        {
+            return _fileSystem.Path.GetFullPath(path);
+        }
+        catch (Exception)
+        {
+            return path;
+        }
+    }
+
+    private void RaiseLogsChanged()
+    {
+        OnPropertyChanged(nameof(HasLogs));
+        OnPropertyChanged(nameof(LogsSummary));
+        _openLogs.Save(Logs.Select(l => l.Path));
     }
 
     private void Open()
@@ -184,18 +276,32 @@ public sealed class MainViewModel : ObservableObject
         };
 
         if (dialog.ShowDialog() != true) return;
-        _ = ScanAsync(dialog.FileNames);
+        _ = LoadAsync(dialog.FileNames);
     }
 
-    private async Task ScanAsync(IReadOnlyList<string> paths)
+    private async Task ScanAsync()
     {
         Encounters.Clear();
         _groups.Clear();
         Findings = Array.Empty<Finding>();
         _reading = Reading.Nothing;
-        LogPath = paths.Count == 1
-            ? paths[0]
-            : paths.Count + " logs, starting with " + _fileSystem.Path.GetFileName(paths[0]);
+
+        // A file that has gone since it was added keeps its row and says so. Removing it is then
+        // somebody's decision rather than something the app did quietly on their behalf.
+        foreach (var log in Logs)
+        {
+            log.Source = null;
+            log.Missing = !_fileSystem.File.Exists(log.Path);
+        }
+
+        var paths = Logs.Where(l => !l.Missing).Select(l => l.Path).ToList();
+        if (paths.Count == 0)
+        {
+            Status = "None of these files is there any more.";
+            RaiseSelectionChanged();
+            return;
+        }
+
         Progress = 0;
         IsBusy = true;
         RaiseSelectionChanged();
@@ -213,6 +319,18 @@ public sealed class MainViewModel : ObservableObject
             var reading = await Task.Run(() => Read(paths, progress, token), token);
 
             _reading = reading;
+
+            // Each row learns what its own file turned out to hold, which is the three columns that
+            // stood empty while it was being read.
+            foreach (var source in reading.Sources)
+            {
+                var row = Logs.FirstOrDefault(l => string.Equals(l.Path, source.Path, StringComparison.OrdinalIgnoreCase));
+                if (row != null) row.Source = source;
+            }
+
+            // The list has done its job once there are fights to look at.
+            LogsExpanded = false;
+
             Rebuild(reading.Pulls);
             BuildFindings(reading.Pulls);
             Progress = 100;

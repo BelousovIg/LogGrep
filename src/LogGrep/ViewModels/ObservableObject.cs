@@ -71,6 +71,13 @@ public static class Display
     /// </summary>
     public static string Decimal(double value) => value.ToString("0.#", Inv);
 
+    /// <summary>
+    /// A day and a time, invariant like the rest. A log is a technical artefact that gets pasted
+    /// into chats and compared across machines, and "15 Sep 20:00" means the same thing on all of
+    /// them where a localised month does not.
+    /// </summary>
+    public static string Moment(DateTime value) => value.ToString("d MMM HH:mm", Inv);
+
     /// <summary>Time inside a pull as "m:ss", the shape death times are read in.</summary>
     public static string Clock(TimeSpan value)
     {

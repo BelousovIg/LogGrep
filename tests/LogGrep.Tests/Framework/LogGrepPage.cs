@@ -37,7 +37,7 @@ public sealed class LogGrepPage
         ViewModel = new MainViewModel(_disk);
     }
 
-    public MainViewModel ViewModel { get; }
+    public MainViewModel ViewModel { get; private set; }
 
     public IReadOnlyList<EncounterViewModel> Encounters => ViewModel.Encounters;
 
@@ -58,9 +58,31 @@ public sealed class LogGrepPage
     public PlayerRowViewModel Player => _player ?? throw new InvalidOperationException(
         "No player is being looked at. Look at one first.");
 
+    /// <summary>Closes the app and opens it again, on the same disk - which is what a restart is.</summary>
+    public void Reopen()
+    {
+        _encounter = null;
+        _pull = null;
+        _player = null;
+        ViewModel = new MainViewModel(_disk);
+        Pump(ViewModel.RestoreAsync());
+    }
+
+    public void DeleteFile(string name) => _disk.File.Delete(Folder + name);
+
+    public void RemoveLog(string name)
+    {
+        var row = ViewModel.Logs.FirstOrDefault(l => l.Name == name)
+            ?? throw new InvalidOperationException(
+                "No log called '" + name + "' is open. These are: " +
+                string.Join(", ", ViewModel.Logs.Select(l => l.Name)));
+
+        Pump(ViewModel.RemoveAsync(row));
+    }
+
     /// <summary>
     /// Puts the logs on the fake disk under the names the game would have given them, with the
-    /// creation dates each one claims, and opens the lot together.
+    /// creation dates each one claims, and adds them to the list.
     /// </summary>
     public void Open(params CombatLogBuilder[] logs)
     {

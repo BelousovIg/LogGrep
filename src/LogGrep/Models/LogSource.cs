@@ -36,6 +36,12 @@ public sealed class LogSource
 
     public int Pulls { get; set; }
 
+    /// <summary>How many distinct bosses or runs this file holds, which is not the same as attempts.</summary>
+    public int Encounters { get; set; }
+
+    /// <summary>When the first attempt in this file began - the fight, not the file.</summary>
+    public DateTime? Started { get; set; }
+
     /// <summary>How many of those survived the joining - none, if this file is a copy of another.</summary>
     public int Kept { get; set; }
 

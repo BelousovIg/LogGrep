@@ -27,6 +27,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -47,11 +48,15 @@
                         Style="{StaticResource PrimaryButton}"
                         Command="{Binding OpenCommand}" />
 
-                <TextBox Grid.Column="1"
-                         Margin="12,0,12,0"
-                         IsReadOnly="True"
-                         Text="{Binding LogPath, Mode=OneWay}"
-                         ToolTip="{Binding LogPath}" />
+                <!-- The list of open logs, not a path: the app reads a set of files, and a box with
+                     one path in it could only ever describe the first of them. -->
+                <ToggleButton Grid.Column="1"
+                              Margin="12,0,12,0"
+                              HorizontalAlignment="Left"
+                              MinWidth="140"
+                              Height="32"
+                              IsChecked="{Binding LogsExpanded, Mode=TwoWay}"
+                              Content="{Binding LogsSummary}" />
 
                 <Button Grid.Column="2"
                         Content="Settings"
@@ -68,10 +73,72 @@
             </Grid>
         </Border>
 
-        <ProgressBar Grid.Row="1" Minimum="0" Maximum="100" Value="{Binding Progress, Mode=OneWay}" />
+        <!-- ===== the logs that are open ===== -->
+        <Border Grid.Row="1"
+                Background="{StaticResource WindowBrush}" BorderBrush="{StaticResource LineBrush}"
+                BorderThickness="0,0,0,1" Padding="16,8"
+                Visibility="{Binding LogsExpanded, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <Grid Height="22">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="200" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Style="{StaticResource MutedText}" Text="FILE" />
+                    <TextBlock Grid.Column="1" Style="{StaticResource MutedText}" HorizontalAlignment="Right"
+                               Margin="0,0,14,0" Text="PULLS" />
+                    <TextBlock Grid.Column="2" Style="{StaticResource MutedText}" HorizontalAlignment="Right"
+                               Margin="0,0,14,0" Text="ENCOUNTERS" />
+                    <TextBlock Grid.Column="3" Style="{StaticResource MutedText}" HorizontalAlignment="Right"
+                               Margin="0,0,14,0" Text="FIRST PULL" />
+                </Grid>
+
+                <ItemsControl ItemsSource="{Binding Logs}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Height="30">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" MinWidth="200" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                       Text="{Binding Name}"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding Path}"
+                                       ToolTipService.ShowDuration="60000" />
+
+                            <TextBlock Grid.Column="1" Style="{StaticResource NumberText}"
+                                       Text="{Binding PullsText}" />
+                            <TextBlock Grid.Column="2" Style="{StaticResource NumberText}"
+                                       Text="{Binding EncountersText}" />
+                            <TextBlock Grid.Column="3" Style="{StaticResource MutedText}"
+                                       VerticalAlignment="Center" HorizontalAlignment="Right"
+                                       Margin="0,0,14,0"
+                                       Text="{Binding StartedText}" />
+
+                            <Button Grid.Column="4" Style="{StaticResource LinkButton}"
+                                    Content="Remove"
+                                    Click="OnRemoveLog"
+                                    ToolTip="Take this file out and read what is left" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <ProgressBar Grid.Row="2" Minimum="0" Maximum="100" Value="{Binding Progress, Mode=OneWay}" />
 
         <!-- ===== table header ===== -->
-        <Border Grid.Row="2" Background="{StaticResource WindowBrush}" BorderBrush="{StaticResource LineBrush}"
+        <Border Grid.Row="3" Background="{StaticResource WindowBrush}" BorderBrush="{StaticResource LineBrush}"
                 BorderThickness="0,0,0,1" Padding="16,0,16,0" Height="34">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -113,7 +180,7 @@
         </Border>
 
         <!-- ===== encounters ===== -->
-        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+        <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                       Padding="16,0,16,0">
             <ItemsControl ItemsSource="{Binding EncountersView}">
                 <ItemsControl.ItemsPanel>
@@ -470,7 +537,7 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
-        <Border Grid.Row="4" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
+        <Border Grid.Row="5" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
                 BorderThickness="0,1,0,0" Padding="16,12">
             <Grid>
                 <Grid.ColumnDefinitions>

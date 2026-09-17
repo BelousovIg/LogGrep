@@ -26,6 +26,12 @@ public sealed class TestMethods
 
     public void SortPlayersBy(PlayerColumn column) => _page.SortPlayersBy(column);
 
+    public void RemoveLog(string name) => _page.RemoveLog(name);
+
+    public void Reopen() => _page.Reopen();
+
+    public void DeleteFile(string name) => _page.DeleteFile(name);
+
     /// <summary>Opens an encounter and one of its pulls in one go, which most scenarios want.</summary>
     public void OpenPull(Boss boss, int number)
     {

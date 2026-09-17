@@ -33,12 +33,25 @@ public partial class MainWindow : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         string? path = Environment.GetCommandLineArgs().Skip(1).FirstOrDefault(File.Exists);
+
+        // A file on the command line is what somebody asked for now; the list is what they were
+        // reading last time. Asking for one replaces neither - it is added to the other.
         if (path != null) Model.Load(path);
+        else _ = Model.RestoreAsync();
     }
 
     /// <summary>Opens the settings, which is where a key and the folder everything lives in are set.</summary>
     private void OnOpenSettings(object sender, RoutedEventArgs e)
         => new SettingsWindow { Owner = this }.ShowDialog();
+
+    /// <summary>Takes one file out of the list, which re-reads whatever is left of it.</summary>
+    private void OnRemoveLog(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: LogRowViewModel log } && DataContext is MainViewModel main)
+        {
+            _ = main.RemoveAsync(log);
+        }
+    }
 
     /// <summary>
     /// Copies the full name of the player that was clicked, and acknowledges it where the click

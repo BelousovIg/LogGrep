@@ -360,6 +360,36 @@ public sealed class Then
         return this;
     }
 
+    public Then TheLogListHolds(params string[] expected)
+    {
+        _check.TheLogListHolds(expected);
+        return this;
+    }
+
+    public Then NothingIsListed()
+    {
+        _check.NothingIsListed();
+        return this;
+    }
+
+    public Then TheLogListIsEmpty()
+    {
+        _check.TheLogListIsEmpty();
+        return this;
+    }
+
+    public Then TheLogRowReads(string name, string pulls, string encounters, string started)
+    {
+        _check.TheLogRowReads(name, pulls, encounters, started);
+        return this;
+    }
+
+    public Then TheLogRowSaysItIsGone(string name)
+    {
+        _check.TheLogRowSaysItIsGone(name);
+        return this;
+    }
+
     public Then NothingWasFound()
     {
         _check.NothingWasFound();

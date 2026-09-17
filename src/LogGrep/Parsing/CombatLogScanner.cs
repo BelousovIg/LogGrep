@@ -159,6 +159,8 @@ public sealed class CombatLogScanner
         if (_open != null) Close(_open, success: false, _lastLineEnd, TimeSpan.Zero, _open.LastTimestamp);
 
         _result.Source.Pulls = _result.Pulls.Count;
+        _result.Source.Encounters = _result.Pulls.Select(p => p.GroupKey).Distinct(StringComparer.Ordinal).Count();
+        _result.Source.Started = _result.Pulls.Count == 0 ? null : _result.Pulls.Min(p => p.StartTime);
 
         Report(new ScanProgress(100, null));
         return _result;

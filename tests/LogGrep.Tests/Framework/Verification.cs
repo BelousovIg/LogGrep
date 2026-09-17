@@ -304,6 +304,38 @@ public sealed class Verification
         => Deaths(player).FirstOrDefault()
            ?? throw new InvalidOperationException($"No death was reported for '{player}'. " + What());
 
+
+    /// <summary>The files the window is holding, by name and in order.</summary>
+    public void TheLogListHolds(params string[] expected)
+        => Assert.Equal(expected, _page.ViewModel.Logs.Select(l => l.Name).ToArray());
+
+    public void NothingIsListed()
+        => Assert.True(_page.Encounters.Count == 0,
+            "Nothing should be listed, and this is: " +
+            string.Join(", ", _page.Encounters.Select(e => e.Name)));
+
+    public void TheLogListIsEmpty()
+        => Assert.True(_page.ViewModel.Logs.Count == 0,
+            "The list should be empty, and holds: " +
+            string.Join(", ", _page.ViewModel.Logs.Select(l => l.Name)));
+
+    /// <summary>What a row says about its own file, which is empty until the file has been read.</summary>
+    public void TheLogRowReads(string name, string pulls, string encounters, string started)
+    {
+        var row = Row(name);
+        Assert.Equal(pulls, row.PullsText);
+        Assert.Equal(encounters, row.EncountersText);
+        Assert.Equal(started, row.StartedText);
+    }
+
+    public void TheLogRowSaysItIsGone(string name)
+        => Assert.Equal("file is gone", Row(name).StartedText);
+
+    private LogRowViewModel Row(string name)
+        => _page.ViewModel.Logs.FirstOrDefault(l => l.Name == name)
+           ?? throw new InvalidOperationException(
+               "No log called '" + name + "' is open. These are: " +
+               string.Join(", ", _page.ViewModel.Logs.Select(l => l.Name)));
     public void NothingWasFound()
         => Assert.True(_page.Findings.Count == 0,
             "Nothing should have been found, but these were: " +

@@ -81,6 +81,24 @@ public sealed class When
         return this;
     }
 
+    public When IRemoveTheLog(string name)
+    {
+        _act.RemoveLog(name);
+        return this;
+    }
+
+    public When IReopenTheApp()
+    {
+        _act.Reopen();
+        return this;
+    }
+
+    public When IDeleteTheFile(string name)
+    {
+        _act.DeleteFile(name);
+        return this;
+    }
+
     public When ISortPlayersBy(PlayerColumn column)
     {
         _act.SortPlayersBy(column);
