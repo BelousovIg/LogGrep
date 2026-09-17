@@ -48,6 +48,21 @@ A test must never raise a dialog. `MainViewModel` only shows a message box when 
 application behind it, which is what keeps a failing scenario from hanging the run behind a modal
 window nobody is looking at.
 
+## Turning values into text
+
+**Everything the app shows goes through `Display`** (`src/LogGrep/ViewModels/Display.cs`), and the
+formatting there is invariant. Never call `ToString` on a number, a share, a duration or a date at a
+call site - add a method to `Display` if the shape you need is missing.
+
+This is not tidiness. Three locale bugs shipped before the rule existed: a rate written `2,5` on a
+Russian install, a month written `вер.`, and an export file name that would carry a different year
+under a non-Gregorian calendar. Each was one call site formatting a value itself, and each read as
+correct on the machine it was written on.
+
+`ReadingUnderAnotherLocale` runs a scan under Thai - Thai month names, Buddhist years - and checks
+what the window shows. It fails the moment anything formats a value itself, which is what keeps this
+rule true rather than merely written down.
+
 ## Milestones
 
 `docs/ROADMAP.md` holds them. Starting one opens with a commit of its own: bump `<Version>` in
