@@ -127,6 +127,17 @@ public sealed class PlayerStats
     /// </summary>
     public double DeadSeconds { get; set; }
 
+    /// <summary>
+    /// When they first landed damage on an enemy, and when an enemy first landed damage on them,
+    /// measured from the start of the attempt. Null means it never happened during the fight.
+    ///
+    /// Neither is worth anything on its own: what a pull opening wrongly looks like is one of these
+    /// arriving for somebody well before it arrives for a tank.
+    /// </summary>
+    public TimeSpan? Struck { get; set; }
+
+    public TimeSpan? WasHit { get; set; }
+
     /// <summary>Each spell they used, with the cooldown the log demonstrates for it.</summary>
     public IReadOnlyList<SpellUse> Spells { get; set; } = Array.Empty<SpellUse>();
 

@@ -6,7 +6,7 @@ namespace LogGrep.Analysis;
 /// Finds a pull that started with the wrong person.
 ///
 /// A pull belongs to the tank at both ends: they land the first blow, and they take it. Whoever
-/// strikes first has the threat, and whoever the boss hits first had it - so if either of those is
+/// strikes first has the threat, and whoever the enemy hits first had it - so if either of those is
 /// not a tank, the fight opened wrong, and everything that follows in the next few seconds follows
 /// from that.
 ///
@@ -24,6 +24,23 @@ public sealed class OpeningDetector : IDetector
     /// </summary>
     private static readonly TimeSpan Opening = TimeSpan.FromSeconds(10);
 
+    /// <summary>
+    /// How far ahead of the tank somebody has to be before they were early rather than alongside.
+    ///
+    /// Everybody starts a pull at once, so the opening of one is a scramble: a pre-cast lands at
+    /// 0.0 while the tank is still closing the distance and connects at 0.2. On the real log that
+    /// scramble is the usual case - on twenty-four attempts the gaps ran from -1.4 to 1.1 seconds
+    /// and sat inside half a second either way - so reading it as a mistake put a finding on
+    /// nearly every attempt, which is not a report, it is a shrug. The other end is the same
+    /// story from the other side: an untargeted pulse hits the whole group inside one event, and
+    /// which name the log happens to write first in it means nothing.
+    ///
+    /// So the measure is a global cooldown, the time it takes anybody to act once. Less than that
+    /// and the tank had not yet had a turn; being ahead of somebody who has not moved is not being
+    /// early. More than that and you acted, they could have acted, and they had not.
+    /// </summary>
+    private static readonly TimeSpan Ahead = TimeSpan.FromSeconds(1.5);
+
     /// <summary>How long a death has to follow for it to have followed from the pull going wrong.</summary>
     private static readonly TimeSpan Soon = TimeSpan.FromSeconds(15);
 
@@ -35,31 +52,51 @@ public sealed class OpeningDetector : IDetector
         {
             // Without a tank in the group there is nobody the pull belonged to, and a five-player
             // party that brought none is not making this mistake.
-            if (!pull.Roster.Any(p => Specs.RoleOf(p.SpecId) == Role.Tank)) continue;
+            var tanks = pull.Roster.Where(p => Specs.RoleOf(p.SpecId) == Role.Tank).ToList();
+            if (tanks.Count == 0) continue;
 
-            var opened = pull.OpenedAt <= Opening ? Who(pull, pull.Opened) : null;
-            if (opened != null && Specs.RoleOf(opened.SpecId) != Role.Tank)
+            var opened = Early(pull, tanks, p => p.Struck);
+            if (opened != null)
             {
                 yield return Report(attempts, pull, opened,
                     "opened the pull",
-                    "the first damage on the boss was yours, before any tank's",
+                    "you hit the enemy a whole action before any tank did",
                     "Threat starts with whoever lands the first blow. Opening ahead of the tank " +
                     "hands it to you, and everything the boss does for the next few seconds is " +
                     "aimed at you rather than at them.");
             }
 
-            var hit = pull.FirstHitAt <= Opening ? Who(pull, pull.FirstHit) : null;
-            if (hit != null && Specs.RoleOf(hit.SpecId) != Role.Tank
-                && !string.Equals(hit.Name, opened?.Name, StringComparison.Ordinal))
+            var hit = Early(pull, tanks, p => p.WasHit);
+            if (hit != null && !string.Equals(hit.Name, opened?.Name, StringComparison.Ordinal))
             {
                 yield return Report(attempts, pull, hit,
                     "took the first hit of the pull",
-                    "the boss struck you before it struck any tank",
+                    "the enemy hit you a whole action before it hit any tank",
                     "The boss hits whoever holds its attention, and at the start of a fight that " +
                     "should be a tank. Being first means the pull began with the threat in the " +
                     "wrong place.");
             }
         }
+    }
+
+    /// <summary>
+    /// Whoever this happened to first, if it happened to them inside the opening and a clear step
+    /// ahead of every tank. A tank it never happened to at all counts as never: somebody taking the
+    /// opening while the tanks stand out of it is the same mistake, only more so.
+    /// </summary>
+    private static PlayerStats? Early(
+        PullRecord pull, List<PlayerStats> tanks, Func<PlayerStats, TimeSpan?> moment)
+    {
+        var first = pull.Roster
+            .Where(p => Specs.RoleOf(p.SpecId) != Role.Tank && moment(p) != null)
+            .OrderBy(p => moment(p)!.Value)
+            .FirstOrDefault();
+
+        if (first == null || moment(first)!.Value > Opening) return null;
+
+        var tank = tanks.Select(moment).Where(m => m != null).Select(m => m!.Value).DefaultIfEmpty(TimeSpan.MaxValue).Min();
+
+        return moment(first)!.Value + Ahead <= tank ? first : null;
     }
 
     private Finding Report(Attempts attempts, PullRecord pull, PlayerStats player,
@@ -79,9 +116,4 @@ public sealed class OpeningDetector : IDetector
             player.SpecId,
             TimeSpan.Zero);
     }
-
-    private static PlayerStats? Who(PullRecord pull, string name)
-        => name.Length == 0
-            ? null
-            : pull.Roster.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.Ordinal));
 }

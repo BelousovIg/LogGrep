@@ -71,6 +71,41 @@ public sealed class OpeningThePull : Scenario
     }
 
     [Fact]
+    public void Everybody_starting_at_once_is_just_a_pull()
+    {
+        // A pull is a scramble: a spell cast before the fight lands the moment it begins, while the
+        // tank is still closing the distance. Being in front of somebody who has not had time to
+        // act is not being early, and on the real log this is what almost every attempt looks like.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(0.Seconds()).Deals("Nightblade", to: Soulcoiler, amount: 900_000)
+            .At(1.0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
+            .At(1.4.Seconds()).BossHits("Sunwell", 300_000)
+            .At(2.5.Seconds()).BossHits("Rockjaw", 200_000)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.ThePullWasClean();
+    }
+
+    [Fact]
+    public void A_pull_nobody_tanked_belongs_to_whoever_started_it()
+    {
+        // The tank never touched the enemy at all. There is no gap to measure and no need for one:
+        // whoever opened held the threat for the whole attempt because nobody took it off them.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(0.Seconds()).Deals("Nightblade", to: Soulcoiler, amount: 900_000)
+            .At(4.Seconds()).Deals("Sunwell", to: Soulcoiler, amount: 50_000)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.ThePullSays("Nightblade", "opened the pull");
+    }
+
+    [Fact]
     public void Threat_changing_hands_later_in_the_fight_is_not_a_bad_pull()
     {
         // A tank swap, an add picked up, a second boss - all of it looks like this and none of it

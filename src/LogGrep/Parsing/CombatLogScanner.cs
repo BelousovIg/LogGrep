@@ -383,6 +383,8 @@ public sealed class CombatLogScanner
                 Deaths = entry.Value.Deaths.ToArray(),
                 Casts = entry.Value.Casts,
                 DeadSeconds = entry.Value.Dead,
+                Struck = entry.Value.Struck,
+                WasHit = entry.Value.WasHit,
                 Spells = entry.Value.Spells
                     .Select(s => new SpellUse(s.Key, s.Value.Label, s.Value.Uses, s.Value.Shortest,
                         entry.Value.Output.TryGetValue(s.Key, out long did) ? did : 0))
@@ -419,10 +421,6 @@ public sealed class CombatLogScanner
             Blows = segment.Blows.Values.ToArray(),
             HealCeiling = segment.Players.Values.Count == 0 ? 0 : segment.Players.Values.Max(p => p.BestHealing),
             Casts = segment.Casts.ToArray(),
-            Opened = segment.Opened,
-            OpenedAt = segment.OpenedAt,
-            FirstHit = segment.FirstHit,
-            FirstHitAt = segment.FirstHitAt,
             Damage = segment.Damage,
             Healing = segment.Healing,
             StartOffset = segment.StartOffset,
@@ -709,7 +707,7 @@ public sealed class CombatLogScanner
             // the threat with it, and on the first seconds of a fight that is the whole story.
             if (actor != null && kind == EventKind.Damage)
             {
-                _open!.Struck(actor.Name, Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)));
+                actor.Strike(Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)));
             }
         }
 
@@ -733,7 +731,7 @@ public sealed class CombatLogScanner
         double at = LogTimestamp.SecondsOfDay(line, eventStart);
 
         // And who the enemy hit first, which is the same question read from the other end.
-        if (!fromTheGroup) _open!.WasHit(victim.Name, Elapsed(at));
+        if (!fromTheGroup) victim.Took(Elapsed(at));
 
         if (at >= 0)
         {
@@ -989,6 +987,20 @@ public sealed class CombatLogScanner
         public long DamageTaken { get; set; }
         public List<DeathRecord> Deaths { get; } = new();
 
+        /// <summary>
+        /// When this player first struck an enemy, and when an enemy first struck them. Both are
+        /// set once and never moved. Who was first is not a question about one person, it is a
+        /// comparison between the tanks and everybody else, so the scanner keeps the times and
+        /// leaves the comparing to whoever knows the roles.
+        /// </summary>
+        public TimeSpan? Struck { get; private set; }
+
+        public TimeSpan? WasHit { get; private set; }
+
+        public void Strike(TimeSpan at) => Struck ??= at;
+
+        public void Took(TimeSpan at) => WasHit ??= at;
+
         /// <summary>Rolling window of recent hits; anything older than the window is dropped on the spot.</summary>
         public Queue<Hit> Hits { get; } = new();
 
@@ -1239,31 +1251,6 @@ public sealed class CombatLogScanner
 
         /// <summary>One entry per enemy spell and person it landed on, keyed so it stays one entry.</summary>
         public Dictionary<(int Spell, string Player), Blow> Blows { get; } = new();
-
-        /// <summary>Who struck the enemy first, and who the enemy struck first. Each set once.</summary>
-        public string Opened { get; private set; } = string.Empty;
-
-        public string FirstHit { get; private set; } = string.Empty;
-
-        public TimeSpan OpenedAt { get; private set; }
-
-        public TimeSpan FirstHitAt { get; private set; }
-
-        public void Struck(string player, TimeSpan at)
-        {
-            if (Opened.Length > 0) return;
-
-            Opened = player;
-            OpenedAt = at;
-        }
-
-        public void WasHit(string player, TimeSpan at)
-        {
-            if (FirstHit.Length > 0) return;
-
-            FirstHit = player;
-            FirstHitAt = at;
-        }
 
         /// <summary>Specialization per player GUID hash, learned from COMBATANT_INFO.</summary>
         public Dictionary<ulong, int> Specs { get; } = new();
