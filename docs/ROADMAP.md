@@ -643,6 +643,41 @@ date was written with the machine's own month names, so a Russian install read "
 in this app are technical and get pasted into chats; they are invariant now like the numbers.
 
 
+
+### The filler problem, found by reading the output
+
+Reported from the real log: Holy Nova in the list of under-used cooldowns, for a priest, where it is
+a filler nobody presses for a reason.
+
+It was not one spell. Beside it sat Charge, Fel Rush, Demonic Circle, Angelic Feather and Purify
+Spirit - movement and utility, none of which can be under-used in any sense this app can support.
+The cause was the filter: a spell was called a cooldown for going out rarely, and a spell nobody has
+a reason to press goes out rarely.
+
+Measured, by reading the log directly: Holy Nova did 5,464,789 healing across 3,830 casts, about
+half a percent of what those healers did all evening and 1,427 a cast. Death Pact did 9,328,733 in
+twenty-five. Charge and the rest did nothing measurable at all.
+
+So the scanner now keeps what each of a player's spells actually did, and the detector weighs a
+spell by its share of that player's own output rather than by how often it goes out. Two percent is
+the bar. A spell with no output fails it without a special case, since nothing is less than any
+share of something.
+
+The finding also gained a price it never had: the uses missed, times what one of them is worth. A
+cooldown left unused and a hit that should have been dodged now sort against each other, which is
+what the cost field was for.
+
+On the real log: cooldown findings fell from 81 to 9, and the nine are spells that do something -
+Vampiric Touch, Arcane Blast, Essence Break, Eternal Flame, Blackout Kick, Healing Wave, Burning
+Rush. Total findings 243 to 172.
+
+Not done, and worth a milestone of its own: the other half of the observation - that the real
+question may not be "two Holy Novas instead of four" but "something else should have gone out
+there". That needs to know what was available, and the log does carry the missing half of it: the
+advanced block reports current and maximum power on every event, so mana and resources are readable.
+The risk is that a finding about what somebody did *not* do is far easier to get wrong than one
+about what they did, so it would have to be phrased against the player's own habit - "you usually
+press X here" - and never as advice about what to press.
 ## What this means for the window
 
 The tree - encounters, attempts, players - is the spine and stays. It is how a night is shaped and

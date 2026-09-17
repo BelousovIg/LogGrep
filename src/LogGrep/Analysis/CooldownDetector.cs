@@ -100,7 +100,7 @@ public sealed class CooldownDetector : IDetector
             Display.Decimal(usual.Value) + " a minute of it",
             "Nothing here knows what this spell does or when it should go out - only that you " +
             "normally get more of it out of an attempt this long than you did here.",
-            Cost.Damage((long)((expected - use.Count) * each)),
+            Cost.Missed((long)((expected - use.Count) * each)),
             attempts.NumberOf(use.Pull),
             use.Pull,
             use.Player,

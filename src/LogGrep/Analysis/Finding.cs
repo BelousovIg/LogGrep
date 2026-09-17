@@ -24,6 +24,13 @@ public readonly record struct Cost(double Weight, string Text)
 
     public static Cost Damage(long amount) => new(amount, Display.Amount(amount) + " taken");
 
+    /// <summary>
+    /// Output that did not happen. Weighed the same as damage taken, because a cooldown left unused
+    /// and a hit that should have been dodged cost the attempt the same kind of thing, and the list
+    /// has to be able to sort one against the other.
+    /// </summary>
+    public static Cost Missed(long amount) => new(amount, Display.Amount(amount) + " of output missed");
+
     public static Cost Nothing(string why) => new(0, why);
 }
 
