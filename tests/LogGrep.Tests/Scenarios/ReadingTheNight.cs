@@ -19,6 +19,21 @@ public sealed class ReadingTheNight : Scenario
         Damage("Nightblade", Spec.AssassinationRogue),
         Damage("Emberwild", Spec.ArcaneMage));
 
+    /// <summary>An attempt where one person takes a mechanic that is not theirs.</summary>
+    private static CombatLogBuilder Sloppy(CombatLogBuilder log, string who)
+        => log.Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(20.Seconds()).BossDebuffs("Rockjaw", with: Ability.PossessionBarrage, times: 4)
+            .At(1.Minutes(30)).BossDebuffs(who, with: Ability.PossessionBarrage)
+            .Wipe());
+
+    /// <summary>The same attempt with the mechanic going where it belongs.</summary>
+    private static CombatLogBuilder Clean(CombatLogBuilder log)
+        => log.Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(20.Seconds()).BossDebuffs("Rockjaw", with: Ability.PossessionBarrage, times: 4)
+            .Wipe());
+
     /// <summary>An attempt where one named person goes down before anybody else.</summary>
     private static CombatLogBuilder AnAttempt(CombatLogBuilder log, string first)
         => log.Pull(Soulcoiler, Difficulty.Mythic, p => p
@@ -74,6 +89,36 @@ public sealed class ReadingTheNight : Scenario
         Given.IOpenedLog(log);
 
         Then.TheNightSays("Nightblade", "top damage in 6 of 6 attempts");
+    }
+
+    [Fact]
+    public void Somebody_who_stopped_making_their_mistakes_is_the_good_news()
+    {
+        // Four in the first half and none in the second reads exactly like four spread evenly,
+        // until somebody counts the halves. A report that cannot tell those apart discourages the
+        // person who did the work.
+        var log = ARaid();
+        for (int i = 0; i < 5; i++) Sloppy(log, "Nightblade");
+        for (int i = 0; i < 5; i++) Clean(log);
+
+        Given.IOpenedLog(log);
+
+        Then.TheNightSays("Nightblade", "5 mistakes in the first 5 attempts, none in the last 5");
+    }
+
+    [Fact]
+    public void Mistakes_spread_through_the_evening_are_not_an_improvement()
+    {
+        var log = ARaid();
+        for (int i = 0; i < 5; i++)
+        {
+            Sloppy(log, "Nightblade");
+            Clean(log);
+        }
+
+        Given.IOpenedLog(log);
+
+        Then.TheNightSaysNothing();
     }
 
     [Fact]

@@ -78,3 +78,16 @@ public interface IDetector
 
     IEnumerable<Finding> Look(Attempts attempts);
 }
+
+/// <summary>
+/// A second pass, over what the detectors found rather than over the log.
+///
+/// Some things about an evening are only visible once the mistakes are in: whether somebody stopped
+/// making theirs halfway through, which mechanic cost the group the most across the night. A
+/// detector cannot see any of that - it is handed the attempts and knows nothing about what its
+/// neighbours concluded - so the questions that need the whole picture live here instead.
+/// </summary>
+public interface IReview
+{
+    IEnumerable<Finding> Look(Attempts attempts, IReadOnlyList<Finding> found);
+}

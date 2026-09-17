@@ -17,6 +17,12 @@ public static class Findings
             new UptimeDetector(), new BuildDetector(), new StackDetector(),
             new FirstDeathDetector(), new LedDetector());
 
+    /// <summary>
+    /// The reviews, which run after the detectors and over what they found. Kept separate because
+    /// they ask a different kind of question - one that needs the whole picture rather than the log.
+    /// </summary>
+    private static readonly IReview[] Reviews = { new ImprovementReview() };
+
     public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls, params IDetector[] detectors)
     {
         var found = new List<Finding>();
@@ -25,7 +31,12 @@ public static class Findings
         {
             var attempts = new Attempts(encounter.OrderBy(p => p.StartOffset).ToList());
 
-            foreach (var detector in detectors) found.AddRange(detector.Look(attempts));
+            var mine = new List<Finding>();
+            foreach (var detector in detectors) mine.AddRange(detector.Look(attempts));
+
+            foreach (var review in Reviews) mine.AddRange(review.Look(attempts, mine.ToList()));
+
+            found.AddRange(mine);
         }
 
         return found
