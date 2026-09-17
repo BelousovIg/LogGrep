@@ -83,6 +83,40 @@ public sealed class ReadingTheRotation : Scenario
     }
 
     [Fact]
+    public void A_bit_below_the_usual_rate_is_not_a_finding()
+    {
+        // Seven an attempt, then four. Fewer, and by more than one - but not the half that says
+        // something actually went wrong rather than the fight being what it was.
+        var log = ARaid()
+            .Pulls(6, Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 20.Seconds())
+                .Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 40.Seconds())
+                .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.GotNoCooldownFinding("Nightblade");
+    }
+
+    [Fact]
+    public void A_handful_of_attempts_is_not_a_usual_rate()
+    {
+        // Three attempts and a bad one. Four numbers do not make a habit to depart from.
+        var log = ANightOfCooldowns(times: 3).Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes())
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.GotNoCooldownFinding("Nightblade");
+    }
+
+    [Fact]
     public void A_filler_cast_constantly_is_not_a_cooldown()
     {
         // Twenty a minute is not a cooldown, and half as many of it is a pace question - which the
