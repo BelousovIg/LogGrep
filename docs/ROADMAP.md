@@ -306,7 +306,7 @@ Not done: the stack question. The scanner does not read dose counts yet, and the
 this log is silence anyway - somebody carried thirty-five stacks of Mark of Acid and lived. Left
 open rather than written blind.
 
-### 5. Execution, without knowing the class
+### 5. Execution, without knowing the class — done
 
 Three signals that need no class knowledge at all:
 
@@ -317,6 +317,27 @@ Three signals that need no class knowledge at all:
 
 Ends with: rotation findings for every spec in the game, including the ones nobody wrote a module
 for, at the price of being less specific than one that was.
+
+All three read a player against themselves on the same boss, which is what lets them say anything at
+all without knowing a class. The sentence "this attempt had far more standing about in it than your
+others did" means the same to a rogue and a priest, and nothing in it can go out of date.
+
+Where it departed from the plan, twice, and both times because the real log said so:
+
+*The observable cooldown does not hold.* The shortest gap between two casts was supposed to be a
+spell's recharge. On the real log one spell showed a gap of 0.0 seconds, another showed 15 where the
+game's own number is 90, and two different abilities shared a name. Resets, charges and procs each
+shorten a gap, and one of them poisons the estimate for the whole evening. So a cooldown is counted
+the same way idleness is: uses a minute against your own median on this fight. No recharge is
+claimed and none is needed.
+
+*Uptime against a best attempt is a wall of findings.* A best is an outlier by construction, so
+every ordinary attempt falls short of one - 551 findings in a single evening, most of them procs and
+trinkets whose uptime is luck. Against the median, and only for buffs held most of a typical
+attempt, the same log yields two.
+
+Measured on the real log: 197 findings where there were 134 - 11 idle, 50 cooldowns, 2 uptime.
+Scanning still takes about ten seconds despite three new streams of events in the hot path.
 
 ### 6. The yardstick
 
