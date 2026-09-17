@@ -189,6 +189,22 @@ public sealed class Verification
             $"{players} {(players == 1 ? "player." : "players.")}",
             _page.ViewModel.FindingsSummary);
 
+    /// <summary>A talent change the numbers moved with.</summary>
+    public void TheBuildFindingReads(string player, string expected)
+        => Assert.Equal(expected, Builds(player).FirstOrDefault()?.Headline ??
+            throw new InvalidOperationException("Nothing was said about " + player + "'s build. " + What()));
+
+    public void TheBuildEvidenceReads(string player, string expected)
+        => Assert.Equal(expected, Builds(player).First().Evidence);
+
+    public void NothingWasSaidAboutTheBuild(string player)
+        => Assert.True(!Builds(player).Any(),
+            "Nothing should have been said about " + player + "'s build, and this was: " +
+            string.Join(", ", Builds(player).Select(f => f.Headline)));
+
+    private IEnumerable<Finding> Builds(string player)
+        => _page.Findings.Where(f => f.Category == "builds" && PlayerName.Character(f.Player) == player);
+
     /// <summary>An attempt where a buff the player normally holds up was not held up.</summary>
     public void LostUptime(string player, Ability spell)
         => Assert.True(Uptime(player).Any(f => f.Headline.StartsWith(spell.NameOf(), StringComparison.Ordinal)),

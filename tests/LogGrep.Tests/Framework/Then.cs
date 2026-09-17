@@ -228,6 +228,24 @@ public sealed class Then
         return this;
     }
 
+    public Then TheBuildFindingReads(string player, string expected)
+    {
+        _check.TheBuildFindingReads(player, expected);
+        return this;
+    }
+
+    public Then TheBuildEvidenceReads(string player, string expected)
+    {
+        _check.TheBuildEvidenceReads(player, expected);
+        return this;
+    }
+
+    public Then NothingWasSaidAboutTheBuild(string player)
+    {
+        _check.NothingWasSaidAboutTheBuild(player);
+        return this;
+    }
+
     public Then LostUptime(string player, Ability spell)
     {
         _check.LostUptime(player, spell);

@@ -117,6 +117,14 @@ public sealed class PlayerStats
     /// <summary>Buffs they put on themselves, and how long each was held.</summary>
     public IReadOnlyList<BuffUptime> Buffs { get; set; } = Array.Empty<BuffUptime>();
 
+    /// <summary>
+    /// The talent array, hashed. The log carries every node they picked, so what was run is known
+    /// exactly - but the numbers name nothing a person would recognise and carry no spell. Two
+    /// builds that differ hash differently, which is enough to ask whether a change made any
+    /// difference, and is all that can be said without reference data.
+    /// </summary>
+    public ulong Build { get; set; }
+
     public string ClassName => Specs.ClassOf(SpecId);
     public string SpecName => Specs.SpecOf(SpecId);
 

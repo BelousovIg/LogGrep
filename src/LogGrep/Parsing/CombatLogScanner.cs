@@ -370,6 +370,7 @@ public sealed class CombatLogScanner
             {
                 Name = entry.Value.Name,
                 SpecId = segment.Specs.TryGetValue(entry.Key, out int spec) ? spec : 0,
+                Build = segment.Builds.TryGetValue(entry.Key, out ulong build) ? build : 0,
                 Damage = entry.Value.Damage,
                 Healing = entry.Value.Healing,
                 DamageTaken = entry.Value.DamageTaken,
@@ -443,6 +444,11 @@ public sealed class CombatLogScanner
 
             int spec = _fields.Int(line, i - 1);
             if (spec > 0) _open.Specs[Hash(guid)] = spec;
+
+            // The talent array itself: node, entry and rank per pick. The numbers name nothing a
+            // person would recognise, and there is no spell in them - but two builds that differ
+            // hash differently, which is all it takes to ask whether a change made any difference.
+            _open.Builds[Hash(guid)] = Hash(field);
             return;
         }
     }
@@ -1156,6 +1162,9 @@ public sealed class CombatLogScanner
 
         /// <summary>Specialization per player GUID hash, learned from COMBATANT_INFO.</summary>
         public Dictionary<ulong, int> Specs { get; } = new();
+
+        /// <summary>What each player's talent array hashed to, which is how a build change is seen.</summary>
+        public Dictionary<ulong, ulong> Builds { get; } = new();
         public long Damage { get; set; }
         public long Healing { get; set; }
     }

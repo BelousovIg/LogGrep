@@ -33,6 +33,7 @@ public sealed class CombatLogBuilder
 
     private readonly StringBuilder _text = new();
     private readonly Dictionary<string, long> _health = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _builds = new(StringComparer.Ordinal);
     private readonly List<Fighter> _roster = new();
     private DateTime _start = Evening(2026, 9, 15);
     private DateTime _origin = Evening(2026, 9, 15) - TimeSpan.FromMinutes(1);
@@ -51,6 +52,17 @@ public sealed class CombatLogBuilder
     /// <summary>The name the game would give this file, which carries its own timestamp.</summary>
     internal string FileName
         => _name ?? "WoWCombatLog-" + _origin.ToString("MMddyy_HHmmss", CultureInfo.InvariantCulture) + ".txt";
+
+    /// <summary>
+    /// Somebody changed their talents. Every attempt after this carries a different array for them,
+    /// which is all the app ever sees of a build change.
+    /// </summary>
+    public CombatLogBuilder Respecced(string player)
+    {
+        _builds.TryGetValue(player, out int build);
+        _builds[player] = build + 1;
+        return this;
+    }
 
     /// <summary>A file under a name of somebody's own - an export, rather than what the game wrote.</summary>
     public CombatLogBuilder Called(string name)
@@ -225,9 +237,17 @@ public sealed class CombatLogBuilder
     /// The specialization is the field right before the talent array, which is how the app finds it.
     /// The stats in between are filler; nothing reads them.
     /// </summary>
+    /// <summary>
+    /// Everything the log says about one player at the start of an attempt. The talent array is
+    /// what a build change shows up in: the numbers name nothing, but a different array is a
+    /// different build, which is exactly as much as the app can read from it.
+    /// </summary>
     private string CombatantInfo(Fighter fighter)
     {
         string stats = string.Join(",", Enumerable.Repeat("0", 22));
-        return $"COMBATANT_INFO,{fighter.Guid},0,{stats},{(int)fighter.Spec},[(1,1,1)],[],[],[],0,0,0,0,0";
+        _builds.TryGetValue(fighter.Name, out int build);
+
+        return $"COMBATANT_INFO,{fighter.Guid},0,{stats},{(int)fighter.Spec}," +
+               $"[({80000 + build},{101000 + build},1)],[],[],[],0,0,0,0,0";
     }
 }
