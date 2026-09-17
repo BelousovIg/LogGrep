@@ -71,7 +71,9 @@ public sealed class CooldownDetector : IDetector
             // that does nothing, or almost nothing, is not a cooldown however rarely it goes out.
             long output = seen.Sum(u => u.Output);
             long theirs = seen.Sum(u => u.Whole);
-            if (output <= 0 || theirs <= 0 || output < theirs * Worthwhile) continue;
+            // A spell that did nothing fails this on its own - nothing is less than any share of
+            // something - so there is no separate test for it.
+            if (theirs <= 0 || output < theirs * Worthwhile) continue;
 
             long each = output / Math.Max(1, seen.Sum(u => u.Count));
 
