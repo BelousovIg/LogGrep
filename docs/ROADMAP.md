@@ -339,13 +339,33 @@ attempt, the same log yields two.
 Measured on the real log: 197 findings where there were 134 - 11 idle, 50 cooldowns, 2 uptime.
 Scanning still takes about ten seconds despite three new streams of events in the hot path.
 
-### 6. The yardstick
+### 6. The yardstick — done
 
 Formalise the baselines so every detector can pick one: the group on this attempt, the player across
 their own attempts, and where it exists, another player of the same spec in the same log.
 
 Ends with: findings phrased as "you usually do this, and this time you did not", which is the form
 advice is actually accepted in.
+
+`Yardstick` holds them and every detector that compares a player with themselves now asks it rather
+than working out its own median. Two baselines live there, tried in the order a person accepts them:
+your own attempts at this fight first, because nobody argues with their own log, and failing enough
+of those, another player of the same specialization in the same log. The third baseline - the group
+within one attempt - stays with the mechanics rules, which compare people to each other inside a
+single moment rather than across attempts.
+
+Whose numbers they are travels with the number, because it changes the sentence: "the 7% you
+average" and "the 7% another Havoc in this log averages" are different claims and a reader has to
+be able to tell them apart.
+
+Borrowing needs three attempts where your own needs five. Held to the same bar it never applied at
+all - on the real log it fired zero times, which is the wrong answer for a baseline whose entire
+purpose is the night you only pulled twice.
+
+Measured on the real log: 238 findings where there were 197, and 41 of them are about players the
+app previously had nothing to say about. It also turned up a formatting bug: a rate was written
+with the machine's own decimal separator, so a Russian locale read 2,5 where the rest of the app
+writes 2.5.
 
 ### 7. Talents and builds
 
