@@ -222,7 +222,7 @@ times out of 133 and let through 17. Avoidable damage found nothing there at all
 that boss either lands on most of the group or belongs to the tanks - which is the honest answer for
 that log and not a demonstration that the rule works.
 
-### 4. Why somebody died — half done
+### 4. Why somebody died — done, less the stack question
 
 A death is the loudest thing in a log and the app currently says only what landed beforehand. The
 first question is not what killed them, it is **whether it was their death at all**.
@@ -280,25 +280,31 @@ The engineering note: the scanner reads the damage payload today but skips the h
 advanced block. They are the whole basis of this milestone and cost nothing to start keeping.
 
 Ends with: a death that explains itself - whether it was the raid's or the player's, and if the
-
-Half of it is done: whose death it was, and two of the three shapes.
+player's, whether they were bursted, ground down, or beyond saving.
 
 `DeathDetector` asks the first question first. A death counts as one person's only when few others
 fell alongside it and the attempt carried on afterwards - both, because either alone lets a wipe
 through. The end-of-fight test turned out to be the stronger of the two on the real log: a naive
 crowd share called deaths with seven neighbours "personal", while "did the raid fight on past it"
 sorted them correctly. The scanner now keeps the health the advanced block was already carrying, so
-"that took 60% of them" is read rather than guessed, and every death carries the walk back to the
+"that took 60% of them" is read rather than guessed.
+
+Four shapes rather than three, and they are read in order of how little they need to be believed.
+A whole health pool gone inside two seconds settles itself - no ceiling, no opinion, nobody reacts
+to that. One hit taking half of somebody is next. Only then does the arithmetic get a say: the
+demonstrated ceiling is the most healing this group actually landed on one player in five seconds
+all evening, so "166.7K a second incoming against the 100K they have managed at their best" is a
+sentence nobody can argue with by naming a class. What is left over is a grind, measured from the
 last moment the player was whole.
 
-Still to come: the third shape. Unhealable needs the demonstrated healing ceiling - the largest
-healing the group landed in any window of that length all evening - and until that exists a death
-that is neither a burst nor a grind reads only as "died while the raid fought on", which is thin.
-The stack question is untouched.
+Measured on the real log: 315 deaths, 97 of them somebody's own - 16 sudden, 6 past saving, 2 burst,
+35 ground down, and 38 that none of the four explained. Healing ceilings came out between 247K and
+559K a second depending on the fight. Scanning still takes about ten seconds. Every threshold is a
+placeholder, as the plan said it would be.
 
-Measured on the real log: 315 deaths, of which 97 are reported as somebody's own. Every threshold in
-this milestone is still a placeholder, as the plan said it would be.
-player's, whether they were bursted, ground down, or beyond saving.
+Not done: the stack question. The scanner does not read dose counts yet, and the expected answer on
+this log is silence anyway - somebody carried thirty-five stacks of Mark of Acid and lived. Left
+open rather than written blind.
 
 ### 5. Execution, without knowing the class
 
