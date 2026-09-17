@@ -57,6 +57,26 @@ public sealed class ReadingTheNight : Scenario
     }
 
     [Fact]
+    public void What_somebody_led_is_counted_and_not_judged()
+    {
+        // The counterweight: a report that only ever accuses stops being opened. Held to the same
+        // standard as the blame - a count, never a verdict.
+        var log = ARaid();
+        for (int i = 0; i < 6; i++)
+        {
+            log.Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .At(1.Minutes()).Deals("Nightblade", to: Soulcoiler, amount: 9_000_000)
+                .At(1.Minutes()).Deals("Emberwild", to: Soulcoiler, amount: 1_000_000)
+                .Wipe());
+        }
+
+        Given.IOpenedLog(log);
+
+        Then.TheNightSays("Nightblade", "top damage in 6 of 6 attempts");
+    }
+
+    [Fact]
     public void A_handful_of_attempts_is_not_an_evening()
     {
         var log = ARaid();

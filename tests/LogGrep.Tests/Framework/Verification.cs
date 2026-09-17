@@ -347,10 +347,17 @@ public sealed class Verification
             "The evening should have gone unremarked, and this was said: " +
             string.Join(", ", _page.Findings.Where(f => f.Category == "the night").Select(f => f.Headline)));
 
+    /// <summary>
+    /// Nothing was found that accuses anybody. Facts about the evening - who led, who opened it -
+    /// are not mistakes, and a scenario about mechanics or rotation should not have to care that
+    /// somebody also happened to top the healing.
+    /// </summary>
     public void NothingWasFound()
-        => Assert.True(_page.Findings.Count == 0,
-            "Nothing should have been found, but these were: " +
-            string.Join(", ", _page.Findings.Select(f => f.Line)));
+    {
+        var blame = _page.Findings.Where(f => f.Category != "the night").ToList();
+        Assert.True(blame.Count == 0,
+            "Nothing should have been found, but these were: " + string.Join(", ", blame.Select(f => f.Line)));
+    }
 
     public void MechanicBelongsTo(Ability spell, Role owner)
         => Assert.Equal(spell.NameOf() + " - " + Specs.NameOf(owner) + " mechanic", First(spell).Headline);
