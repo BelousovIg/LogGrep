@@ -222,7 +222,7 @@ times out of 133 and let through 17. Avoidable damage found nothing there at all
 that boss either lands on most of the group or belongs to the tanks - which is the honest answer for
 that log and not a demonstration that the rule works.
 
-### 4. Why somebody died — done, less the stack question
+### 4. Why somebody died — done
 
 A death is the loudest thing in a log and the app currently says only what landed beforehand. The
 first question is not what killed them, it is **whether it was their death at all**.
@@ -302,9 +302,13 @@ Measured on the real log: 315 deaths, 97 of them somebody's own - 16 sudden, 6 p
 559K a second depending on the fight. Scanning still takes about ten seconds. Every threshold is a
 placeholder, as the plan said it would be.
 
-Not done: the stack question. The scanner does not read dose counts yet, and the expected answer on
-this log is silence anyway - somebody carried thirty-five stacks of Mark of Acid and lived. Left
-open rather than written blind.
+The stack question is now answered too. SPELL_AURA_APPLIED_DOSE carries the count on the end of the
+line, so a peak is read rather than inferred, and a stack that expires and re-lands starts at one
+again - which makes a peak a real high-water mark. `StackDetector` splits every peak by whether a
+death followed within ten seconds and draws a line only when the split is clean: everybody above it
+died, nobody below it did. On the real log not one debuff separates - people died holding three of
+something and lived holding twenty - so the app says nothing, which was the predicted answer and is
+the right one.
 
 ### 5. Execution, without knowing the class — done
 
