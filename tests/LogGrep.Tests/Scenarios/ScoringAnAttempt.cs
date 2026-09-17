@@ -74,15 +74,33 @@ public sealed class ScoringAnAttempt : Scenario
             .Wipe());
 
     [Fact]
-    public void Nothing_landing_on_somebody_is_a_whole_score_for_surviving()
+    public void Somebody_the_log_never_measured_gets_no_score_rather_than_a_perfect_one()
     {
+        // A health pool is only ever reported on damage somebody took, so a player nothing touched
+        // has none - and without the unit there is no score. A dash is the honest answer; calling
+        // it a hundred per cent would be rewarding them for a measurement that was never made.
         Given.IOpenedLog(ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => Clean(p).Wipe()))
             .IOpenedPull(Soulcoiler, number: 1);
 
         When.ILookAtPlayer("Nightblade");
 
+        Then.PlayerScores(Axis.Survival, "—")
+            .PlayerScoreSays(Axis.Survival, "the log never reported a health pool for them");
+    }
+
+    [Fact]
+    public void Damage_that_was_nobodys_fault_costs_nothing()
+    {
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => Clean(p)
+            .At(30.Seconds()).BossHits("Nightblade", 200_000)
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        When.ILookAtPlayer("Nightblade");
+
         Then.PlayerScores(Axis.Survival, "100%")
-            .PlayerScoreSays(Axis.Survival, "nothing landed on them");
+            .PlayerScoreSays(Axis.Survival, "0 of 0.2 health pools was avoidable");
     }
 
     [Fact]

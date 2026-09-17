@@ -319,6 +319,42 @@ already compute costs. They need a common denominator and a normalisation.
 6. The player's own record, with the repeat pattern.
 7. The cumulative view over a night.
 
+## What the real log changed
+
+The first four axes and the lane were built against the generated log and then pointed at a real
+evening - twenty players, thirteen attempts, the longest of them ten minutes. Four things were
+wrong, and none of them was visible in a scenario.
+
+**The health pool was the boss's.** The advanced block on a combat log line describes the unit that
+*caused* the event - its second field is the owner GUID, which is how a pet's damage finds its
+player. Reading it as the victim's put seven hundred million on every damage dealer in the raid, and
+every score built on a pool quietly became nonsense: people scored five per cent for surviving a
+fight they walked out of. The pool is now credited to whoever the block says it is about, which is
+right in both directions, and read off casts as well so a healer who dodged everything still gets
+measured. The generated log writes that block as the target's, which is exactly why no scenario ever
+caught this.
+
+**A death does not belong in a share of damage.** Survival began as one minus the avoidable damage
+and the deaths over everything that landed. A ten-minute fight puts forty health pools through
+somebody, so a death moved the score three points and the whole raid scored ninety-seven - a formula
+saturating, not a measurement. Survival is now purely the share of what hit you that was yours to
+avoid. The death is named in the same sentence, counted in the pools, and drawn on the lane; three
+places is enough without a percentage pretending to carry it too.
+
+**The group's mechanics need the group's denominator.** Twenty people's hits over one group's
+castings scored a clean attempt at seven per cent. The chances are per person: a mechanic that goes
+out eleven times in a raid of twenty offered two hundred and twenty chances to be caught.
+
+**A boss comes with adds.** Counting every enemy's swings put two thirds of the melee on people who
+were never meant to hold anything and read as though the tanks had lost the boss for most of the
+fight. Only the thing the fight is named after is counted now.
+
+Two things are still open, and are written down here rather than quietly shipped. The tank's number
+is **28% on that attempt even after the fix**, which is either a real reading of a loose boss or a
+measure that still needs narrowing - it has not been confirmed either way. And the walk back to the
+last moment somebody was whole still reads the attacker's health, because it was measured and tuned
+against the real log as it stands; correcting it is its own piece of work with its own measurement.
+
 ## What would make this wrong
 
 **A single overall rating per player.** The four axes stay separate, always. One number turns

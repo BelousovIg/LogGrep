@@ -99,6 +99,7 @@ public sealed class Scorecards
     private readonly Yardstick _healing;
     private readonly double _bestDamage;
     private readonly double _bestHealing;
+    private readonly Dictionary<PullRecord, IReadOnlyList<TimeSpan>> _shared = new();
 
     private Scorecards(Attempts attempts, IReadOnlyList<Finding> found)
     {
@@ -119,28 +120,53 @@ public sealed class Scorecards
     /// <summary>How one player played one attempt.</summary>
     public Scorecard For(PullRecord pull, PlayerStats player)
     {
-        var mine = _byPull[pull]
+        var mine = About(pull)
             .Where(f => string.Equals(f.Player, player.Name, StringComparison.Ordinal))
             .OrderBy(f => f.At)
             .ToArray();
 
         var role = Specs.RoleOf(player.SpecId);
+        int alone = Alone(pull, player);
 
         var axes = new[]
         {
             Output(pull, player, role),
-            Survival(player, mine),
+            Survival(player, mine, alone),
             Mechanics(pull, player, mine),
             Duty(pull, player, role),
         };
 
-        return new Scorecard(player.Name, role, axes, Lost(player, mine), mine);
+        return new Scorecard(player.Name, role, axes, Lost(player, mine, alone), mine);
+    }
+
+    /// <summary>
+    /// The findings that are about this attempt. The reviews are not: they are conclusions about a
+    /// whole evening that had to be filed against some attempt, and "four mistakes in the first six
+    /// attempts" on the card of the thirteenth is an answer to a question nobody asked there.
+    /// </summary>
+    private IEnumerable<Finding> About(PullRecord pull)
+        => _byPull[pull].Where(f => f.Category != "the night" && f.Category != "rules");
+
+    /// <summary>
+    /// How many of their deaths were their own. A wipe kills everybody, and charging twenty people
+    /// with a death each for the fact that the attempt ended is how a report starts crying wolf -
+    /// the same death belongs to the raid's card, where it is one of the twenty that ended the pull.
+    /// </summary>
+    private int Alone(PullRecord pull, PlayerStats player)
+    {
+        if (player.Deaths.Count == 0) return 0;
+
+        var shared = _shared.TryGetValue(pull, out var moments)
+            ? moments
+            : _shared[pull] = Collective.In(pull, _byPull[pull].ToArray());
+
+        return player.Deaths.Count(d => !Collective.Covers(shared, d.At));
     }
 
     /// <summary>How the whole group played one attempt.</summary>
     public Scorecard For(PullRecord pull)
     {
-        var all = _byPull[pull].OrderBy(f => f.At).ToArray();
+        var all = About(pull).OrderBy(f => f.At).ToArray();
 
         var axes = new List<Score>
         {
@@ -151,13 +177,15 @@ public sealed class Scorecards
             Threat(pull),
         };
 
-        double pools = pull.Roster.Sum(p => Lost(p, Mine(all, p.Name)));
+        // Every death counts here, including the ones the wipe took. They were not anybody's
+        // personally and they are still what the attempt cost.
+        double pools = pull.Roster.Sum(p => Lost(p, Mine(all, p.Name), p.Deaths.Count));
 
         return new Scorecard(pull.EncounterName, null, axes, pools, all);
     }
 
     /// <summary>What an attempt cost this player, in their own health pools.</summary>
-    private static double Lost(PlayerStats player, IReadOnlyList<Finding> mine)
+    private static double Lost(PlayerStats player, IReadOnlyList<Finding> mine, int deaths)
     {
         if (player.MaxHealth <= 0) return 0;
 
@@ -167,7 +195,7 @@ public sealed class Scorecards
 
         // A death is one pool and then some - the pull carries on without you - but the pool is
         // what can be defended, so the pool is what is counted.
-        return avoidable + player.Deaths.Count;
+        return avoidable + deaths;
     }
 
     private Score Output(PullRecord pull, PlayerStats player, Role role)
@@ -196,7 +224,7 @@ public sealed class Scorecards
     /// real damage rather than an allowance invented for the purpose, which is why this needs no
     /// threshold and cannot drift: a fight that hits harder moves both halves of it at once.
     /// </summary>
-    private static Score Survival(PlayerStats player, IReadOnlyList<Finding> mine)
+    private static Score Survival(PlayerStats player, IReadOnlyList<Finding> mine, int deaths)
     {
         if (player.MaxHealth <= 0)
         {
@@ -204,10 +232,8 @@ public sealed class Scorecards
         }
 
         double taken = player.DamageTaken / (double)player.MaxHealth;
-        int deaths = player.Deaths.Count;
-        double total = taken + deaths;
 
-        if (total <= 0)
+        if (taken <= 0)
         {
             return new Score(Axis.Survival, 1, "nothing landed on them", "of everything that hit them");
         }
@@ -216,10 +242,16 @@ public sealed class Scorecards
             .Where(f => AxisOf(f.Category) == Axis.Survival && f.Cost.Toll == Toll.Damage)
             .Sum(f => f.Cost.Amount) / (double)player.MaxHealth;
 
-        string facts = Display.Decimal(avoidable) + " of " + Display.Decimal(taken) + " health pools was avoidable";
-        if (deaths > 0) facts += ", and " + Deaths(deaths);
+        // Deaths are named here and deliberately left out of the number. A ten-minute fight puts
+        // forty health pools through somebody, so adding a death to that denominator moved the
+        // score by three points and every person in the raid scored ninety-seven - which is not a
+        // measurement, it is a formula saturating. What a death cost is carried by the pools, the
+        // worst line and the lane, all three of which say it louder than a percentage would.
+        string facts = Display.Decimal(avoidable) + " of " + Display.Decimal(taken) +
+            " health pools was avoidable";
+        if (deaths > 0) facts += ", and they took " + Deaths(deaths);
 
-        return new Score(Axis.Survival, Math.Clamp(1 - (avoidable + deaths) / total, 0, 1),
+        return new Score(Axis.Survival, Math.Clamp(1 - avoidable / taken, 0, 1),
             facts, "of everything that hit them");
     }
 
@@ -353,14 +385,13 @@ public sealed class Scorecards
                 .Sum(f => f.Cost.Amount) / (double)player.MaxHealth;
         }
 
-        double total = taken + deaths;
-        if (total <= 0) return Score.Missing(Axis.Survival, "nothing landed on anybody");
+        if (taken <= 0) return Score.Missing(Axis.Survival, "nothing landed on anybody");
 
         string facts = Display.Decimal(avoidable) + " of " + Display.Decimal(taken) +
             " health pools was avoidable";
         if (deaths > 0) facts += ", and the group lost " + Deaths(deaths);
 
-        return new Score(Axis.Survival, Math.Clamp(1 - (avoidable + deaths) / total, 0, 1),
+        return new Score(Axis.Survival, Math.Clamp(1 - avoidable / taken, 0, 1),
             facts, "of everything that hit the group");
     }
 
@@ -379,20 +410,29 @@ public sealed class Scorecards
         }
 
         long caught = 0;
-        long went = 0;
+        long chances = 0;
+        long castings = 0;
 
+        // The chances are per person, not per casting. A player's own score asks how often a thing
+        // caught them out of the times it went out; the group's has to ask the same question of
+        // twenty people at once, so the denominator grows with the roster. Counting castings alone
+        // put twenty people's hits over one group's castings and scored a clean attempt at seven
+        // per cent.
         foreach (int spell in spells)
         {
             long times = pull.Roster.Sum(p => Times(pull, p.Name, spell));
             if (times == 0) times = all.Count(f => f.SpellId == spell);
 
+            long went = Occasions(pull, spell, 1);
+
             caught += times;
-            went += Occasions(pull, spell, times);
+            castings += went;
+            chances += went * Math.Max(1, pull.Roster.Count);
         }
 
-        return new Score(Axis.Mechanics, Math.Clamp(1 - caught / (double)Math.Max(went, caught), 0, 1),
-            "caught the group " + caught + " times over " + went + " castings",
-            "of the times those mechanics went out");
+        return new Score(Axis.Mechanics, Math.Clamp(1 - caught / (double)Math.Max(chances, caught), 0, 1),
+            "caught somebody " + caught + " times over " + castings + " castings",
+            "of every chance the group had to be caught");
     }
 
     /// <summary>

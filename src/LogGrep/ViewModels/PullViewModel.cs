@@ -42,7 +42,7 @@ public sealed class PullViewModel : ObservableObject
     {
         _mistakes = mistakes.OrderBy(f => f.At).ToArray();
         _cards = cards;
-        _collective = LaneMark.Shared(Record, _mistakes, Together);
+        _collective = Analysis.Collective.In(Record, _mistakes);
         _playersView = null;
 
         OnPropertyChanged(nameof(MistakeCount));
@@ -54,13 +54,6 @@ public sealed class PullViewModel : ObservableObject
         OnPropertyChanged(nameof(PoolsText));
         OnPropertyChanged(nameof(Blame));
     }
-
-    /// <summary>
-    /// How close together two findings have to be to count as the same moment. A mechanic goes out
-    /// once and lands on everybody it catches inside a heartbeat; anything wider than this would
-    /// start reading two unrelated mistakes as one raid event.
-    /// </summary>
-    private static readonly TimeSpan Together = TimeSpan.FromSeconds(2);
 
     /// <summary>The attempt's own card - one number, then the axes under it.</summary>
     public IReadOnlyList<Score> Axes => _cards?.For(Record).Axes ?? Array.Empty<Score>();

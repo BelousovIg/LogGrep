@@ -529,6 +529,12 @@ public sealed class CombatLogScanner
         if (affiliation != 0 && affiliation != AffiliationOutsider && (sourceFlags & ControlPlayer) != 0)
         {
             PlayerAt(line, 1)?.Cast(LogTimestamp.SecondsOfDay(line, eventStart), spellId, Label(line, 10));
+
+            // And the pool again, from the block a cast carries. This is the surest place to find
+            // it: everybody casts all fight, including a healer who dealt no damage and stood out
+            // of everything, who would otherwise never be measured at all.
+            if (_fields.Count > 15) PlayerAt(line, 12)?.Saw(_fields.Long(line, 15));
+
             return;
         }
 
@@ -685,6 +691,15 @@ public sealed class CombatLogScanner
 
         int sourceFlags = _fields.Hex(line, 3);
         int affiliation = sourceFlags & AffiliationMask;
+        // A health pool, credited to whoever the block is about rather than to whoever the line is
+        // about. Its first field names the unit it describes, and in a real log that is the source:
+        // a player striking the boss states their own pool, the boss striking a player states the
+        // boss's. Reading it as the victim's, as this did, put seven hundred million on every damage
+        // dealer in the raid and quietly made a nonsense of everything built on a pool. Following
+        // the field rather than the role is also what keeps a pet's pool off its owner, because a
+        // pet's GUID is not a player's.
+        if (advancedAt >= 0) PlayerAt(line, advancedAt)?.Saw(_fields.Long(line, advancedAt + 3));
+
         bool fromTheGroup = affiliation != 0 && affiliation != AffiliationOutsider && (sourceFlags & ControlPlayer) != 0;
         if (fromTheGroup)
         {
@@ -704,11 +719,6 @@ public sealed class CombatLogScanner
             // from a filler: the app was calling a spell a cooldown for being used rarely, which is
             // exactly what a spell nobody has a reason to press looks like.
             if (actor != null && prefixParams >= 3) actor.Did(_fields.Int(line, 9), amount);
-
-            // Their own health pool, read off their own advanced block. Somebody who was never hit
-            // all fight would otherwise have no pool at all, and a healer who stood out of every
-            // mechanic is exactly the person that happens to.
-            if (actor != null && advancedAt >= 0) actor.Pool(_fields.Long(line, advancedAt + 3));
 
             // Who opened on the boss. A pull belongs to the tank: whoever lands the first blow takes
             // the threat with it, and on the first seconds of a fight that is the whole story.
@@ -745,13 +755,29 @@ public sealed class CombatLogScanner
             // A swing carries no spell id, which is exactly what makes it worth counting on its
             // own: it is the enemy hitting whoever it is looking at, and where it lands is the only
             // reading the log gives of who is holding its attention.
-            if (prefixParams < 3) victim.Swung(amount);
+            //
+            // Only the thing the fight is named after, though. A raid boss comes with adds, and
+            // adds swing at whoever they were sent at - on the real log, counting every enemy's
+            // swings put two thirds of the melee on people who were never meant to hold anything,
+            // and read as though the tanks had lost the boss for most of the fight.
+            if (prefixParams < 3 && string.Equals(Label(line, 2), _open!.Name, StringComparison.Ordinal))
+            {
+                victim.Swung(amount);
+            }
         }
 
         if (at >= 0)
         {
-            // The advanced block runs infoGUID, ownerGUID, currentHP, maxHP - so the two fields
-            // after the owner are the target's health at the moment of the hit.
+            // KNOWN WRONG, and left alone deliberately. The advanced block on this line describes
+            // whoever dealt the hit - its second field is the owner GUID, which is how a pet's
+            // damage finds its player - so these two numbers are the attacker's health, not the
+            // victim's. The share a hit took of somebody no longer reads them: a death's pool now
+            // comes from PlayerStats.MaxHealth, which is learned from events the player caused and
+            // is correct. What still reads them is the walk back to the last moment they were
+            // whole, and that heuristic was measured and tuned against the real log as it stands.
+            // Changing it is its own piece of work with its own measurement, not a footnote to
+            // somebody else's. The generated log writes this block as the target's, which is why
+            // no scenario ever caught it.
             long health = advancedAt >= 0 ? _fields.Long(line, advancedAt + 2) : 0;
             long maxHealth = advancedAt >= 0 ? _fields.Long(line, advancedAt + 3) : 0;
 
@@ -1024,6 +1050,8 @@ public sealed class CombatLogScanner
         /// </summary>
         public long MaxHealth { get; private set; }
 
+        public void Saw(long maxHealth) => Pool(maxHealth);
+
         public void Pool(long maxHealth)
         {
             if (maxHealth > MaxHealth) MaxHealth = maxHealth;
@@ -1040,7 +1068,6 @@ public sealed class CombatLogScanner
         public void Hit(double at, string label, long amount, long health, long maxHealth)
         {
             Hits.Enqueue(new Hit(at, label, amount, health, maxHealth));
-            Pool(maxHealth);
 
             // Kept longer than the causes window, because the event that killed somebody can be
             // longer than the last ten seconds of it - a player ground down over half a minute is

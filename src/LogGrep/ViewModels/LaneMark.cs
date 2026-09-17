@@ -72,29 +72,8 @@ public readonly record struct LaneMark(
     /// The moments a single thing caught much of the group at once. One event that hit five people
     /// is not five mistakes, and the lane has to be able to say so.
     /// </summary>
-    public static IReadOnlyList<TimeSpan> Shared(
-        PullRecord pull, IReadOnlyList<Finding> all, TimeSpan window)
-    {
-        int roster = pull.Roster.Count;
-        if (roster < 3) return Array.Empty<TimeSpan>();
-
-        int enough = roster / 2 + 1;
-
-        // Read off what the lanes actually draw rather than off the findings alone. A wipe is the
-        // plainest collective moment there is, and half of a wipe is deaths nobody has a lesson
-        // about - which are on the lane and would otherwise not be counted as having happened.
-        var moments = all
-            .Where(f => f.Player.Length > 0)
-            .Select(f => (f.Player, f.At))
-            .Concat(pull.Roster.SelectMany(p => p.Deaths.Select(d => (Player: p.Name, d.At))));
-
-        return moments
-            .GroupBy(m => (long)(m.At.TotalSeconds / window.TotalSeconds))
-            .Where(g => g.Select(m => m.Player).Distinct(StringComparer.Ordinal).Count() >= enough)
-            .Select(g => TimeSpan.FromSeconds(g.Min(m => m.At.TotalSeconds)))
-            .OrderBy(t => t)
-            .ToArray();
-    }
+    public static IReadOnlyList<TimeSpan> Shared(PullRecord pull, IReadOnlyList<Finding> all)
+        => Analysis.Collective.In(pull, all);
 
     /// <summary>What the enemy did, drawn above the group so a cause sits over its consequence.</summary>
     public static IReadOnlyList<LaneMark> Enemy(PullRecord pull)
@@ -125,7 +104,7 @@ public readonly record struct LaneMark(
     };
 
     private static bool Near(IReadOnlyCollection<TimeSpan> moments, TimeSpan at)
-        => moments.Any(m => Close(m, at));
+        => Analysis.Collective.Covers(moments, at);
 
     private static bool Close(TimeSpan one, TimeSpan other)
         => Math.Abs((one - other).TotalSeconds) <= 2;

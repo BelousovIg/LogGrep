@@ -121,6 +121,11 @@ public sealed class PlayerStats
     /// half a rogue and a fifth of a tank - and it does not compare across a patch either, whereas
     /// a share of somebody's own pool means the same thing in any tier. Zero when the log never
     /// reported one, which is the signal to show nothing rather than to divide by it.
+    ///
+    /// It is read only off damage they took, because that is the one event whose advanced block is
+    /// about them. Reading it off their own casts too looked like an improvement - a healer who
+    /// dodged everything all fight would finally have a pool - and put the boss's health pool on
+    /// every damage dealer in the raid, which turned every score built on it into quiet nonsense.
     /// </summary>
     public long MaxHealth { get; set; }
 
