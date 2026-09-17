@@ -52,6 +52,24 @@ public sealed class DeathDetector : IDetector
     /// <summary>How long below full counts as having been ground down rather than caught out.</summary>
     private static readonly TimeSpan Ground = TimeSpan.FromSeconds(15);
 
+    /// <summary>
+    /// How far past what the rest of the group was carrying a stack count has to be before it is
+    /// worth naming as the likely reason. Everybody who dies was carrying more of something than
+    /// average - that is most of what dying means - so plainly "above average" would append a guess
+    /// to every death. Half again above is a number that stands out of the night rather than out of
+    /// the arithmetic.
+    ///
+    /// Tanks are left out of the average entirely: they hold more of everything by design, and
+    /// including them would raise the bar until nothing ever cleared it.
+    /// </summary>
+    private const double Carrying = 1.5;
+
+    /// <summary>And below this many stacks the comparison is between two small numbers.</summary>
+    private const int Noticeable = 3;
+
+    /// <summary>How recently the stacks have to have been climbing to be part of this death.</summary>
+    private static readonly TimeSpan Recently = TimeSpan.FromSeconds(20);
+
     public string Category => "deaths";
 
     public IEnumerable<Finding> Look(Attempts attempts)
@@ -82,7 +100,7 @@ public sealed class DeathDetector : IDetector
         return new Finding(
             Category,
             Headline(death, shape),
-            Evidence(pull, death, others, attempts.HealingCeiling, shape),
+            Evidence(pull, death, others, attempts.HealingCeiling, shape) + Carried(pull, player, death),
             Advice(shape),
             Cost.Death(death.At, death.Causes.Count > 0 ? death.Causes[0].Label : null),
             attempts.NumberOf(pull),
@@ -144,6 +162,38 @@ public sealed class DeathDetector : IDetector
             ? mine + "; " + Display.Rate(death.Rate) + " a second incoming against the " +
               Display.Rate(ceiling) + " the healers have landed at their best"
             : mine;
+    }
+
+    /// <summary>
+    /// A likely reason rather than a proven one, and it says so. If somebody died holding far more
+    /// of a debuff than the rest of the group was carrying, that is worth naming - but one attempt
+    /// cannot prove a stack count kills, which is why this reads as "likely" and why the rule that
+    /// does claim a threshold needs a run of attempts and a clean split behind it.
+    ///
+    /// The comparison is against the damage and the healers only. A tank carrying twelve of
+    /// something while everybody else carries two is a tank; it says nothing about why anybody died.
+    /// </summary>
+    private static string Carried(PullRecord pull, PlayerStats player, DeathRecord death)
+    {
+        var worst = player.Stacks
+            .Where(s => s.At <= death.At && death.At - s.At <= Recently)
+            .OrderByDescending(s => s.Peak)
+            .FirstOrDefault();
+
+        if (worst.Peak < Noticeable) return string.Empty;
+
+        var group = pull.Roster
+            .Where(p => Specs.RoleOf(p.SpecId) != Role.Tank && !string.Equals(p.Name, player.Name, StringComparison.Ordinal))
+            .Select(p => p.Stacks.FirstOrDefault(s => s.SpellId == worst.SpellId).Peak)
+            .ToList();
+
+        if (group.Count == 0) return string.Empty;
+
+        double usual = group.Average();
+        if (worst.Peak < Math.Max(Noticeable, usual * Carrying)) return string.Empty;
+
+        return "; likely the " + worst.Peak + " stacks of " + worst.Spell + " on you, against " +
+               Display.Decimal(usual) + " on the rest of the group";
     }
 
     private static string Advice(Kind shape) => shape switch

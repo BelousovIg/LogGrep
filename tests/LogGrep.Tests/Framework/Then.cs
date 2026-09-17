@@ -348,6 +348,12 @@ public sealed class Then
         return this;
     }
 
+    public Then DeathEvidenceMentions(string player, string expected)
+    {
+        _check.DeathEvidenceMentions(player, expected);
+        return this;
+    }
+
     public Then DeathAdvises(string player, string expected)
     {
         _check.DeathAdvises(player, expected);

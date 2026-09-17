@@ -60,6 +60,80 @@ public sealed class CountingStacks : Scenario
     }
 
     [Fact]
+    public void A_death_under_far_more_stacks_than_anybody_else_names_them_as_the_likely_reason()
+    {
+        // One attempt, one death, and no run of attempts to draw a threshold from - so this is a
+        // likely reason rather than a rule, and it says so. Twelve against the two everybody else
+        // was carrying is a thing worth putting in front of somebody either way.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(20.Seconds()).BossDebuffs("Nightblade", with: Rot)
+            .At(20.Seconds()).BossStacks("Nightblade", with: Rot, to: 12)
+            .At(20.Seconds()).BossDebuffs("Emberwild", with: Rot)
+            .At(20.Seconds()).BossStacks("Emberwild", with: Rot, to: 2)
+            .At(20.Seconds()).BossDebuffs("Moonfire", with: Rot)
+            .At(20.Seconds()).BossStacks("Moonfire", with: Rot, to: 2)
+            .At(40.Seconds()).Kills("Nightblade", with: Rot)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.DeathEvidenceReads("Nightblade",
+            "nobody else died within five seconds, and the attempt ran 2:20 longer; " +
+            "likely the 12 stacks of Creeping Rot on you, against 1 on the rest of the group");
+    }
+
+    [Fact]
+    public void A_death_carrying_what_everybody_else_was_carrying_blames_nothing()
+    {
+        // Three stacks each and one of them died. Whatever the reason, the stacks were not what
+        // singled this person out, and appending a guess to every death is how a report stops
+        // being read.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(20.Seconds()).BossDebuffs("Nightblade", with: Rot)
+            .At(20.Seconds()).BossStacks("Nightblade", with: Rot, to: 3)
+            .At(20.Seconds()).BossDebuffs("Emberwild", with: Rot)
+            .At(20.Seconds()).BossStacks("Emberwild", with: Rot, to: 3)
+            .At(20.Seconds()).BossDebuffs("Moonfire", with: Rot)
+            .At(20.Seconds()).BossStacks("Moonfire", with: Rot, to: 3)
+            .At(20.Seconds()).BossDebuffs("Frostbite", with: Rot)
+            .At(20.Seconds()).BossStacks("Frostbite", with: Rot, to: 3)
+            .At(20.Seconds()).BossDebuffs("Sunwell", with: Rot)
+            .At(20.Seconds()).BossStacks("Sunwell", with: Rot, to: 3)
+            .At(40.Seconds()).Kills("Nightblade", with: Rot)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.DeathEvidenceReads("Nightblade",
+            "nobody else died within five seconds, and the attempt ran 2:20 longer");
+    }
+
+    [Fact]
+    public void A_tank_holding_more_than_everybody_does_not_raise_the_bar()
+    {
+        // The tank carries twelve of it every attempt because they are the tank. Counting that in
+        // the average would hide the damage dealer who died under eight.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(20.Seconds()).BossDebuffs("Rockjaw", with: Rot)
+            .At(20.Seconds()).BossStacks("Rockjaw", with: Rot, to: 12)
+            .At(20.Seconds()).BossDebuffs("Nightblade", with: Rot)
+            .At(20.Seconds()).BossStacks("Nightblade", with: Rot, to: 8)
+            .At(20.Seconds()).BossDebuffs("Emberwild", with: Rot)
+            .At(20.Seconds()).BossStacks("Emberwild", with: Rot, to: 2)
+            .At(20.Seconds()).BossDebuffs("Moonfire", with: Rot)
+            .At(20.Seconds()).BossStacks("Moonfire", with: Rot, to: 2)
+            .At(40.Seconds()).Kills("Nightblade", with: Rot)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.DeathEvidenceMentions("Nightblade", "likely the 8 stacks of Creeping Rot on you");
+    }
+
+    [Fact]
     public void Stacks_that_do_not_separate_the_dead_from_the_living_say_nothing()
     {
         // Somebody died at three and somebody lived at twenty. Whatever kills on this fight, it is

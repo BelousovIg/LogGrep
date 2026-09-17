@@ -291,6 +291,9 @@ public sealed class Verification
     public void DeathEvidenceReads(string player, string expected)
         => Assert.Equal(expected, TheDeath(player).Evidence);
 
+    public void DeathEvidenceMentions(string player, string expected)
+        => Assert.Contains(expected, TheDeath(player).Evidence, StringComparison.Ordinal);
+
     public void DeathAdvises(string player, string expected)
         => Assert.Contains(expected, TheDeath(player).Advice, StringComparison.Ordinal);
 
