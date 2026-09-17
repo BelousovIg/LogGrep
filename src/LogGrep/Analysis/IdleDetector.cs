@@ -36,30 +36,28 @@ public sealed class IdleDetector : IDetector
 
     public IEnumerable<Finding> Look(Attempts attempts)
     {
-        foreach (var player in Showings(attempts).GroupBy(s => s.Player, StringComparer.Ordinal))
+        var shown = Showings(attempts).ToList();
+        var yardstick = Yardstick.Of(
+            shown.Select(s => new Measured(s.Pull, s.Player, s.SpecId, s.Share)), MinimumAttempts);
+
+        foreach (var showing in shown)
         {
-            var shown = player.ToList();
-            if (shown.Count < MinimumAttempts) continue;
+            var usual = yardstick.For(showing.Player, showing.SpecId);
+            if (!usual.Exists || usual.Value <= 0) continue;
 
-            double usual = Median(shown.Select(s => s.Share).ToList());
-            if (usual <= 0) continue;
+            if (showing.Share < usual.Value * Worse) continue;
+            if (showing.Idle < Noticeable) continue;
 
-            foreach (var showing in shown)
-            {
-                if (showing.Share < usual * Worse) continue;
-                if (showing.Idle < Noticeable) continue;
-
-                yield return Report(attempts, showing, usual);
-            }
+            yield return Report(attempts, showing, usual);
         }
     }
 
-    private Finding Report(Attempts attempts, Showing showing, double usual)
+    private Finding Report(Attempts attempts, Showing showing, Normal usual)
         => new(
             Category,
             "cast nothing for " + Display.Clock(showing.Idle) + " of it",
             "that is " + Display.Percent(showing.Share) + " of the attempt against the " +
-            Display.Percent(usual) + " you average on this fight",
+            Display.Percent(usual.Value) + " " + usual.Whose + " on this fight",
             "Nothing here says what you should have cast - only that this attempt had far more " +
             "standing about in it than your others did. Movement, a death you were waiting out, or " +
             "a rotation that fell apart all look like this.",
@@ -90,16 +88,6 @@ public sealed class IdleDetector : IDetector
                 yield return new Showing(pull, player.Name, player.SpecId, idle, idle / up);
             }
         }
-    }
-
-    private static double Median(List<double> values)
-    {
-        values.Sort();
-        int middle = values.Count / 2;
-
-        return values.Count % 2 == 1
-            ? values[middle]
-            : (values[middle - 1] + values[middle]) / 2;
     }
 
     private readonly record struct Showing(

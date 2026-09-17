@@ -64,6 +64,13 @@ public static class Display
     /// </summary>
     public static string Percent(double value) => Math.Round(value * 100).ToString("0", Inv) + "%";
 
+    /// <summary>
+    /// A small number with at most one decimal. Invariant, like everything else here: the app is
+    /// read on a machine whose locale writes 2,5 and copied into a chat where that is a second
+    /// number.
+    /// </summary>
+    public static string Decimal(double value) => value.ToString("0.#", Inv);
+
     /// <summary>Time inside a pull as "m:ss", the shape death times are read in.</summary>
     public static string Clock(TimeSpan value)
     {

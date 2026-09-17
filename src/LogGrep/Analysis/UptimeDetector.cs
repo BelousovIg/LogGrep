@@ -42,38 +42,28 @@ public sealed class UptimeDetector : IDetector
 
     public IEnumerable<Finding> Look(Attempts attempts)
     {
-        foreach (var buff in Holdings(attempts).GroupBy(h => (h.Player, h.SpellId)))
+        foreach (var buff in Holdings(attempts).GroupBy(h => h.SpellId))
         {
             var held = buff.ToList();
-            if (held.Count < MinimumAttempts) continue;
-
-            double usual = Median(held.Select(h => h.Share).ToList());
-            if (usual < Maintained) continue;
+            var yardstick = Yardstick.Of(
+                held.Select(h => new Measured(h.Pull, h.Player, h.SpecId, h.Share)), MinimumAttempts);
 
             foreach (var holding in held)
             {
-                if (holding.Share >= usual * Dropped) continue;
+                var usual = yardstick.For(holding.Player, holding.SpecId);
+                if (!usual.Exists || usual.Value < Maintained) continue;
+                if (holding.Share >= usual.Value * Dropped) continue;
 
                 yield return Report(attempts, holding, usual);
             }
         }
     }
 
-    private static double Median(List<double> values)
-    {
-        values.Sort();
-        int middle = values.Count / 2;
-
-        return values.Count % 2 == 1
-            ? values[middle]
-            : (values[middle - 1] + values[middle]) / 2;
-    }
-
-    private Finding Report(Attempts attempts, Holding holding, double usual)
+    private Finding Report(Attempts attempts, Holding holding, Normal usual)
         => new(
             Category,
             holding.Spell + " up " + Display.Percent(holding.Share) + " of it",
-            "you normally hold it for " + Display.Percent(usual) + " of an attempt on this fight",
+            usual.Whose + " " + Display.Percent(usual.Value) + " of an attempt on this fight",
             "Nothing here knows what this buff does - only that you keep it up when things go " +
             "well, and on this attempt you did not.",
             Cost.Nothing("no damage to put on it"),

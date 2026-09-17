@@ -218,6 +218,9 @@ public sealed class Verification
     public void TheCooldownFindingReads(string player, string expected)
         => Assert.Equal(expected, Cooldowns(player).First().Headline);
 
+    public void TheCooldownEvidenceReads(string player, string expected)
+        => Assert.Equal(expected, Cooldowns(player).First().Evidence);
+
     private IEnumerable<Finding> Cooldowns(string player)
         => _page.Findings.Where(f => f.Category == "cooldowns" && PlayerName.Character(f.Player) == player);
 

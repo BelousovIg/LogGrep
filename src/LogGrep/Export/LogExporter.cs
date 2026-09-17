@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.IO.Abstractions;
 using System.Text;
@@ -125,8 +126,10 @@ public sealed class LogExporter
         if (sourceStem.Length > 0) name.Append(Sanitize(sourceStem)).Append('_');
         name.Append(Sanitize(pull.EncounterName));
         if (pull.Kind == ContentKind.MythicPlus && pull.KeystoneLevel > 0) name.Append('+').Append(pull.KeystoneLevel);
-        name.Append('_').Append(pull.StartTime.ToString("yyyy-MM-dd"));
-        name.Append('_').Append(pull.StartTime.ToString("HH-mm-ss"));
+        // Invariant: a calendar other than the Gregorian one would put a different year in the
+        // file name than the one inside the log.
+        name.Append('_').Append(pull.StartTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        name.Append('_').Append(pull.StartTime.ToString("HH-mm-ss", CultureInfo.InvariantCulture));
         name.Append(".txt");
         return name.ToString();
     }

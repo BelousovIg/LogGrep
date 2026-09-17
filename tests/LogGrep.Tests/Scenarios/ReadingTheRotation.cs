@@ -64,7 +64,7 @@ public sealed class ReadingTheRotation : Scenario
         Given.IOpenedLog(log);
 
         Then.GotFewerUses("Nightblade", Ability.Reckoning)
-            .And.TheCooldownFindingReads("Nightblade", "used Reckoning twice where 5 times is your usual");
+            .And.TheCooldownFindingReads("Nightblade", "used Reckoning twice where 5 times is usual");
     }
 
     [Fact]
@@ -100,6 +100,34 @@ public sealed class ReadingTheRotation : Scenario
         Given.IOpenedLog(log);
 
         Then.GotNoCooldownFinding("Nightblade");
+    }
+
+    [Fact]
+    public void Somebody_with_too_few_attempts_is_measured_against_their_own_spec()
+    {
+        // A player who joined for two pulls has no normal of their own. Another rogue was there all
+        // night under the same conditions, and whatever the spec is meant to do, they were doing it.
+        var log = new CombatLogBuilder()
+            .Raid(
+                Tank("Rockjaw", Spec.ProtectionWarrior),
+                Healer("Sunwell", Spec.HolyPriest),
+                Damage("Nightblade", Spec.AssassinationRogue),
+                Damage("Shadowstep", Spec.AssassinationRogue))
+            .Pulls(6, Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 30.Seconds())
+                .Wipe())
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(2.Minutes())
+                .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 30.Seconds())
+                .Casting("Shadowstep", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes())
+                .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.GotFewerUses("Shadowstep", Ability.Reckoning)
+            .And.TheCooldownEvidenceReads("Shadowstep",
+                "over 7 attempts at this fight another Assassination in this log averages 2.5 a minute of it");
     }
 
     [Fact]

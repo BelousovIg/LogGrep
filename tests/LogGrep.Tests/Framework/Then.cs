@@ -264,6 +264,12 @@ public sealed class Then
         return this;
     }
 
+    public Then TheCooldownEvidenceReads(string player, string expected)
+    {
+        _check.TheCooldownEvidenceReads(player, expected);
+        return this;
+    }
+
     public Then WasIdle(string player)
     {
         _check.WasIdle(player);

@@ -1,3 +1,4 @@
+using LogGrep.ViewModels;
 using LogGrep.Models;
 
 namespace LogGrep.Analysis;
@@ -45,33 +46,35 @@ public sealed class CooldownDetector : IDetector
 
     public IEnumerable<Finding> Look(Attempts attempts)
     {
-        foreach (var spell in Uses(attempts).GroupBy(u => (u.Player, u.SpellId)))
+        // A baseline per spell: how often this person - or, failing enough attempts of their own,
+        // somebody else of their spec - gets this particular spell out in a minute.
+        foreach (var spell in Uses(attempts).GroupBy(u => u.SpellId))
         {
             var seen = spell.ToList();
-            if (seen.Count < MinimumAttempts) continue;
-
-            double usual = Median(seen.Select(u => u.PerMinute).ToList());
-            if (usual <= 0 || usual > Filler) continue;
+            var yardstick = Yardstick.Of(
+                seen.Select(u => new Measured(u.Pull, u.Player, u.SpecId, u.PerMinute)), MinimumAttempts);
 
             foreach (var use in seen)
             {
-                if (use.PerMinute > usual * Short) continue;
+                var usual = yardstick.For(use.Player, use.SpecId);
+                if (!usual.Exists || usual.Value <= 0 || usual.Value > Filler) continue;
+                if (use.PerMinute > usual.Value * Short) continue;
 
-                double expected = usual * use.Minutes;
+                double expected = usual.Value * use.Minutes;
                 if (expected - use.Count < Missing) continue;
 
-                yield return Report(attempts, use, expected);
+                yield return Report(attempts, use with { Usual = usual.Value }, expected, usual);
             }
         }
     }
 
-    private Finding Report(Attempts attempts, Use use, double expected)
+    private Finding Report(Attempts attempts, Use use, double expected, Normal usual)
         => new(
             Category,
             "used " + use.Spell + " " + Times(use.Count) + " where " + Times(Math.Round(expected)) +
-            " is your usual",
-            "over " + attempts.Pulls.Count + " attempts at this fight you average " +
-            use.Usual.ToString("0.#") + " a minute of it",
+            " is usual",
+            "over " + attempts.Pulls.Count + " attempts at this fight " + usual.Whose + " " +
+            Display.Decimal(usual.Value) + " a minute of it",
             "Nothing here knows what this spell does or when it should go out - only that you " +
             "normally get more of it out of an attempt this long than you did here.",
             Cost.Nothing("no damage to put on it"),
@@ -86,15 +89,13 @@ public sealed class CooldownDetector : IDetector
         0 => "none",
         1 => "once",
         2 => "twice",
-        _ => count.ToString("0") + " times",
+        _ => Display.Decimal(count) + " times",
     };
 
     private static IEnumerable<Use> Uses(Attempts attempts)
     {
         // The rate has to be worked out per attempt first, then compared - a long attempt naturally
         // holds more of everything, and counting raw uses would call every short pull a failure.
-        var rates = new List<Use>();
-
         foreach (var pull in attempts.Pulls)
         {
             if (pull.Duration < LongEnough) continue;
@@ -105,29 +106,11 @@ public sealed class CooldownDetector : IDetector
             {
                 foreach (var spell in player.Spells)
                 {
-                    rates.Add(new Use(pull, player.Name, player.SpecId, spell.SpellId, spell.Spell,
-                        spell.Uses, minutes, spell.Uses / minutes, 0));
+                    yield return new Use(pull, player.Name, player.SpecId, spell.SpellId, spell.Spell,
+                        spell.Uses, minutes, spell.Uses / minutes, 0);
                 }
             }
         }
-
-        // Second pass fills in each player's own average for the spell, which is what the sentence
-        // quotes back at them.
-        foreach (var spell in rates.GroupBy(u => (u.Player, u.SpellId)))
-        {
-            double usual = Median(spell.Select(u => u.PerMinute).ToList());
-            foreach (var use in spell) yield return use with { Usual = usual };
-        }
-    }
-
-    private static double Median(List<double> values)
-    {
-        values.Sort();
-        int middle = values.Count / 2;
-
-        return values.Count % 2 == 1
-            ? values[middle]
-            : (values[middle - 1] + values[middle]) / 2;
     }
 
     private readonly record struct Use(
