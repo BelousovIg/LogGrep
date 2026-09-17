@@ -42,7 +42,7 @@ public sealed class PullViewModel : ObservableObject
     {
         _mistakes = mistakes.OrderBy(f => f.At).ToArray();
         _cards = cards;
-        _collective = LaneMark.Shared(_mistakes, Record.Roster.Count, Together);
+        _collective = LaneMark.Shared(Record, _mistakes, Together);
         _playersView = null;
 
         OnPropertyChanged(nameof(MistakeCount));

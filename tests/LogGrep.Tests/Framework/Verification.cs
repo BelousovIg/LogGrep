@@ -484,4 +484,80 @@ public sealed class Verification
                $"Nothing was found for '{spell.NameOf()}'. " + What());
 
     private string What() => "Findings: " + string.Join(", ", _page.Findings.Select(f => f.Line));
+
+    // The card, the lane, and what the attempt cost.
+
+    /// <summary>One of the four axes on a player row, exactly as the cell prints it.</summary>
+    public void PlayerScores(Axis axis, string expected)
+        => Assert.True(expected == Cell(axis),
+            $"{_page.Player.Name} should score {expected} for {axis} and scores {Cell(axis)}. " + Facts(axis));
+
+    /// <summary>What the number is built from, which is the half of a score that stops an argument.</summary>
+    public void PlayerScoreSays(Axis axis, string expected)
+        => Assert.True(Facts(axis).Contains(expected, StringComparison.Ordinal),
+            $"The {axis} tooltip should have said '{expected}'. It says: {Facts(axis)}");
+
+    /// <summary>The one sentence the row shows: the most expensive thing that happened to them.</summary>
+    public void PlayerWorstIs(string expected) => Assert.Equal(expected, _page.Player.WorstText);
+
+    public void PlayerLaneHas(int marks)
+        => Assert.True(marks == _page.Player.Marks.Count,
+            $"{_page.Player.Name} should have {marks} marks and has {_page.Player.Marks.Count}: " + Lane());
+
+    /// <summary>A mark at a moment, and what hovering it would say.</summary>
+    public void PlayerLaneShows(TimeSpan at, string expected)
+        => Assert.True(_page.Player.Marks.Any(m => Math.Abs(m.At - at.TotalSeconds) < 1 && m.Text.Contains(expected, StringComparison.Ordinal)),
+            $"The lane should carry '{expected}' at {Display.Clock(at)}. It carries: " + Lane());
+
+    /// <summary>Whether a mark was drawn as one thing that caught the group rather than one person.</summary>
+    public void PlayerLaneSharedIt(TimeSpan at, bool expected)
+        => Assert.True(expected == _page.Player.Marks.Any(m => Math.Abs(m.At - at.TotalSeconds) < 1 && m.Collective),
+            $"The mark at {Display.Clock(at)} should {(expected ? "" : "not ")}read as the group's. Lane: " + Lane());
+
+    public void TheEnemyLaneHas(int casts)
+        => Assert.True(casts == _page.Pull.EnemyMarks.Count,
+            $"The enemy lane should carry {casts} casts and carries {_page.Pull.EnemyMarks.Count}.");
+
+    public void TheEnemyLaneShows(TimeSpan at, string expected)
+        => Assert.True(_page.Pull.EnemyMarks.Any(m => Math.Abs(m.At - at.TotalSeconds) < 1 && m.Text.Contains(expected, StringComparison.Ordinal)),
+            $"The enemy lane should carry '{expected}' at {Display.Clock(at)}. It carries: " +
+            string.Join("; ", _page.Pull.EnemyMarks.Select(m => m.Text)));
+
+    /// <summary>What the attempt cost everybody in it, in their own health pools.</summary>
+    public void TheAttemptCost(string expected) => Assert.Equal(expected, _page.Pull.PoolsText);
+
+    /// <summary>Who it went to. Named rather than averaged, which is the whole point of the line.</summary>
+    public void TheAttemptBlames(string player, string pools)
+    {
+        var line = _page.Pull.Blame.FirstOrDefault(b => b.Name == player)
+            ?? throw new InvalidOperationException(
+                $"'{player}' was not blamed for anything. Blamed: " +
+                string.Join(", ", _page.Pull.Blame.Select(b => b.Name + " " + b.PoolsText)));
+
+        Assert.Equal(pools, line.PoolsText);
+    }
+
+    public void TheRaidScores(Axis axis, string expected)
+        => Assert.Equal(expected, _page.Pull.Axes.First(s => s.Axis == axis).Text);
+
+    private string Cell(Axis axis) => axis switch
+    {
+        Axis.Output => _page.Player.OutputText,
+        Axis.Survival => _page.Player.SurvivalText,
+        Axis.Mechanics => _page.Player.MechanicsText,
+        _ => _page.Player.DutyText,
+    };
+
+    private string Facts(Axis axis) => axis switch
+    {
+        Axis.Output => _page.Player.OutputTooltip,
+        Axis.Survival => _page.Player.SurvivalTooltip,
+        Axis.Mechanics => _page.Player.MechanicsTooltip,
+        _ => _page.Player.DutyTooltip,
+    };
+
+    private string Lane()
+        => _page.Player.Marks.Count == 0
+            ? "nothing"
+            : string.Join("; ", _page.Player.Marks.Select(m => m.Text));
 }

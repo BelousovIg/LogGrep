@@ -43,6 +43,9 @@ public enum Ability
 
     /// <summary>A cast the group is expected to stop.</summary>
     GrimIncantation = 3205,
+
+    /// <summary>Something the boss throws repeatedly, so a scenario can count the times it went out.</summary>
+    SoulDrain = 3206,
 }
 
 /// <summary>The bosses the scenarios fight, under the encounter id the log records them with.</summary>

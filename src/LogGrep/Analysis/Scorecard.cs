@@ -403,16 +403,24 @@ public sealed class Scorecards
     private static long Occasions(PullRecord pull, int spell, long floor)
     {
         long casts = pull.Casts.Count(c => c.SpellId == spell);
-        long landings = pull.Blows.Where(b => b.SpellId == spell).Select(b => (long)b.Times)
-            .DefaultIfEmpty(0).Max();
+        long landings = pull.Roster.Select(p => Times(pull, p.Name, spell)).DefaultIfEmpty(0).Max();
 
         return Math.Max(Math.Max(casts, landings), floor);
     }
 
+    /// <summary>
+    /// How often one ability caught one person. Counted from both ends of what the log records,
+    /// because the rules behind these findings do not agree on which end matters: the avoidable
+    /// damage rule reads blows, and the mechanics rule reads the debuff going on somebody. A
+    /// mechanic recognised by its debuff lands no damage at all, and counting only blows scored it
+    /// as though it had gone out once and caught them every time.
+    /// </summary>
     private static long Times(PullRecord pull, string player, int spell)
         => pull.Blows
             .Where(b => b.SpellId == spell && string.Equals(b.Player, player, StringComparison.Ordinal))
-            .Sum(b => (long)b.Times);
+            .Sum(b => (long)b.Times)
+        + pull.Debuffs
+            .Count(d => d.SpellId == spell && string.Equals(d.Player, player, StringComparison.Ordinal));
 
     private static IReadOnlyList<Finding> Mine(IReadOnlyList<Finding> all, string player)
         => all.Where(f => string.Equals(f.Player, player, StringComparison.Ordinal)).ToArray();

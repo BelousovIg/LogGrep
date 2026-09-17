@@ -73,17 +73,25 @@ public readonly record struct LaneMark(
     /// is not five mistakes, and the lane has to be able to say so.
     /// </summary>
     public static IReadOnlyList<TimeSpan> Shared(
-        IReadOnlyList<Finding> all, int roster, TimeSpan window)
+        PullRecord pull, IReadOnlyList<Finding> all, TimeSpan window)
     {
+        int roster = pull.Roster.Count;
         if (roster < 3) return Array.Empty<TimeSpan>();
 
         int enough = roster / 2 + 1;
 
-        return all
+        // Read off what the lanes actually draw rather than off the findings alone. A wipe is the
+        // plainest collective moment there is, and half of a wipe is deaths nobody has a lesson
+        // about - which are on the lane and would otherwise not be counted as having happened.
+        var moments = all
             .Where(f => f.Player.Length > 0)
-            .GroupBy(f => (long)(f.At.TotalSeconds / window.TotalSeconds))
-            .Where(g => g.Select(f => f.Player).Distinct(StringComparer.Ordinal).Count() >= enough)
-            .Select(g => TimeSpan.FromSeconds(g.Min(f => f.At.TotalSeconds)))
+            .Select(f => (f.Player, f.At))
+            .Concat(pull.Roster.SelectMany(p => p.Deaths.Select(d => (Player: p.Name, d.At))));
+
+        return moments
+            .GroupBy(m => (long)(m.At.TotalSeconds / window.TotalSeconds))
+            .Where(g => g.Select(m => m.Player).Distinct(StringComparer.Ordinal).Count() >= enough)
+            .Select(g => TimeSpan.FromSeconds(g.Min(m => m.At.TotalSeconds)))
             .OrderBy(t => t)
             .ToArray();
     }

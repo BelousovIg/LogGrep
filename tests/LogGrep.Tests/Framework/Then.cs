@@ -1,3 +1,4 @@
+using LogGrep.Analysis;
 using LogGrep.Models;
 using LogGrep.Tests.Logs;
 
@@ -532,6 +533,72 @@ public sealed class Then
     public Then FindingAdvises(Ability spell, string expected)
     {
         _check.FindingAdvises(spell, expected);
+        return this;
+    }
+
+    public Then PlayerScores(Axis axis, string expected)
+    {
+        _check.PlayerScores(axis, expected);
+        return this;
+    }
+
+    public Then PlayerScoreSays(Axis axis, string expected)
+    {
+        _check.PlayerScoreSays(axis, expected);
+        return this;
+    }
+
+    public Then PlayerWorstIs(string expected)
+    {
+        _check.PlayerWorstIs(expected);
+        return this;
+    }
+
+    public Then PlayerLaneHas(int marks)
+    {
+        _check.PlayerLaneHas(marks);
+        return this;
+    }
+
+    public Then PlayerLaneShows(TimeSpan at, string expected)
+    {
+        _check.PlayerLaneShows(at, expected);
+        return this;
+    }
+
+    public Then PlayerLaneSharedIt(TimeSpan at, bool expected)
+    {
+        _check.PlayerLaneSharedIt(at, expected);
+        return this;
+    }
+
+    public Then TheEnemyLaneHas(int casts)
+    {
+        _check.TheEnemyLaneHas(casts);
+        return this;
+    }
+
+    public Then TheEnemyLaneShows(TimeSpan at, string expected)
+    {
+        _check.TheEnemyLaneShows(at, expected);
+        return this;
+    }
+
+    public Then TheAttemptCost(string expected)
+    {
+        _check.TheAttemptCost(expected);
+        return this;
+    }
+
+    public Then TheAttemptBlames(string player, string pools)
+    {
+        _check.TheAttemptBlames(player, pools);
+        return this;
+    }
+
+    public Then TheRaidScores(Axis axis, string expected)
+    {
+        _check.TheRaidScores(axis, expected);
         return this;
     }
 }
