@@ -147,7 +147,7 @@ public sealed class Scorecards
         var axes = new[]
         {
             Output(pull, player, role),
-            Survival(player, mine),
+            Survival(player, mine, Wiped(pull)),
             Mechanics(pull, player),
             Duty(pull, player, role),
         };
@@ -172,12 +172,23 @@ public sealed class Scorecards
     {
         if (player.Deaths.Count == 0) return 0;
 
-        var shared = _shared.TryGetValue(pull, out var moments)
-            ? moments
-            : _shared[pull] = Collective.In(pull, _byPull[pull].ToArray());
-
+        var shared = Shared(pull);
         return player.Deaths.Count(d => !Collective.Covers(shared, d.At));
     }
+
+    /// <summary>
+    /// Whether the attempt ended with most of the group on the floor. Not a threshold about deaths -
+    /// a majority is the same test the app uses everywhere it has to tell one person's moment from
+    /// the group's.
+    /// </summary>
+    private static bool Wiped(PullRecord pull)
+        => !pull.Success && pull.Roster.Count(p => p.Deaths.Count > 0) > pull.Roster.Count / 2;
+
+    /// <summary>The moments this attempt caught much of the group at once, worked out once.</summary>
+    private IReadOnlyList<TimeSpan> Shared(PullRecord pull)
+        => _shared.TryGetValue(pull, out var moments)
+            ? moments
+            : _shared[pull] = Collective.In(pull, _byPull[pull].ToArray());
 
     /// <summary>How the whole group played one attempt.</summary>
     public Scorecard For(PullRecord pull)
@@ -240,7 +251,7 @@ public sealed class Scorecards
     /// real damage rather than an allowance invented for the purpose, which is why this needs no
     /// threshold and cannot drift: a fight that hits harder moves both halves of it at once.
     /// </summary>
-    private static Score Survival(PlayerStats player, IReadOnlyList<Finding> mine)
+    private static Score Survival(PlayerStats player, IReadOnlyList<Finding> mine, bool wiped)
     {
         if (player.Deaths.Count == 0)
         {
@@ -263,8 +274,18 @@ public sealed class Scorecards
 
         if (worst == null)
         {
-            return Score.Says(Axis.Survival, "died",
-                "nothing here can say what took them down",
+            // A wipe kills everybody, and the death rules stay quiet about that on purpose: twenty
+            // people going down is one event, not twenty mistakes. The rules do single out the
+            // death that was not part of it - "died while the raid fought on" is exactly the solo
+            // one - so a death they had nothing to say about, in an attempt that was lost and that
+            // most of the group did not walk out of, is the wipe. Saying so costs nothing and is
+            // the difference between a verdict and a shrug.
+            bool together = wiped;
+
+            return Score.Says(Axis.Survival, together ? "died with the raid" : "died",
+                together
+                    ? "the group went down together; that is one event rather than each of theirs"
+                    : "nothing here can say what took them down",
                 "the rules found no pattern behind it");
         }
 
@@ -362,13 +383,21 @@ public sealed class Scorecards
     /// </summary>
     private static Score Threat(PullRecord pull)
     {
-        long all = pull.Roster.Sum(p => p.MeleeTaken);
-        if (all <= 0) return Score.Missing(Axis.Duty, "the enemy landed no melee at all");
+        if (pull.ThreatSeconds <= 0)
+        {
+            return Score.Missing(Axis.Duty, "the enemy never swung at anybody in particular");
+        }
 
-        long tanks = pull.Roster.Where(p => Specs.RoleOf(p.SpecId) == Role.Tank).Sum(p => p.MeleeTaken);
+        // Seconds, not damage. Summed damage answered a different question on the real evening: in
+        // the two longest attempts the boss spent a phase swinging at the whole raid, which put
+        // three quarters of the melee on people who were never holding it and scored both tanks at
+        // twenty-eight per cent for a fight they had tanked. Those seconds are simply not about
+        // threat, so they are not counted.
+        int tanks = pull.Roster.Where(p => Specs.RoleOf(p.SpecId) == Role.Tank).Sum(p => p.HeldSeconds);
+        int held = Math.Min(tanks, pull.ThreatSeconds);
 
-        return new Score(Axis.Duty, tanks / (double)all,
-            Display.Amount(tanks) + " of " + Display.Amount(all) + " melee damage landed on a tank",
+        return new Score(Axis.Duty, held / (double)pull.ThreatSeconds,
+            held + " of the " + pull.ThreatSeconds + " seconds it spent swinging at somebody went at a tank",
             "the enemy swings at whoever it is looking at");
     }
 

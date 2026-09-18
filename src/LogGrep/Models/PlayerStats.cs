@@ -132,10 +132,10 @@ public sealed class PlayerStats
     /// a share of somebody's own pool means the same thing in any tier. Zero when the log never
     /// reported one, which is the signal to show nothing rather than to divide by it.
     ///
-    /// It is read only off damage they took, because that is the one event whose advanced block is
-    /// about them. Reading it off their own casts too looked like an improvement - a healer who
-    /// dodged everything all fight would finally have a pool - and put the boss's health pool on
-    /// every damage dealer in the raid, which turned every score built on it into quiet nonsense.
+    /// It is read off whichever unit the advanced block says it is about, which in a real log is
+    /// whoever caused the event. Reading it as the victim's instead put the boss's seven hundred
+    /// million on every damage dealer in the raid and turned every score built on it into quiet
+    /// nonsense.
     /// </summary>
     public long MaxHealth { get; set; }
 
@@ -145,6 +145,13 @@ public sealed class PlayerStats
     /// log's only account of who was holding the fight's attention.
     /// </summary>
     public long MeleeTaken { get; set; }
+
+    /// <summary>
+    /// How many seconds of the fight the enemy spent swinging at this person while it was swinging
+    /// at one or two people at all - the seconds when it was looking at somebody rather than at the
+    /// room.
+    /// </summary>
+    public int HeldSeconds { get; set; }
 
     public IReadOnlyList<DeathRecord> Deaths { get; set; } = Array.Empty<DeathRecord>();
 

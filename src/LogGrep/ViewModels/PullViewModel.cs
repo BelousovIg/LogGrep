@@ -75,6 +75,23 @@ public sealed class PullViewModel : ObservableObject
 
     public bool HasCard => _cards != null;
 
+    /// <summary>
+    /// How many of the group the rows are showing. The totals above them are over everybody who was
+    /// there, because that is what happened - so when the rows are narrowed the screen has to say
+    /// that the two are counting different people.
+    /// </summary>
+    public string ShownText
+    {
+        get
+        {
+            int shown = PlayersView.Cast<PlayerRowViewModel>().Count();
+            return shown == Record.Roster.Count
+                ? string.Empty
+                : "showing " + Display.Count(shown) + " of " + Display.Count(Record.Roster.Count) +
+                  " who were there; the totals above are over all of them";
+        }
+    }
+
     /// <summary>What the attempt cost, in health pools, over everybody in it.</summary>
     public string PoolsText => _cards == null
         ? "—"

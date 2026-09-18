@@ -52,6 +52,13 @@ public sealed class PullRecord
     /// <summary>Enemy damage that landed on group members, one entry per spell and person.</summary>
     public IReadOnlyList<Blow> Blows { get; set; } = Array.Empty<Blow>();
 
+    /// <summary>
+    /// Seconds in which the enemy was swinging at one or two people rather than at the room. This is
+    /// the only stretch of a fight that says anything about threat: in a phase where a boss hits
+    /// everybody, who it hit is a fact about the phase.
+    /// </summary>
+    public int ThreatSeconds { get; set; }
+
     /// <summary>Enemy casts, and whether each one went off or was stopped.</summary>
     public IReadOnlyList<CastRecord> Casts { get; set; } = Array.Empty<CastRecord>();
 

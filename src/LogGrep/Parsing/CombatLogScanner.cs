@@ -447,6 +447,26 @@ public sealed class CombatLogScanner
         // Whatever anybody was still holding when the fight ended was held until then.
         foreach (var player in segment.Players.Values) player.Settle(segment.StartSeconds + duration.TotalSeconds);
 
+        // Who the enemy was looking at, second by second. Only the seconds where it was swinging
+        // at one or two people count: a phase where it hits the whole group says nothing about who
+        // was holding it, and on the real evening those phases put three quarters of the melee on
+        // people who were never meant to hold anything.
+        int crowd = Math.Max(2, segment.Players.Count / 2);
+        var held = new Dictionary<string, int>(StringComparer.Ordinal);
+        int threat = 0;
+
+        foreach (var second in segment.Swings.Values)
+        {
+            if (second.Count > crowd) continue;
+
+            threat++;
+            foreach (string who in second)
+            {
+                held.TryGetValue(who, out int seconds);
+                held[who] = seconds + 1;
+            }
+        }
+
         var roster = segment.Players
             .Select(entry => new PlayerStats
             {
@@ -462,6 +482,7 @@ public sealed class CombatLogScanner
                 DeadSeconds = entry.Value.Dead,
                 MaxHealth = entry.Value.MaxHealth,
                 MeleeTaken = entry.Value.MeleeTaken,
+                HeldSeconds = held.TryGetValue(entry.Value.Name, out int seconds) ? seconds : 0,
                 Struck = entry.Value.Struck,
                 WasHit = entry.Value.WasHit,
                 Spells = entry.Value.Spells
@@ -500,6 +521,7 @@ public sealed class CombatLogScanner
             Debuffs = segment.Debuffs.ToArray(),
             Blows = segment.Blows.Values.ToArray(),
             HealCeiling = segment.Players.Values.Count == 0 ? 0 : segment.Players.Values.Max(p => p.BestHealing),
+            ThreatSeconds = threat,
             Casts = segment.Casts.ToArray(),
             Damage = segment.Damage,
             Healing = segment.Healing,
@@ -848,13 +870,17 @@ public sealed class CombatLogScanner
             // own: it is the enemy hitting whoever it is looking at, and where it lands is the only
             // reading the log gives of who is holding its attention.
             //
-            // Only the thing the fight is named after, though. A raid boss comes with adds, and
-            // adds swing at whoever they were sent at - on the real log, counting every enemy's
-            // swings put two thirds of the melee on people who were never meant to hold anything,
-            // and read as though the tanks had lost the boss for most of the fight.
+            // Only the thing the fight is named after, and noted second by second rather than
+            // added up. A raid boss comes with adds, and in a late phase it swings at the whole
+            // group at once - on the real evening that put two thirds of the melee on people who
+            // were never meant to hold anything, and read as though the tanks had lost the boss for
+            // most of the fight. A second in which it hit one or two people is the boss looking at
+            // somebody; a second in which it hit half the raid is a mechanic, and says nothing
+            // about who was holding it.
             if (prefixParams < 3 && string.Equals(Label(line, 2), _open!.Name, StringComparison.Ordinal))
             {
                 victim.Swung(amount);
+                _open.Swing((int)Elapsed(at).TotalSeconds, victim.Name);
             }
         }
 
@@ -1424,6 +1450,19 @@ public sealed class CombatLogScanner
 
         /// <summary>Enemy casts that went off or were cut short, in the order they happened.</summary>
         public List<CastRecord> Casts { get; } = new();
+
+        /// <summary>
+        /// Who the enemy swung at, second by second. A second in which it hit one or two people is
+        /// the enemy looking at somebody, which is the only account a log gives of threat; a second
+        /// in which it hit half the raid is a mechanic wearing a swing's clothes.
+        /// </summary>
+        public Dictionary<int, HashSet<string>> Swings { get; } = new();
+
+        public void Swing(int second, string victim)
+        {
+            if (!Swings.TryGetValue(second, out var who)) Swings[second] = who = new HashSet<string>(StringComparer.Ordinal);
+            who.Add(victim);
+        }
 
         /// <summary>One entry per enemy spell and person it landed on, keyed so it stays one entry.</summary>
         public Dictionary<(int Spell, string Player), Blow> Blows { get; } = new();

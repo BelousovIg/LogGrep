@@ -156,12 +156,17 @@ public sealed class ScoringAnAttempt : Scenario
     [Fact]
     public void Where_the_swings_landed_is_what_the_tank_is_read_on()
     {
-        // Three quarters of the melee went where it should have. Both tanks would carry the same
-        // number, because they shared the job.
+        // Counted in seconds rather than in damage. Summed damage answers a different question: a
+        // boss that spends a phase swinging at the whole raid piles most of its melee onto people
+        // who were never holding it, and the tanks are scored for a phase instead of for tanking.
+        //
+        // Three of the four seconds it spent swinging at somebody went where they should have.
         var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
             .Lasting(2.Minutes())
             .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
             .At(2.Seconds()).BossSwingsAt("Rockjaw", 300_000)
+            .At(10.Seconds()).BossSwingsAt("Rockjaw", 300_000)
+            .At(20.Seconds()).BossSwingsAt("Rockjaw", 300_000)
             .At(30.Seconds()).BossSwingsAt("Nightblade", 100_000)
             .Wipe());
 
@@ -170,7 +175,7 @@ public sealed class ScoringAnAttempt : Scenario
         When.ILookAtPlayer("Rockjaw");
 
         Then.PlayerScores(Axis.Duty, "75%")
-            .PlayerScoreSays(Axis.Duty, "the enemy swings at whoever it is looking at");
+            .PlayerScoreSays(Axis.Duty, "3 of the 4 seconds it spent swinging at somebody went at a tank");
     }
 
     [Fact]
