@@ -53,14 +53,17 @@ public sealed class PullRecord
     public IReadOnlyList<Blow> Blows { get; set; } = Array.Empty<Blow>();
 
     /// <summary>
-    /// How far down the enemy was, second by second, from the start of the attempt. A share of its
-    /// pool per second, carried forward through the seconds it said nothing.
+    /// How much of the boss had been taken off, second by second, from nothing to all of it.
     ///
     /// This is the story of an attempt in one line: whether the group pushed the thing and lost it
-    /// late, or never moved it at all. Empty when the log never stated the enemy's health, which is
-    /// what happens on a fight named after something that never acts.
+    /// late, or never moved it at all. Several creatures at once are one pool - a council is a fight
+    /// against all of them - and the share is what is gone out of the lot of them together.
+    ///
+    /// NaN in the seconds no boss fight was happening, which the chart draws as a gap: half a
+    /// keystone run is trash, and a line held flat across it is a claim about a fight nobody was
+    /// having. Empty when the log never stated any enemy's health at all.
     /// </summary>
-    public IReadOnlyList<double> EnemyHealth { get; set; } = Array.Empty<double>();
+    public IReadOnlyList<double> BossProgress { get; set; } = Array.Empty<double>();
 
     /// <summary>
     /// How many of the group were still standing, second by second. Together with the line above it

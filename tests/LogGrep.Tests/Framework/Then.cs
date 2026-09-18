@@ -656,6 +656,12 @@ public sealed class Then
         return this;
     }
 
+    public Then TheLineSaysNothingAt(string name, TimeSpan when)
+    {
+        _check.TheLineSaysNothingAt(name, when);
+        return this;
+    }
+
     public Then TheLineIsDrawnAt(string name, TimeSpan when, string expected)
     {
         _check.TheLineIsDrawnAt(name, when, expected);

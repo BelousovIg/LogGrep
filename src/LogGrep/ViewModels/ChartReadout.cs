@@ -22,7 +22,10 @@ public static class ChartReadout
 
         foreach (var trace in traces ?? Array.Empty<Trace>())
         {
-            if (trace.IsOn && trace.Values.Count > 0) said.Add(trace.At(second));
+            if (!trace.IsOn) continue;
+
+            string line = trace.At(second);
+            if (line.Length > 0) said.Add(line);
         }
 
         // A death is a mark rather than a line, and so is a kill, so neither has a switch to obey.

@@ -578,7 +578,7 @@ public sealed class Verification
 
     /// <summary>Whether the enemy ever stated its health, which is what a progress line is made of.</summary>
     public void TheAttemptHasAShape(bool expected)
-        => Assert.True(expected == (_page.Pull.Record.EnemyHealth.Count > 0),
+        => Assert.True(expected == (_page.Pull.Record.BossProgress.Count > 0),
             "The attempt should " + (expected ? "" : "not ") + "have a line for the enemy.");
 
     /// <summary>How many of the group were still up at that moment.</summary>
@@ -630,6 +630,14 @@ public sealed class Verification
            ?? throw new InvalidOperationException(
                "'" + name + "' is not a line on this chart. It draws: " +
                string.Join(", ", _page.Pull.Traces.Select(t => t.Name)));
+
+    /// <summary>That the line has nothing to say there - a gap rather than a number.</summary>
+    public void TheLineSaysNothingAt(string name, TimeSpan when)
+    {
+        string said = Line(name).At((int)when.TotalSeconds);
+        Assert.True(said.Length == 0,
+            "'" + name + "' should be drawing nothing at " + Display.Clock(when) + ", and says: " + said);
+    }
 
     public void TheShapeMarksDeathsAt(params int[] expected)
         => Assert.Equal(expected, _page.Pull.Deaths.ToArray());

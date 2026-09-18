@@ -55,7 +55,25 @@ public sealed class CombatLogBuilder
     private string? _name;
     private Boss _boss = Boss.TheSoulcoiler;
 
+    /// <summary>
+    /// The other creatures of a council, by name and by the GUID each one acts under.
+    ///
+    /// A fight against several at once is the case the app has to read as one pool rather than as
+    /// the biggest of them, so a scenario about it needs a log with more than one boss-sized thing
+    /// in it - which is the only reason this exists.
+    /// </summary>
+    private readonly Dictionary<string, string> _alongside = new(StringComparer.Ordinal);
+
     internal string BossName => _boss.NameOf();
+
+    /// <summary>Another boss-sized creature in the same fight.</summary>
+    public CombatLogBuilder Alongside(Boss other)
+    {
+        _alongside[other.NameOf()] = $"Creature-0-1-2-3-{100002 + _alongside.Count}-000000000{2 + _alongside.Count}";
+        return this;
+    }
+
+    private bool IsBossSized(string name) => name == BossName || _alongside.ContainsKey(name);
 
     /// <summary>Which boss the current attempt is against, for events that need it as a target.</summary>
     internal Boss BossOf() => _boss;
@@ -236,12 +254,14 @@ public sealed class CombatLogBuilder
                 .AppendLine(body);
 
     internal string Actor(string name)
-        => name == BossName ? BossGuid : Find(name).Guid;
+        => name == BossName ? BossGuid
+            : _alongside.TryGetValue(name, out string? guid) ? guid
+            : Find(name).Guid;
 
     internal string ActorName(string name)
-        => name == BossName ? name : Find(name).Raw;
+        => IsBossSized(name) ? name : Find(name).Raw;
 
-    internal string Flags(string name) => name == BossName ? BossFlags : PlayerFlags;
+    internal string Flags(string name) => IsBossSized(name) ? BossFlags : PlayerFlags;
 
     internal string Units(string source, string target)
         => $"{Actor(source)},\"{ActorName(source)}\",{Flags(source)},{NoRaidFlags}," +
@@ -278,7 +298,7 @@ public sealed class CombatLogBuilder
     }
 
     /// <summary>A boss is not a person-sized thing, and writing it as one hid a real bug for weeks.</summary>
-    private long PoolOf(string name) => name == BossName ? BossPool : HealthPool;
+    private long PoolOf(string name) => IsBossSized(name) ? BossPool : HealthPool;
 
     /// <summary>Healing puts it back, so a fight can be a grind rather than one long slide.</summary>
     internal void Healed(string target, long amount)

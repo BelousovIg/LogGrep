@@ -255,11 +255,11 @@ public sealed class PullViewModel : ObservableObject
         var shown = Shown;
         int seconds = (int)Record.Duration.TotalSeconds;
 
-        // The enemy is the enemy whoever is being looked at, so this line never narrows.
-        if (Record.EnemyHealth.Count > 0)
+        // The boss is the boss whoever is being looked at, so this line never narrows.
+        if (Record.BossProgress.Count > 0)
         {
-            traces.Add(new Trace("enemy", Color.FromRgb(0xE0, 0x70, 0x6D),
-                Record.EnemyHealth.ToArray(), v => Display.Percent(v), IsOn("enemy", true)));
+            traces.Add(new Trace("boss", Color.FromRgb(0xE0, 0x70, 0x6D),
+                Record.BossProgress.ToArray(), v => Display.Percent(v) + " down", IsOn("boss", true)));
         }
 
         // The rest are about people, so they are about whoever the rows are showing. Unnarrowed they

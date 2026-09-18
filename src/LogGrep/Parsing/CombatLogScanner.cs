@@ -351,8 +351,14 @@ public sealed class CombatLogScanner
 
     private void OnEncounterStart(ReadOnlySpan<byte> line, int eventStart, long start)
     {
-        // Boss pulls inside a keystone run belong to the run, they do not open a segment.
-        if (_open is { IsKeystone: true }) return;
+        // Boss pulls inside a keystone run belong to the run, they do not open a segment of their
+        // own - but they are still a boss fight inside it, which is what the progress line and the
+        // tank measure are read against.
+        if (_open is { IsKeystone: true })
+        {
+            _open.OpenFight((int)Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds);
+            return;
+        }
         if (_open != null) Close(_open, success: false, start, TimeSpan.Zero, _open.LastTimestamp, finished: false);
 
         _fields.Split(line);
@@ -379,23 +385,25 @@ public sealed class CombatLogScanner
             Map = _mapChange,
             GroupKey = (kind == ContentKind.Raid ? "R|" : "D|") + encounterId + "|" + difficulty,
         };
+
+        _open.OpenFight(0);
     }
 
     private void OnEncounterEnd(ReadOnlySpan<byte> line, int eventStart, long end)
     {
         if (_open == null) return;
 
-        // A boss that went down inside a keystone run. The run is one row by design - it is what
+        // A boss inside a keystone run. The run is one row by design - it is what
         // somebody cuts out of the file - but without these its half hour is an unbroken line with
         // nothing on it, and three of the four things that happened in it were bosses dying.
         if (_open.IsKeystone)
         {
             _fields.Split(line);
-            if (!_fields.Flag(line, 5)) return;
+            bool won = _fields.Flag(line, 5);
+            int ended = (int)Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds;
 
-            _open.Kills.Add(new BossKill(
-                (int)Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds,
-                _fields.Text(line, 2)));
+            _open.CloseFight(ended, won);
+            if (won) _open.Kills.Add(new BossKill(ended, _fields.Text(line, 2)));
             return;
         }
 
@@ -458,6 +466,10 @@ public sealed class CombatLogScanner
             ? reportedDuration
             : endTime > segment.StartTime ? endTime - segment.StartTime : TimeSpan.Zero;
 
+        // A boss pull's fight ends when the pull does, and with the same result. One still open at
+        // the end of a key is one the log stopped in the middle of.
+        segment.CloseFight((int)duration.TotalSeconds, success && !segment.IsKeystone);
+
         // Whatever anybody was still holding when the fight ended was held until then.
         foreach (var player in segment.Players.Values) player.Settle(segment.StartSeconds + duration.TotalSeconds);
 
@@ -469,7 +481,7 @@ public sealed class CombatLogScanner
         var held = new Dictionary<string, int>(StringComparer.Ordinal);
         int threat = 0;
 
-        foreach (var second in segment.Swings.Values)
+        foreach (var second in segment.Fights.SelectMany(f => f.Swings.Values))
         {
             if (second.Count > crowd) continue;
 
@@ -540,7 +552,7 @@ public sealed class CombatLogScanner
             Blows = segment.Blows.Values.ToArray(),
             HealCeiling = segment.Players.Values.Count == 0 ? 0 : segment.Players.Values.Max(p => p.BestHealing),
             ThreatSeconds = threat,
-            EnemyHealth = Curve(segment.Left, (int)duration.TotalSeconds),
+            BossProgress = Progress(segment.Fights, (int)duration.TotalSeconds),
             Standing = Alive(roster, (int)duration.TotalSeconds),
 
             // A keystone run collected one of these per boss as it went; a boss pull is its own
@@ -1085,20 +1097,66 @@ public sealed class CombatLogScanner
     /// states its health whenever it acts, which is often, but not every second - and a line with
     /// holes in it would be drawn as a line that dropped to nothing and came back.
     /// </summary>
-    private static IReadOnlyList<double> Curve(Dictionary<int, double> stated, int seconds)
+    /// <summary>
+    /// How much of the boss has been taken off, second by second, from nothing to all of it.
+    ///
+    /// Counted up rather than down, because what somebody watching a pull wants to know is how far
+    /// they got, and a line that rises to the top and stops there is the shape of a kill.
+    ///
+    /// Several creatures at once are one pool: a council is a fight against all of them, and the
+    /// share is what is gone out of the lot of them together.
+    ///
+    /// Outside a boss fight there is nothing to draw and the line says so - NaN rather than a
+    /// number, which the chart reads as a gap. Half an hour of a keystone run is trash, and a flat
+    /// line held at whatever the last boss was on is a claim about a fight nobody is having.
+    /// </summary>
+    private static IReadOnlyList<double> Progress(List<BossFight> fights, int seconds)
     {
-        if (stated.Count == 0 || seconds <= 0) return Array.Empty<double>();
+        if (fights.Count == 0 || seconds <= 0) return Array.Empty<double>();
 
         var line = new double[seconds + 1];
-        double last = 1;
+        Array.Fill(line, double.NaN);
+        bool anything = false;
 
-        for (int i = 0; i <= seconds; i++)
+        foreach (var fight in fights)
         {
-            if (stated.TryGetValue(i, out double share)) last = share;
-            line[i] = last;
+            var foes = fight.Foes.Values.Where(f => f.Max * 2 >= fight.Biggest).ToArray();
+            long pool = foes.Sum(f => f.Max);
+            if (pool <= 0) continue;
+
+            int from = Math.Clamp(fight.From, 0, seconds);
+            int to = Math.Clamp(fight.To, from, seconds);
+
+            // Each creature carried forward from the last second it stated its health, and taken as
+            // whole until it first says otherwise.
+            var stated = foes.Select(f => f.At.OrderBy(e => e.Key).ToArray()).ToArray();
+            var next = new int[foes.Length];
+            var now = foes.Select(f => f.Max).ToArray();
+
+            for (int second = from; second <= to; second++)
+            {
+                long left = 0;
+                for (int i = 0; i < foes.Length; i++)
+                {
+                    while (next[i] < stated[i].Length && stated[i][next[i]].Key <= second)
+                    {
+                        now[i] = stated[i][next[i]++].Value;
+                    }
+
+                    left += now[i];
+                }
+
+                line[second] = Math.Clamp(1 - left / (double)pool, 0, 1);
+                anything = true;
+            }
+
+            // A dying creature does not act, so it never states that it has nothing left - the real
+            // kill this was measured on finished at ninety per cent. The encounter ending in a kill
+            // is the one second that is certainly all of it.
+            if (fight.Won) line[to] = 1;
         }
 
-        return line;
+        return anything ? line : Array.Empty<double>();
     }
 
     /// <summary>One point a second, with the seconds nothing happened in left at nothing.</summary>
@@ -1611,6 +1669,79 @@ public sealed class CombatLogScanner
         }
     }
 
+    /// <summary>
+    /// One boss fight: the stretch of a record where the group was on a boss, and what that boss
+    /// was made of.
+    ///
+    /// Several creatures rather than one, because a council is a fight against all of them at once
+    /// and "how far down is it" means how far down the lot of them are. Which creatures count is
+    /// settled by pool: anything under half the biggest is scenery standing in front of the fight -
+    /// an add, a totem, a summoned thing - and counting those would put a denominator in the sum
+    /// that the group was never asked to get through.
+    /// </summary>
+    private sealed class BossFight
+    {
+        public int From { get; init; }
+
+        public int To { get; set; } = int.MaxValue;
+
+        /// <summary>Whether it ended with the thing dead, which is the only second known to be 100%.</summary>
+        public bool Won { get; set; }
+
+        /// <summary>The largest creature in it, whose swings are the ones worth reading as threat.</summary>
+        public ulong Principal { get; private set; }
+
+        public long Biggest { get; private set; }
+
+        public Dictionary<ulong, Foe> Foes { get; } = new();
+
+        public Dictionary<int, HashSet<string>> Swings { get; } = new();
+
+        public bool Health(ulong who, int second, long current, long max)
+        {
+            if (max <= 0) return false;
+
+            // A bigger pool than anything so far means the real thing has finally acted, and
+            // everything gathered until now was about something smaller standing in front of it.
+            if (max > Biggest)
+            {
+                Biggest = max;
+                Principal = who;
+
+                foreach (ulong small in Foes.Where(f => f.Value.Max * 2 < Biggest).Select(f => f.Key).ToList())
+                {
+                    Foes.Remove(small);
+                }
+
+                Swings.Clear();
+            }
+            else if (max * 2 < Biggest)
+            {
+                return false;
+            }
+
+            if (!Foes.TryGetValue(who, out var foe)) Foes[who] = foe = new Foe();
+            foe.Max = Math.Max(foe.Max, max);
+            foe.At[second] = current;
+
+            return who == Principal;
+        }
+
+        public void Swing(int second, string victim)
+        {
+            if (!Swings.TryGetValue(second, out var who)) Swings[second] = who = new HashSet<string>(StringComparer.Ordinal);
+            who.Add(victim);
+        }
+    }
+
+    /// <summary>One creature of a boss fight, and what it said it had left and when.</summary>
+    private sealed class Foe
+    {
+        public long Max;
+
+        public Dictionary<int, long> At { get; } = new();
+    }
+
     private sealed class OpenSegment
     {
         public required string GroupKey { get; init; }
@@ -1646,7 +1777,29 @@ public sealed class CombatLogScanner
         /// the enemy looking at somebody, which is the only account a log gives of threat; a second
         /// in which it hit half the raid is a mechanic wearing a swing's clothes.
         /// </summary>
-        public Dictionary<int, HashSet<string>> Swings { get; } = new();
+        /// <summary>
+        /// The boss fights inside this segment. A boss pull has exactly one, running its whole
+        /// length; a keystone run has one per boss, with the trash in between belonging to neither.
+        /// </summary>
+        public List<BossFight> Fights { get; } = new();
+
+        public BossFight? Fight { get; private set; }
+
+        public void OpenFight(int second)
+        {
+            CloseFight(second, won: false);
+            Fight = new BossFight { From = second };
+            Fights.Add(Fight);
+        }
+
+        public void CloseFight(int second, bool won)
+        {
+            if (Fight == null) return;
+
+            Fight.To = second;
+            Fight.Won = won;
+            Fight = null;
+        }
 
         /// <summary>What the group dealt and healed, second by second.</summary>
         public Dictionary<int, long> Dealt { get; } = new();
@@ -1668,53 +1821,11 @@ public sealed class CombatLogScanner
             }
         }
 
-        /// <summary>How far down the thing the fight is really about was, second by second.</summary>
-        public Dictionary<int, double> Left { get; } = new();
-
-        /// <summary>
-        /// Which enemy that is, and how big it is.
-        ///
-        /// By pool rather than by name. The encounter's name is not the name of a creature on half
-        /// the fights in a tier - a council is named after the council, and a boss can act under a
-        /// name of its own - so matching on it left those attempts with no progress line at all and
-        /// no tank measure either. The biggest thing the group fought is the thing the fight is
-        /// about, whatever either of them is called.
-        /// </summary>
-        public ulong Principal { get; private set; }
-
-        private long _biggest;
-
-        /// <summary>
-        /// Notes an enemy's health. Returns whether this is the one the fight is about, which is
-        /// also what decides whether its swings are worth counting as threat.
-        /// </summary>
+        /// <summary>Notes an enemy's health, if a boss fight is open to note it against.</summary>
         public bool Health(ulong who, int second, long current, long max)
-        {
-            if (max <= 0) return false;
+            => Fight?.Health(who, second, current, max) ?? false;
 
-            // A bigger pool than anything so far means the real thing has finally acted, and
-            // everything gathered until now was about something smaller standing in front of it.
-            if (max > _biggest)
-            {
-                _biggest = max;
-                Principal = who;
-                Left.Clear();
-                Swings.Clear();
-            }
-            else if (who != Principal)
-            {
-                return false;
-            }
-
-            Left[second] = Math.Clamp(current / (double)max, 0, 1);
-            return true;
-        }
-
-        public void Swing(int second, string victim)
-        {
-            if (!Swings.TryGetValue(second, out var who)) Swings[second] = who = new HashSet<string>(StringComparer.Ordinal);
-            who.Add(victim);
-        }
+        public void Swing(int second, string victim) => Fight?.Swing(second, victim);
 
         /// <summary>One entry per enemy spell and person it landed on, keyed so it stays one entry.</summary>
         public Dictionary<(int Spell, string Player), Blow> Blows { get; } = new();

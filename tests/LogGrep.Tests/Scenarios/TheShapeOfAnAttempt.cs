@@ -27,19 +27,60 @@ public sealed class TheShapeOfAnAttempt : Scenario
     private static CombatLogBuilder AParty() => ARaid();
 
     [Fact]
-    public void The_enemy_leaves_a_line_of_how_far_down_it_went()
+    public void The_boss_leaves_a_line_of_how_much_of_it_was_taken_off()
     {
+        // Counted up rather than down: what somebody watching a pull wants to know is how far they
+        // got, and a line that rises to the top and stops there is the shape of a kill.
         var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
             .Lasting(2.Minutes())
-            .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
-            .At(10.Seconds()).BossSwingsAt("Rockjaw", 200_000)
-            .At(1.Minutes()).BossSwingsAt("Rockjaw", 200_000)
+            .At(10.Seconds()).Deals("Nightblade", to: Soulcoiler, amount: 125_000_000)
+            .At(11.Seconds()).BossSwingsAt("Rockjaw", 200_000)
             .Wipe());
 
         Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
 
+        // A quarter of a five hundred million pool, stated the moment the boss next acts.
         Then.TheAttemptHasAShape(true)
+            .TheLineReadsAt("boss", 5.Seconds(), "boss 0% down")
+            .TheLineReadsAt("boss", 20.Seconds(), "boss 25% down")
             .TheGroupStoodAt(0.Seconds(), 3);
+    }
+
+    [Fact]
+    public void A_kill_is_all_of_it_however_little_the_boss_said()
+    {
+        // A dying creature does not act, so it never states that it has nothing left - the real kill
+        // this was measured on finished at ninety per cent. The encounter ending is what says the
+        // rest, and it is the second the star sits on.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(10.Seconds()).Deals("Nightblade", to: Soulcoiler, amount: 125_000_000)
+            .At(11.Seconds()).BossSwingsAt("Rockjaw", 200_000)
+            .Kill());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        Then.TheLineReadsAt("boss", 2.Minutes(), "boss 100% down")
+            .TheKillsAreMarkedAt(2.Minutes());
+    }
+
+    [Fact]
+    public void Several_bosses_at_once_are_one_pool()
+    {
+        // A council is a fight against all of them, so "how far down is it" is how far down the lot
+        // of them are. Picking the biggest and ignoring the rest would call a quarter of the work a
+        // half of it.
+        var log = ARaid().Alongside(Boss.ForgottenDepths).Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(10.Seconds()).Deals("Nightblade", to: Soulcoiler, amount: 250_000_000)
+            .At(11.Seconds()).BossSwingsAt("Rockjaw", 200_000)
+            .At(11.Seconds()).EnemySwingsAt(Boss.ForgottenDepths, "Rockjaw", 200_000)
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        // Half of one of them is a quarter of the two together.
+        Then.TheLineReadsAt("boss", 20.Seconds(), "boss 25% down");
     }
 
     [Fact]
@@ -98,8 +139,10 @@ public sealed class TheShapeOfAnAttempt : Scenario
         // an unbroken line with nothing on it.
         var log = AParty().Keystone(Dungeon.TheRookery, level: 12, p => p
             .Lasting(20.Minutes())
-            .At(5.Minutes()).Downs(Soulcoiler, lasting: 2.Minutes())
-            .At(12.Minutes()).Downs(Boss.EntombedSentinels, lasting: 3.Minutes())
+            .At(5.Minutes()).Pulls(Soulcoiler)
+            .At(7.Minutes()).Downs(Soulcoiler)
+            .At(12.Minutes()).Pulls(Boss.EntombedSentinels)
+            .At(15.Minutes()).Downs(Boss.EntombedSentinels)
             .Kill());
 
         Given.IOpenedLog(log).IOpenedPull(Dungeon.TheRookery, number: 1);
@@ -115,13 +158,36 @@ public sealed class TheShapeOfAnAttempt : Scenario
         // down are still marked; the one that did not is not.
         var log = AParty().Keystone(Dungeon.TheRookery, level: 12, p => p
             .Lasting(20.Minutes())
-            .At(5.Minutes()).Downs(Soulcoiler, lasting: 2.Minutes())
-            .At(12.Minutes()).Wiped(Boss.EntombedSentinels, lasting: 3.Minutes())
+            .At(5.Minutes()).Pulls(Soulcoiler)
+            .At(7.Minutes()).Downs(Soulcoiler)
+            .At(12.Minutes()).Pulls(Boss.EntombedSentinels)
+            .At(15.Minutes()).Wiped(Boss.EntombedSentinels)
             .Wipe());
 
         Given.IOpenedLog(log).IOpenedPull(Dungeon.TheRookery, number: 1);
 
         Then.TheKillsAreOf(Soulcoiler);
+    }
+
+    [Fact]
+    public void Between_bosses_a_key_draws_nothing()
+    {
+        // Half of a keystone run is trash. A line held flat across it at whatever the last boss was
+        // on is a claim about a fight nobody is having, so there is no line there at all.
+        var log = AParty().Keystone(Dungeon.TheRookery, level: 12, p => p
+            .Lasting(20.Minutes())
+            .At(5.Minutes()).Pulls(Soulcoiler)
+            .At(6.Minutes()).Deals("Nightblade", to: Soulcoiler, amount: 125_000_000)
+            .At(361.Seconds()).BossSwingsAt("Rockjaw", 200_000)
+            .At(7.Minutes()).Downs(Soulcoiler)
+            .Kill());
+
+        Given.IOpenedLog(log).IOpenedPull(Dungeon.TheRookery, number: 1);
+
+        Then.TheLineSaysNothingAt("boss", 1.Minutes())
+            .TheLineReadsAt("boss", 390.Seconds(), "boss 25% down")
+            .TheLineReadsAt("boss", 7.Minutes(), "boss 100% down")
+            .TheLineSaysNothingAt("boss", 10.Minutes());
     }
 
     [Fact]

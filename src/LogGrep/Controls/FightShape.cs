@@ -286,16 +286,32 @@ public sealed class FightShape : FrameworkElement
         var pen = new Pen(trace.Paint, 1.5);
         pen.Freeze();
 
-        var figure = new PathFigure { StartPoint = At(line, 0, width, height, peak, seconds) };
-        for (int i = 1; i < line.Count; i++)
+        // One figure per unbroken stretch. A gap means the line is about something that was not
+        // happening then, and drawing across it would invent a fight between two bosses.
+        var path = new PathGeometry();
+        PathFigure? figure = null;
+
+        for (int i = 0; i < line.Count; i++)
         {
-            figure.Segments.Add(new LineSegment(At(line, i, width, height, peak, seconds), true));
+            if (double.IsNaN(line[i]))
+            {
+                figure = null;
+                continue;
+            }
+
+            var point = At(line, i, width, height, peak, seconds);
+            if (figure == null)
+            {
+                figure = new PathFigure { StartPoint = point };
+                path.Figures.Add(figure);
+            }
+            else
+            {
+                figure.Segments.Add(new LineSegment(point, true));
+            }
         }
 
-        var path = new PathGeometry();
-        path.Figures.Add(figure);
         path.Freeze();
-
         dc.DrawGeometry(null, pen, path);
     }
 

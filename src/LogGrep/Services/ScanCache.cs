@@ -33,7 +33,7 @@ public sealed class ScanCache
     /// migration and there should not be: the log is still on disk, and reading it again is twelve
     /// seconds against the risk of showing somebody half-old numbers.
     /// </summary>
-    public const int Schema = 3;
+    public const int Schema = 4;
 
     private static readonly JsonSerializerOptions Format = new()
     {

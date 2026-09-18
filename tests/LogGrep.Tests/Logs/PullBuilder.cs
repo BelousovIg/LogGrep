@@ -10,6 +10,8 @@ public sealed class PullBuilder
     private readonly CombatLogBuilder _log;
     private readonly DateTime _start;
     private TimeSpan _at;
+    private Boss? _fighting;
+    private TimeSpan _opened;
 
     internal PullBuilder(CombatLogBuilder log, DateTime start)
     {
@@ -59,26 +61,34 @@ public sealed class PullBuilder
     }
 
     /// <summary>
-    /// A boss going down inside a keystone run.
+    /// The group reaching a boss inside a keystone run.
     ///
     /// The game writes a boss fight inside a key exactly as it writes one outside it - its own
     /// encounter block - and the run swallows both, which is why a key is one row holding three
-    /// fights rather than three rows.
+    /// fights rather than three rows. Written in two halves, opened here and closed by
+    /// <see cref="Downs"/> or <see cref="Wiped"/>, so whatever happens during the fight is written
+    /// between them: the app reads the file in the order it was written, not by the clock on each
+    /// line.
     /// </summary>
-    public PullBuilder Downs(Boss boss, TimeSpan lasting)
+    public PullBuilder Pulls(Boss boss)
     {
+        _fighting = boss;
+        _opened = _at;
         _log.Line(_start + _at, $"ENCOUNTER_START,{(int)boss},\"{boss.NameOf()}\",8,5,1");
-        _log.Line(_start + _at + lasting,
-            $"ENCOUNTER_END,{(int)boss},\"{boss.NameOf()}\",8,5,1,{(long)lasting.TotalMilliseconds}");
         return this;
     }
 
-    /// <summary>A boss inside a keystone run that the group did not put down.</summary>
-    public PullBuilder Wiped(Boss boss, TimeSpan lasting)
+    /// <summary>That boss going down, at the moment the clock is on.</summary>
+    public PullBuilder Downs(Boss boss) => Ends(boss, won: true);
+
+    /// <summary>That boss still standing when the group gave up on it.</summary>
+    public PullBuilder Wiped(Boss boss) => Ends(boss, won: false);
+
+    private PullBuilder Ends(Boss boss, bool won)
     {
-        _log.Line(_start + _at, $"ENCOUNTER_START,{(int)boss},\"{boss.NameOf()}\",8,5,1");
-        _log.Line(_start + _at + lasting,
-            $"ENCOUNTER_END,{(int)boss},\"{boss.NameOf()}\",8,5,0,{(long)lasting.TotalMilliseconds}");
+        var length = _fighting == boss ? _at - _opened : TimeSpan.Zero;
+        _log.Line(_start + _at,
+            $"ENCOUNTER_END,{(int)boss},\"{boss.NameOf()}\",8,5,{(won ? 1 : 0)},{(long)length.TotalMilliseconds}");
         return this;
     }
 
@@ -206,6 +216,19 @@ public sealed class PullBuilder
         _log.Took(target, amount);
         _log.Line(_start + _at,
             $"SWING_DAMAGE,{_log.Units(_log.BossName, target)},{_log.Advanced(_log.BossName)}," +
+            $"{amount},0,1,0,0,0,nil,nil,nil");
+        return this;
+    }
+
+    /// <summary>
+    /// A swing from one of the other creatures of a council. Its own health rides on the line, the
+    /// same way the boss states its own - a creature that never acts never says what it has left.
+    /// </summary>
+    public PullBuilder EnemySwingsAt(Boss enemy, string target, long amount)
+    {
+        _log.Took(target, amount);
+        _log.Line(_start + _at,
+            $"SWING_DAMAGE,{_log.Units(enemy.NameOf(), target)},{_log.Advanced(enemy.NameOf())}," +
             $"{amount},0,1,0,0,0,nil,nil,nil");
         return this;
     }

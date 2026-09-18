@@ -65,8 +65,23 @@ public sealed class Trace : ObservableObject
     /// <summary>Turns one of its values into the words the hover shows.</summary>
     public Func<double, string> Say { get; }
 
-    /// <summary>The highest the drawn line ever reaches, which is what it is drawn against.</summary>
-    public double Peak => Drawn.Count == 0 ? 0 : Math.Max(Drawn.Max(), double.Epsilon);
+    /// <summary>
+    /// The highest the drawn line ever reaches, which is what it is drawn against. Gaps are not
+    /// values: a line that is not being drawn at that second cannot set the scale for the rest.
+    /// </summary>
+    public double Peak
+    {
+        get
+        {
+            double peak = 0;
+            foreach (double v in Drawn)
+            {
+                if (!double.IsNaN(v) && v > peak) peak = v;
+            }
+
+            return Math.Max(peak, double.Epsilon);
+        }
+    }
 
     /// <summary>
     /// A trailing mean, so a point still means "the seconds up to here" and nothing is dragged
@@ -96,7 +111,15 @@ public sealed class Trace : ObservableObject
         set => Set(ref _on, value);
     }
 
-    /// <summary>What this line says at that second, or nothing when it does not reach that far.</summary>
+    /// <summary>
+    /// What this line says at that second, or nothing when it does not reach that far - or when it
+    /// is not being drawn there at all, which is a gap rather than a zero.
+    /// </summary>
     public string At(int second)
-        => Values.Count == 0 ? string.Empty : Name + " " + Say(Values[Math.Clamp(second, 0, Values.Count - 1)]);
+    {
+        if (Values.Count == 0) return string.Empty;
+
+        double value = Values[Math.Clamp(second, 0, Values.Count - 1)];
+        return double.IsNaN(value) ? string.Empty : Name + " " + Say(value);
+    }
 }
