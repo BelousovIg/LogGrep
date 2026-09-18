@@ -16,7 +16,7 @@ namespace LogGrep.ViewModels;
 public static class ChartReadout
 {
     public static IReadOnlyList<string> At(IReadOnlyList<Trace>? traces, IReadOnlyList<int>? deaths,
-        IReadOnlyList<BossKill>? kills, int second)
+        IReadOnlyList<BossKill>? kills, int second, IReadOnlyList<PhaseStart>? phases = null)
     {
         var said = new List<string> { "at " + Display.Clock(TimeSpan.FromSeconds(second)) };
 
@@ -37,6 +37,11 @@ public static class ChartReadout
         foreach (var kill in kills ?? Array.Empty<BossKill>())
         {
             if (Math.Abs(kill.Second - second) <= 1) said.Add(kill.Name + " died here");
+        }
+
+        foreach (var phase in phases ?? Array.Empty<PhaseStart>())
+        {
+            if (Math.Abs(phase.Second - second) <= 1) said.Add("phase " + phase.Number + " starts here");
         }
 
         return said;

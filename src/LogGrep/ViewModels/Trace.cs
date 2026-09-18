@@ -2,6 +2,7 @@ using System.Windows.Media;
 
 namespace LogGrep.ViewModels;
 
+
 /// <summary>
 /// One line on the shape of an attempt, and whether it is being drawn.
 ///

@@ -210,9 +210,11 @@ public sealed class PullViewModel : ObservableObject
     public IReadOnlyList<int> Deaths
         => Shown.SelectMany(p => p.Deaths).Select(d => (int)d.At.TotalSeconds).OrderBy(s => s).ToArray();
 
+    /// <summary>Where each phase after the first began, as the scan read them off the boss.</summary>
+    public IReadOnlyList<PhaseStart> Phases => Record.Phases;
     /// <summary>What the chart says at one second, which is what its hover shows.</summary>
     public string Readout(int second)
-        => string.Join(Environment.NewLine, ChartReadout.At(Traces, Deaths, Kills, second));
+        => string.Join(Environment.NewLine, ChartReadout.At(Traces, Deaths, Kills, second, Phases));
 
     /// <summary>
     /// Every boss that went down in this attempt, marked on the chart where it happened.

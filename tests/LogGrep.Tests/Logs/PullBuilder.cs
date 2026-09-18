@@ -233,6 +233,24 @@ public sealed class PullBuilder
         return this;
     }
 
+    /// <summary>
+    /// The boss swinging steadily at somebody. Its own health rides on every one of those lines, so
+    /// this is also how a stretch where nothing hurt it is written: it keeps saying the same figure.
+    /// </summary>
+    public PullBuilder BossSwingingAt(string target, TimeSpan from, TimeSpan to, TimeSpan every, long amount = 1000)
+    {
+        var was = _at;
+
+        for (var at = from; at <= to; at += every)
+        {
+            _at = at;
+            BossSwingsAt(target, amount);
+        }
+
+        _at = was;
+        return this;
+    }
+
     /// <summary>The killing blow and the death itself, which is what a death breakdown is built from.</summary>
     public PullBuilder Kills(string target, Ability with = Ability.BlastWave, long amount = 900_000)
     {

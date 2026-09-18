@@ -83,6 +83,21 @@ public sealed class PullRecord
     /// </summary>
     public IReadOnlyList<BossKill> Kills { get; set; } = Array.Empty<BossKill>();
 
+    /// <summary>
+    /// Where each phase after the first began.
+    ///
+    /// The log never says "phase two". What it does say is that the boss kept stating the same
+    /// health for three minutes while the group kept hitting it - a boss that cannot be hurt, which
+    /// is an intermission, and the two edges of it are the two moments the fight changed. On the
+    /// real evening this reads as a wall at 55% on every Nek'zali attempt that got that far, and
+    /// nothing at all on the ones that never reached it.
+    ///
+    /// It finds the phases that gate the health bar, which is most of them and not all of them. A
+    /// fight that swaps one body for another without ever stopping the bar leaves nothing here, and
+    /// a mark invented for it would be a guess wearing a measurement's clothes.
+    /// </summary>
+    public IReadOnlyList<PhaseStart> Phases { get; set; } = Array.Empty<PhaseStart>();
+
     /// <summary>What the group dealt and healed, second by second.</summary>
     public IReadOnlyList<long> DamageLine { get; set; } = Array.Empty<long>();
 

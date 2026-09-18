@@ -621,6 +621,14 @@ public sealed class Verification
     public void TheShapeOffers(params string[] expected)
         => Assert.Equal(expected, _page.Pull.Traces.Select(t => t.Name).ToArray());
 
+    /// <summary>Where the chart says a phase began, and which one it calls it.</summary>
+    public void ThePhasesBeginAt(params TimeSpan[] when)
+        => Assert.Equal(when.Select(w => (int)w.TotalSeconds).ToArray(),
+            _page.Pull.Phases.Select(p => p.Second).ToArray());
+
+    public void ThePhasesAreNumbered(params int[] expected)
+        => Assert.Equal(expected, _page.Pull.Phases.Select(p => p.Number).ToArray());
+
     /// <summary>What one line of the chart says at that second, in its own words.</summary>
     public void TheLineReadsAt(string name, TimeSpan when, string expected)
         => Assert.Equal(expected, Line(name).At((int)when.TotalSeconds));

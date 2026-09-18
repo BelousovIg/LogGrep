@@ -650,6 +650,18 @@ public sealed class Then
         return this;
     }
 
+    public Then ThePhasesBeginAt(params TimeSpan[] when)
+    {
+        _check.ThePhasesBeginAt(when);
+        return this;
+    }
+
+    public Then ThePhasesAreNumbered(params int[] expected)
+    {
+        _check.ThePhasesAreNumbered(expected);
+        return this;
+    }
+
     public Then TheLineReadsAt(string name, TimeSpan when, string expected)
     {
         _check.TheLineReadsAt(name, when, expected);

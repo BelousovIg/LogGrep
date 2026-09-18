@@ -1,4 +1,4 @@
-﻿<Window x:Class="LogGrep.MainWindow"
+<Window x:Class="LogGrep.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:LogGrep.ViewModels"
@@ -758,6 +758,7 @@
                                                     Traces="{Binding Traces}"
                                                     Deaths="{Binding Deaths}"
                                                     Kills="{Binding Kills}"
+                                                    Phases="{Binding Phases}"
                                                     From="{Binding From, Mode=TwoWay}"
                                                     To="{Binding To, Mode=TwoWay}" />
 

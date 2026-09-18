@@ -34,6 +34,12 @@ public sealed class FightShape : FrameworkElement
     /// <summary>The kill mark. Light blue, which is the one colour no line on this chart uses.</summary>
     private static readonly Brush Crown = Frozen(new SolidColorBrush(Color.FromRgb(0x8F, 0xC7, 0xF0)));
 
+    /// <summary>A phase boundary: a dotted upright, so it reads as a divider and not as a line.</summary>
+    private static readonly Pen Divide = Frozen(new Pen(
+        new SolidColorBrush(Color.FromRgb(0x6A, 0x6E, 0x78)), 1) { DashStyle = new DashStyle(new double[] { 3, 3 }, 0) });
+
+    private static readonly Brush Marker = Frozen(new SolidColorBrush(Color.FromRgb(0x9A, 0x9F, 0xAA)));
+
     public static readonly DependencyProperty TracesProperty = DependencyProperty.Register(
         nameof(Traces), typeof(IReadOnlyList<Trace>), typeof(FightShape),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnTracesChanged));
@@ -44,6 +50,10 @@ public sealed class FightShape : FrameworkElement
 
     public static readonly DependencyProperty KillsProperty = DependencyProperty.Register(
         nameof(Kills), typeof(IReadOnlyList<BossKill>), typeof(FightShape),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty PhasesProperty = DependencyProperty.Register(
+        nameof(Phases), typeof(IReadOnlyList<PhaseStart>), typeof(FightShape),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public static readonly DependencyProperty FromProperty = DependencyProperty.Register(
@@ -94,6 +104,13 @@ public sealed class FightShape : FrameworkElement
         set => SetValue(DeathsProperty, value);
     }
 
+    /// <summary>Where each phase after the first began.</summary>
+    public IReadOnlyList<PhaseStart>? Phases
+    {
+        get => (IReadOnlyList<PhaseStart>?)GetValue(PhasesProperty);
+        set => SetValue(PhasesProperty, value);
+    }
+
     /// <summary>Every boss that went down in this attempt - one for a boss pull, several for a key.</summary>
     public IReadOnlyList<BossKill>? Kills
     {
@@ -119,6 +136,19 @@ public sealed class FightShape : FrameworkElement
         }
 
         double seconds = Longest();
+
+        // Where the fight changed, under everything else: a phase is the ground the lines are drawn
+        // on rather than one of them.
+        if (seconds > 0)
+        {
+            foreach (var phase in Phases ?? Array.Empty<PhaseStart>())
+            {
+                double x = Math.Round(Math.Clamp(phase.Second / seconds, 0, 1) * width) + 0.5;
+                dc.DrawLine(Divide, new Point(x, 0), new Point(x, height));
+                dc.DrawText(Numbered("P" + phase.Number), new Point(x + 3, 1));
+            }
+        }
+
         for (double t = 60; t < seconds; t += 60)
         {
             double x = Math.Round(t / seconds * width) + 0.5;
@@ -187,7 +217,7 @@ public sealed class FightShape : FrameworkElement
 
         int at = (int)Math.Round(Math.Clamp(e.GetPosition(this).X / ActualWidth, 0, 1) * seconds);
 
-        ToolTip = string.Join(Environment.NewLine, ChartReadout.At(traces, Deaths, Kills, at));
+        ToolTip = string.Join(Environment.NewLine, ChartReadout.At(traces, Deaths, Kills, at, Phases));
     }
 
     /// <summary>
@@ -328,6 +358,11 @@ public sealed class FightShape : FrameworkElement
 
         return traces.Max(t => t.Drawn.Count) - 1;
     }
+
+    /// <summary>A phase's number, in the one colour on this chart that belongs to no line.</summary>
+    private static FormattedText Numbered(string text)
+        => new(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+            new Typeface("Segoe UI"), 10, Marker, 96);
 
     private static FormattedText Small(string text)
         => new(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,

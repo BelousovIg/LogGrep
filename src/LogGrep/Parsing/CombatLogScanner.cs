@@ -563,6 +563,7 @@ public sealed class CombatLogScanner
 
             // A keystone run collected one of these per boss as it went; a boss pull is its own
             // single kill, and the end of the fight is the second it is certainly at.
+            Phases = Walls(segment.Fights, (int)duration.TotalSeconds),
             Kills = segment.Kills.Count > 0
                 ? segment.Kills.ToArray()
                 : success ? new[] { new BossKill((int)duration.TotalSeconds, segment.Name) } : Array.Empty<BossKill>(),
@@ -1355,6 +1356,60 @@ public sealed class CombatLogScanner
     }
 
     private readonly record struct Stated(int Second, long Left);
+
+    /// <summary>How long a bar has to stand still before it is an intermission rather than a lull.</summary>
+    private const int Wall = 20;
+
+    /// <summary>
+    /// Where the fight changed, read off the one thing the log will say about it.
+    ///
+    /// A boss states its health on everything that lands on it, so a stretch where it keeps saying
+    /// the same figure is a boss that cannot be hurt - an intermission - and the two edges of that
+    /// stretch are the two moments the fight changed. Saying nothing is not the same as saying the
+    /// same thing twice, which is why this is read here rather than off the finished line: from the
+    /// outside a quiet minute and an immune minute look identical.
+    /// </summary>
+    private static IReadOnlyList<PhaseStart> Walls(List<BossFight> fights, int seconds)
+    {
+        var phases = new List<PhaseStart>();
+
+        foreach (var fight in fights)
+        {
+            var stated = fight.Foes.Values
+                .Where(f => f.Max * 2 >= fight.Biggest)
+                .SelectMany(f => f.At.Select(e => (Second: e.Key, Share: e.Value / (double)f.Max)))
+                .OrderBy(s => s.Second)
+                .ToArray();
+
+            if (stated.Length == 0) continue;
+
+            int from = 0;
+            int held = 1;
+
+            for (int i = 1; i < stated.Length; i++)
+            {
+                // The same figure again, give or take the rounding a share carries.
+                if (Math.Abs(stated[i].Share - stated[from].Share) <= 0.001)
+                {
+                    held++;
+                    continue;
+                }
+
+                // It moved. Whatever came before was a wall if it stood still long enough and the
+                // boss was saying so all the way through rather than being left alone.
+                if (held >= 5 && stated[i - 1].Second - stated[from].Second >= Wall)
+                {
+                    phases.Add(new PhaseStart(Math.Clamp(stated[from].Second, 0, seconds), phases.Count + 2));
+                    phases.Add(new PhaseStart(Math.Clamp(stated[i].Second, 0, seconds), phases.Count + 2));
+                }
+
+                from = i;
+                held = 1;
+            }
+        }
+
+        return phases.OrderBy(p => p.Second).ToArray();
+    }
 
     /// <summary>The stretches somebody was up for, from the pull opening or from getting back up.</summary>
     private static IEnumerable<(double From, double To)> Alive(List<(int Second, bool Up)> flips, double seconds)

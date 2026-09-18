@@ -240,6 +240,46 @@ public sealed class TheShapeOfAnAttempt : Scenario
     }
 
     [Fact]
+    public void A_stretch_where_the_boss_cannot_be_hurt_is_a_phase()
+    {
+        // The raid pushes it to a quarter, the boss goes untouchable for a minute while they deal
+        // with something else, and then the bar moves again. The log never says "phase two"; a
+        // health bar that stands still for a minute while twenty people are swinging says it.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(4.Minutes())
+            .At(10.Seconds()).Deals("Nightblade", to: Soulcoiler, amount: 125_000_000)
+            .At(11.Seconds()).BossSwingsAt("Rockjaw", 1000)
+            // The boss keeps swinging all the way through, and keeps saying the same health while
+            // it does - which is what an immune phase looks like from outside.
+            .BossSwingingAt("Rockjaw", from: 15.Seconds(), to: 2.Minutes(25), every: 5.Seconds())
+            .At(2.Minutes(30)).Deals("Nightblade", to: Soulcoiler, amount: 125_000_000)
+            .At(2.Minutes(31)).BossSwingsAt("Rockjaw", 1000)
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        // The bar stops at 0:11 and moves again at 2:31 - the two moments the fight changed.
+        Then.ThePhasesBeginAt(11.Seconds(), 2.Minutes(31))
+            .ThePhasesAreNumbered(2, 3);
+    }
+
+    [Fact]
+    public void A_fight_that_never_stalls_has_one_phase_and_no_marks()
+    {
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(10.Seconds()).Deals("Nightblade", to: Soulcoiler, amount: 125_000_000)
+            .At(11.Seconds()).BossSwingsAt("Rockjaw", 200_000)
+            .At(1.Minutes()).Deals("Nightblade", to: Soulcoiler, amount: 125_000_000)
+            .At(1.Minutes(1)).BossSwingsAt("Rockjaw", 200_000)
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        Then.ThePhasesBeginAt();
+    }
+
+    [Fact]
     public void A_line_switched_off_stops_answering_in_the_hover()
     {
         // Turning a switch off is somebody saying they are not asking about that line. A hover that

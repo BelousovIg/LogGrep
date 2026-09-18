@@ -106,6 +106,12 @@ public readonly record struct CastRecord(int SpellId, string Spell, bool Stopped
 /// <summary>A moment somebody went down or got back up.</summary>
 public readonly record struct Flip(int Second, bool Up);
 
+/// <summary>
+/// A phase of a fight after the first, and the second it began at. The first needs no entry: it
+/// starts where the fight does.
+/// </summary>
+public readonly record struct PhaseStart(int Second, int Number);
+
 /// <summary>A boss that went down, and the second of the attempt it happened in.</summary>
 public readonly record struct BossKill(int Second, string Name);
 
