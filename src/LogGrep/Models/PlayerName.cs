@@ -39,6 +39,18 @@ public static class PlayerName
         return dash <= 0 ? raw : raw[..dash];
     }
 
+    /// <summary>
+    /// Just the realm, readable: "Ivarpriest-BurningLegion-EU" becomes "Burning Legion". Empty when
+    /// the log wrote a bare name, which happens on lines it cut short.
+    /// </summary>
+    public static string Realm(string raw)
+    {
+        string whole = Format(raw);
+        int dash = whole.IndexOf(" - ", StringComparison.Ordinal);
+
+        return dash < 0 ? string.Empty : whole[(dash + 3)..];
+    }
+
     private static bool IsRegion(ReadOnlySpan<char> value)
     {
         foreach (string region in Regions)

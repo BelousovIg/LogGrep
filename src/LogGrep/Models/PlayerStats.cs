@@ -108,6 +108,16 @@ public sealed class PlayerStats
 {
     public required string Name { get; init; }
 
+    /// <summary>
+    /// The log's own identifier for this character. A name is what a person reads and what a realm
+    /// transfer or a rename changes; this does not, so it is what says a row from tonight and a row
+    /// from last month are the same character rather than two people.
+    ///
+    /// It identifies a character, not a human. Somebody bringing an alt is a second one of these,
+    /// and grouping those under one person is not something the log can do for us.
+    /// </summary>
+    public string Guid { get; init; } = string.Empty;
+
     /// <summary>Specialization ID from COMBATANT_INFO, 0 when the log did not report one.</summary>
     public int SpecId { get; set; }
 

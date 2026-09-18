@@ -59,6 +59,16 @@ public sealed class LogGrepPage
         "No player is being looked at. Look at one first.");
 
     /// <summary>Closes the app and opens it again, on the same disk - which is what a restart is.</summary>
+    public IReadOnlyList<PersonRowViewModel> People => ViewModel.People;
+
+    public PersonRowViewModel Person(string name)
+        => People.FirstOrDefault(p => p.Name == name)
+           ?? throw new InvalidOperationException(
+               $"'{name}' is not in the registry. It holds: " +
+               (People.Count == 0 ? "nobody" : string.Join(", ", People.Select(p => p.Name))));
+
+    public void MarkAsOurs(string name, bool ours) => Person(name).IsOurs = ours;
+
     public void Reopen()
     {
         _encounter = null;

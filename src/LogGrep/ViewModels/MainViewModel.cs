@@ -28,6 +28,8 @@ public sealed class MainViewModel : ObservableObject
     private CancellationTokenSource? _cancellation;
 
     private readonly OpenLogs _openLogs;
+    private readonly OurPeople _ourPeople;
+    private readonly HashSet<string> _ours;
     private bool _logsExpanded = true;
     private string _status = "Open a World of Warcraft combat log to begin.";
     private double _progress;
@@ -43,7 +45,11 @@ public sealed class MainViewModel : ObservableObject
     {
         _fileSystem = fileSystem;
         _exporter = new LogExporter(fileSystem);
-        _openLogs = new OpenLogs(fileSystem, new SettingsService(fileSystem).DataDirectory);
+
+        string data = new SettingsService(fileSystem).DataDirectory;
+        _openLogs = new OpenLogs(fileSystem, data);
+        _ourPeople = new OurPeople(fileSystem, data);
+        _ours = _ourPeople.Load().ToHashSet(StringComparer.Ordinal);
 
         OpenCommand = new RelayCommand(Open, () => !IsBusy);
         ExportCommand = new RelayCommand(Export, () => !IsBusy && SelectedPullCount > 0);
@@ -61,6 +67,29 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public ObservableCollection<EncounterViewModel> Encounters { get; } = new();
+
+    /// <summary>Every character any loaded log has ever mentioned, and which of them are ours.</summary>
+    public ObservableCollection<PersonRowViewModel> People { get; } = new();
+
+    public bool HasPeople => People.Count > 0;
+
+    /// <summary>
+    /// Marking nobody is not the same answer as marking nobody as ours. An untouched registry means
+    /// the question has not been asked yet, and until it is, everybody counts - which the window
+    /// says out loud rather than leaving an analysis mysteriously empty.
+    /// </summary>
+    public bool NobodyIsMarked => _ours.Count == 0;
+
+    public string PeopleSummary => People.Count == 0
+        ? "No logs read yet"
+        : _ours.Count == 0
+            ? Display.Count(People.Count) + " characters, none marked - all of them count as ours"
+            : Display.Count(_ours.Count) + " of " + Display.Count(People.Count) + " marked as ours";
+
+    /// <summary>The characters an analysis is about: those marked, or everybody when none are.</summary>
+    public IReadOnlyCollection<string> Ours => _ours.Count == 0
+        ? People.Select(p => p.Id).ToArray()
+        : _ours;
 
     /// <summary>Sort state of all three tables, handed down to the encounter and pull rows.</summary>
     public Sorting Sorting { get; } = new();
@@ -233,6 +262,7 @@ public sealed class MainViewModel : ObservableObject
             _groups.Clear();
             Findings = Array.Empty<Finding>();
             _reading = Reading.Nothing;
+            RebuildPeople(Array.Empty<PullRecord>());
             Status = "Open a log to start.";
             RaiseSelectionChanged();
             return Task.CompletedTask;
@@ -285,6 +315,7 @@ public sealed class MainViewModel : ObservableObject
         _groups.Clear();
         Findings = Array.Empty<Finding>();
         _reading = Reading.Nothing;
+        RebuildPeople(Array.Empty<PullRecord>());
 
         // A file that has gone since it was added keeps its row and says so. Removing it is then
         // somebody's decision rather than something the app did quietly on their behalf.
@@ -485,6 +516,37 @@ public sealed class MainViewModel : ObservableObject
         _groups.Clear();
 
         foreach (var pull in pulls) Place(pull);
+
+        RebuildPeople(pulls);
+    }
+
+    /// <summary>
+    /// The registry, rebuilt from everything that has been read. Only the marks survive between
+    /// runs; who somebody is and what they played is read back out of the logs each time.
+    /// </summary>
+    private void RebuildPeople(IReadOnlyList<PullRecord> pulls)
+    {
+        People.Clear();
+
+        foreach (var character in Models.People.In(pulls))
+        {
+            People.Add(new PersonRowViewModel(character, _ours.Contains(character.Guid), OnOursChanged));
+        }
+
+        OnPropertyChanged(nameof(HasPeople));
+        OnPropertyChanged(nameof(PeopleSummary));
+        OnPropertyChanged(nameof(NobodyIsMarked));
+    }
+
+    private void OnOursChanged(PersonRowViewModel person)
+    {
+        if (person.IsOurs) _ours.Add(person.Id);
+        else _ours.Remove(person.Id);
+
+        _ourPeople.Save(_ours);
+
+        OnPropertyChanged(nameof(PeopleSummary));
+        OnPropertyChanged(nameof(NobodyIsMarked));
     }
 
     private void Cancel() => _cancellation?.Cancel();

@@ -30,6 +30,8 @@ public sealed class TestMethods
 
     public void Reopen() => _page.Reopen();
 
+    public void MarkAsOurs(string name, bool ours) => _page.MarkAsOurs(name, ours);
+
     public void DeleteFile(string name) => _page.DeleteFile(name);
 
     public void WriteRule(Ability spell, string roles, string advice) => _page.WriteRule(spell, roles, advice);

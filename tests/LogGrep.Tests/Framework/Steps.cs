@@ -94,6 +94,18 @@ public sealed class When
         return this;
     }
 
+    public When IMarkAsOurs(string name)
+    {
+        _act.MarkAsOurs(name, ours: true);
+        return this;
+    }
+
+    public When IUnmarkAsOurs(string name)
+    {
+        _act.MarkAsOurs(name, ours: false);
+        return this;
+    }
+
     public When IReopenTheApp()
     {
         _act.Reopen();

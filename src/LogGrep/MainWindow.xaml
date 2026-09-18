@@ -137,8 +137,19 @@
 
         <ProgressBar Grid.Row="2" Minimum="0" Maximum="100" Value="{Binding Progress, Mode=OneWay}" />
 
+        <!-- The three things the window is for, kept apart. Browsing and cutting a log is one job,
+             reading a report is another, and saying who counts as ours is a third; one screen trying
+             to be all of them is how the table filled up with things nobody opened it to read. -->
+        <TabControl Grid.Row="3" Grid.RowSpan="2" Style="{StaticResource Screens}">
+            <TabItem Header="LOGS">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
         <!-- ===== table header ===== -->
-        <Border Grid.Row="3" Background="{StaticResource WindowBrush}" BorderBrush="{StaticResource LineBrush}"
+        <Border Grid.Row="0" Background="{StaticResource WindowBrush}" BorderBrush="{StaticResource LineBrush}"
                 BorderThickness="0,0,0,1" Padding="16,0,16,0" Height="34">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -180,7 +191,7 @@
         </Border>
 
         <!-- ===== encounters ===== -->
-        <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                       Padding="16,0,16,0">
             <ItemsControl ItemsSource="{Binding EncountersView}">
                 <ItemsControl.ItemsPanel>
@@ -672,6 +683,115 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+                </Grid>
+            </TabItem>
+
+            <!-- ===== the people the logs have seen ===== -->
+            <TabItem Header="PEOPLE">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource WindowBrush}" Padding="16,10,16,10">
+                        <TextBlock Style="{StaticResource MutedText}" Text="{Binding PeopleSummary}"
+                                   TextWrapping="Wrap" />
+                    </Border>
+
+                    <Border Grid.Row="1" Background="{StaticResource WindowBrush}"
+                            BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1"
+                            Padding="16,0,16,0" Height="30">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="46" />
+                                <ColumnDefinition Width="170" />
+                                <ColumnDefinition Width="170" />
+                                <ColumnDefinition Width="130" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="*" MinWidth="120" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Style="{StaticResource MutedText}" Text="OURS"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource MutedText}" Text="CHARACTER"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Style="{StaticResource MutedText}" Text="REALM"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="3" Style="{StaticResource MutedText}" Text="CLASS"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="4" Style="{StaticResource MutedText}" Text="ROLES PLAYED"
+                                       VerticalAlignment="Center"
+                                       ToolTip="More than one means they respecced. What they were is a property of each attempt, not of the person" />
+                            <TextBlock Grid.Column="5" Style="{StaticResource MutedText}" Text="PULLS"
+                                       HorizontalAlignment="Right" Margin="0,0,14,0" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="6" Style="{StaticResource MutedText}" Text="BOSSES"
+                                       HorizontalAlignment="Right" Margin="0,0,14,0" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="7" Style="{StaticResource MutedText}" Text="LAST SEEN"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled" Padding="16,0,16,0">
+                        <ItemsControl ItemsSource="{Binding People}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <VirtualizingStackPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource RowBrush}" CornerRadius="3"
+                                            Height="28" Margin="0,0,0,2">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="46" />
+                                                <ColumnDefinition Width="170" />
+                                                <ColumnDefinition Width="170" />
+                                                <ColumnDefinition Width="130" />
+                                                <ColumnDefinition Width="150" />
+                                                <ColumnDefinition Width="80" />
+                                                <ColumnDefinition Width="90" />
+                                                <ColumnDefinition Width="*" MinWidth="120" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <CheckBox Grid.Column="0" IsChecked="{Binding IsOurs, Mode=TwoWay}"
+                                                      VerticalAlignment="Center"
+                                                      ToolTip="Whether this character is one of ours" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource MutedText}"
+                                                       Foreground="{Binding ClassBrush}"
+                                                       Text="{Binding Name}" TextTrimming="CharacterEllipsis"
+                                                       Margin="0,0,10,0" ToolTip="{Binding FullName}" />
+                                            <TextBlock Grid.Column="2" Style="{StaticResource MutedText}"
+                                                       Text="{Binding Realm}" TextTrimming="CharacterEllipsis"
+                                                       Margin="0,0,10,0" />
+                                            <TextBlock Grid.Column="3" Style="{StaticResource MutedText}"
+                                                       Text="{Binding ClassName}" TextTrimming="CharacterEllipsis"
+                                                       Margin="0,0,10,0" />
+                                            <TextBlock Grid.Column="4" Style="{StaticResource MutedText}"
+                                                       Text="{Binding RolesText}" TextTrimming="CharacterEllipsis"
+                                                       Margin="0,0,10,0" ToolTip="{Binding SpecsText}" />
+                                            <TextBlock Grid.Column="5" Style="{StaticResource NumberText}"
+                                                       Text="{Binding PullsText}" />
+                                            <TextBlock Grid.Column="6" Style="{StaticResource NumberText}"
+                                                       Text="{Binding EncountersText}" />
+                                            <TextBlock Grid.Column="7" Style="{StaticResource MutedText}"
+                                                       Text="{Binding LastSeenText}"
+                                                       ToolTip="{Binding SeenTooltip}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
         <Border Grid.Row="5" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}"
                 BorderThickness="0,1,0,0" Padding="16,12">
             <Grid>

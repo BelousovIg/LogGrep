@@ -536,6 +536,48 @@ public sealed class Then
         return this;
     }
 
+    public Then PeopleAreListed(params string[] expected)
+    {
+        _check.PeopleAreListed(expected);
+        return this;
+    }
+
+    public Then PersonIsOn(string name, string realm)
+    {
+        _check.PersonIsOn(name, realm);
+        return this;
+    }
+
+    public Then PersonPlayed(string name, string expected)
+    {
+        _check.PersonPlayed(name, expected);
+        return this;
+    }
+
+    public Then PersonWasInPulls(string name, string expected)
+    {
+        _check.PersonWasInPulls(name, expected);
+        return this;
+    }
+
+    public Then PersonIsOurs(string name, bool expected)
+    {
+        _check.PersonIsOurs(name, expected);
+        return this;
+    }
+
+    public Then OursAre(params string[] expected)
+    {
+        _check.OursAre(expected);
+        return this;
+    }
+
+    public Then TheRegistrySays(string expected)
+    {
+        _check.TheRegistrySays(expected);
+        return this;
+    }
+
     public Then PlayerScores(Axis axis, string expected)
     {
         _check.PlayerScores(axis, expected);

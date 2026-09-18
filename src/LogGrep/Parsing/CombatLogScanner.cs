@@ -375,6 +375,7 @@ public sealed class CombatLogScanner
             .Select(entry => new PlayerStats
             {
                 Name = entry.Value.Name,
+                Guid = entry.Value.Guid,
                 SpecId = segment.Specs.TryGetValue(entry.Key, out int spec) ? spec : 0,
                 Build = segment.Builds.TryGetValue(entry.Key, out ulong build) ? build : 0,
                 Damage = entry.Value.Damage,
@@ -898,7 +899,14 @@ public sealed class CombatLogScanner
         var name = FieldSplitter.Unquote(line.Slice(nameAt, nameLength));
         if (name.IsEmpty) return;
 
-        _open.Players[key] = new PlayerState { Name = Encoding.UTF8.GetString(name) };
+        // The GUID is kept as text as well as hashed. A name is what a person reads and what a
+        // transfer or a rename changes; this does not change, so it is what says two rows a month
+        // apart are the same character. One string per player per attempt costs nothing.
+        _open.Players[key] = new PlayerState
+        {
+            Name = Encoding.UTF8.GetString(name),
+            Guid = Encoding.UTF8.GetString(id),
+        };
     }
 
     private static ulong Hash(ReadOnlySpan<byte> value)
@@ -1023,6 +1031,9 @@ public sealed class CombatLogScanner
     private sealed class PlayerState
     {
         public required string Name { get; init; }
+
+        /// <summary>The log's own identifier for this character, which nothing about them changes.</summary>
+        public required string Guid { get; init; }
         public long Damage { get; set; }
         public long Healing { get; set; }
         public long DamageTaken { get; set; }

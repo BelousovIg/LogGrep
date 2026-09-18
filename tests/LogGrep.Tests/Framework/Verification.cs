@@ -485,6 +485,35 @@ public sealed class Verification
 
     private string What() => "Findings: " + string.Join(", ", _page.Findings.Select(f => f.Line));
 
+    // The registry of people.
+
+    /// <summary>Everybody the loaded logs have seen, most attempts first.</summary>
+    public void PeopleAreListed(params string[] expected)
+        => Assert.Equal(expected, _page.People.Select(p => p.Name).ToArray());
+
+    /// <summary>Which realm the registry has them on, since a transfer changes it and not them.</summary>
+    public void PersonIsOn(string name, string realm)
+        => Assert.Equal(realm, _page.Person(name).Realm);
+
+    /// <summary>Every role they were seen in. Two of them is a respec, not a mistake in the data.</summary>
+    public void PersonPlayed(string name, string expected)
+        => Assert.Equal(expected, _page.Person(name).RolesText);
+
+    public void PersonWasInPulls(string name, string expected)
+        => Assert.Equal(expected, _page.Person(name).PullsText);
+
+    public void PersonIsOurs(string name, bool expected)
+        => Assert.True(expected == _page.Person(name).IsOurs,
+            name + " should " + (expected ? "" : "not ") + "be marked as ours.");
+
+    /// <summary>Who an analysis would be about: those marked, or everybody when none are.</summary>
+    public void OursAre(params string[] expected)
+        => Assert.Equal(expected.OrderBy(n => n, StringComparer.Ordinal).ToArray(),
+            _page.People.Where(p => _page.ViewModel.Ours.Contains(p.Id))
+                .Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal).ToArray());
+
+    public void TheRegistrySays(string expected) => Assert.Equal(expected, _page.ViewModel.PeopleSummary);
+
     // The card, the lane, and what the attempt cost.
 
     /// <summary>One of the four axes on a player row, exactly as the cell prints it.</summary>

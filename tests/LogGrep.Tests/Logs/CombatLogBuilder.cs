@@ -6,10 +6,21 @@ namespace LogGrep.Tests.Logs;
 /// <summary>One member of the group, named rather than numbered.</summary>
 public sealed record Fighter(string Name, Spec Spec)
 {
-    /// <summary>The log spells a character as Name-Realm; the app is expected to split that back apart.</summary>
-    public string Raw => Name + "-Doomhammer";
+    /// <summary>
+    /// Who the character is, when that is not what they are called. The game gives a character an
+    /// identifier that a rename or a realm transfer does not touch, so a scenario about somebody
+    /// coming back under a new name sets this to the old one and keeps everything else different.
+    /// </summary>
+    public string Identity { get; init; } = string.Empty;
 
-    public string Guid => "Player-1-" + Math.Abs(Name.GetHashCode()).ToString("X8", CultureInfo.InvariantCulture);
+    /// <summary>The realm they are on, since a transfer changes that too.</summary>
+    public string Realm { get; init; } = "Doomhammer";
+
+    /// <summary>The log spells a character as Name-Realm; the app is expected to split that back apart.</summary>
+    public string Raw => Name + "-" + Realm;
+
+    public string Guid => "Player-1-" + Math.Abs((Identity.Length > 0 ? Identity : Name).GetHashCode())
+        .ToString("X8", CultureInfo.InvariantCulture);
 }
 
 /// <summary>
