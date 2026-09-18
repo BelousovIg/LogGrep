@@ -15,11 +15,14 @@ public sealed class Trace : ObservableObject
 {
     private bool _on;
 
-    public Trace(string name, Color colour, IReadOnlyList<double> values, Func<double, string> say, bool on)
+    public Trace(string name, Color colour, IReadOnlyList<double> values, Func<double, string> say, bool on,
+        int smooth = 1)
     {
         Name = name;
         Colour = colour;
         Values = values;
+        Drawn = Smoothed(values, smooth);
+        Smoothing = smooth;
         Say = say;
         _on = on;
 
@@ -34,14 +37,58 @@ public sealed class Trace : ObservableObject
 
     public Brush Paint { get; }
 
-    /// <summary>The line itself, one point a second, in whatever unit it is about.</summary>
+    /// <summary>
+    /// The line itself, one point a second, in whatever unit it is about. A point at 1:30 is
+    /// everything that happened in the second up to 1:30, which is what somebody reading a point on
+    /// a chart means by it.
+    /// </summary>
     public IReadOnlyList<double> Values { get; }
+
+    /// <summary>
+    /// The same line as it is drawn.
+    ///
+    /// A rate measured in single seconds is spikes: one crit lands and the line jumps to three times
+    /// what the fight was doing, which says something about that swing and nothing about the fight.
+    /// So the rates are drawn as a rolling mean over the last few seconds, and the hover still reads
+    /// the exact second - the picture is for the shape, the hover is for the number.
+    ///
+    /// Lines that are a state rather than a rate - the enemy's health, how many are up - are not
+    /// smoothed: there is nothing noisy about them, and a mean of a headcount is not a headcount.
+    /// </summary>
+    public IReadOnlyList<double> Drawn { get; }
+
+    /// <summary>Over how many seconds the drawn line is averaged; one means it is not.</summary>
+    public int Smoothing { get; }
+
+    public bool IsSmoothed => Smoothing > 1;
 
     /// <summary>Turns one of its values into the words the hover shows.</summary>
     public Func<double, string> Say { get; }
 
-    /// <summary>The highest it ever reaches, which is what it is drawn against.</summary>
-    public double Peak => Values.Count == 0 ? 0 : Math.Max(Values.Max(), double.Epsilon);
+    /// <summary>The highest the drawn line ever reaches, which is what it is drawn against.</summary>
+    public double Peak => Drawn.Count == 0 ? 0 : Math.Max(Drawn.Max(), double.Epsilon);
+
+    /// <summary>
+    /// A trailing mean, so a point still means "the seconds up to here" and nothing is dragged
+    /// earlier than it happened. The first seconds average over the few there are.
+    /// </summary>
+    private static IReadOnlyList<double> Smoothed(IReadOnlyList<double> values, int over)
+    {
+        if (over <= 1 || values.Count == 0) return values;
+
+        var line = new double[values.Count];
+        double running = 0;
+
+        for (int i = 0; i < values.Count; i++)
+        {
+            running += values[i];
+            if (i >= over) running -= values[i - over];
+
+            line[i] = running / Math.Min(i + 1, over);
+        }
+
+        return line;
+    }
 
     public bool IsOn
     {

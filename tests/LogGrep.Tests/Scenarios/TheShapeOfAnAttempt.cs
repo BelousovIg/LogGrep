@@ -125,6 +125,55 @@ public sealed class TheShapeOfAnAttempt : Scenario
     }
 
     [Fact]
+    public void A_point_on_a_line_is_the_second_up_to_it()
+    {
+        // Two hits inside the same second, neither of them on a whole second. What somebody reading
+        // a point at 0:11 means by it is "the second up to 0:11", and both of these are in it - the
+        // other way round has a value at a moment describing a second that has not happened yet.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(10.4.Seconds()).Deals("Nightblade", to: Soulcoiler, amount: 600_000)
+            .At(10.6.Seconds()).Deals("Nightblade", to: Soulcoiler, amount: 600_000)
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        Then.TheLineReadsAt("damage", 11.Seconds(), "damage 1.2M/s")
+            .TheLineReadsAt("damage", 10.Seconds(), "damage —/s");
+    }
+
+    [Fact]
+    public void A_rate_is_drawn_smoothed_and_read_exact()
+    {
+        // One burst in one second is a spike that says something about that swing and nothing about
+        // the fight, so the line is drawn as a rolling mean over five seconds - 1.2M spread over the
+        // five reads as 240K - while the hover still answers for the second it is on.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(10.Seconds()).Deals("Nightblade", to: Soulcoiler, amount: 1_200_000)
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        Then.TheLineReadsAt("damage", 10.Seconds(), "damage 1.2M/s")
+            .TheLineIsDrawnAt("damage", 10.Seconds(), "240K/s");
+    }
+
+    [Fact]
+    public void A_headcount_is_not_smoothed_because_a_mean_of_a_headcount_is_not_a_headcount()
+    {
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
+            .At(30.Seconds()).Kills("Nightblade")
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        Then.TheLineIsDrawnAt("standing", 31.Seconds(), "2 up");
+    }
+
+    [Fact]
     public void A_line_switched_off_stops_answering_in_the_hover()
     {
         // Turning a switch off is somebody saying they are not asking about that line. A hover that

@@ -279,7 +279,7 @@ public sealed class FightShape : FrameworkElement
 
     private static void Draw(DrawingContext dc, Trace trace, double width, double height, double seconds)
     {
-        var line = trace.Values;
+        var line = trace.Drawn;
         if (line.Count < 2) return;
 
         double peak = trace.Peak;
@@ -310,7 +310,7 @@ public sealed class FightShape : FrameworkElement
         var traces = Traces;
         if (traces == null || traces.Count == 0) return 0;
 
-        return traces.Max(t => t.Values.Count) - 1;
+        return traces.Max(t => t.Drawn.Count) - 1;
     }
 
     private static FormattedText Small(string text)

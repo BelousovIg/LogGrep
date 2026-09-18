@@ -612,6 +612,25 @@ public sealed class Verification
     public void TheShapeOffers(params string[] expected)
         => Assert.Equal(expected, _page.Pull.Traces.Select(t => t.Name).ToArray());
 
+    /// <summary>What one line of the chart says at that second, in its own words.</summary>
+    public void TheLineReadsAt(string name, TimeSpan when, string expected)
+        => Assert.Equal(expected, Line(name).At((int)when.TotalSeconds));
+
+    /// <summary>Where the drawn line sits at that second, which is the smoothed value rather than the exact one.</summary>
+    public void TheLineIsDrawnAt(string name, TimeSpan when, string expected)
+    {
+        var line = Line(name);
+        int at = Math.Clamp((int)when.TotalSeconds, 0, Math.Max(0, line.Drawn.Count - 1));
+
+        Assert.Equal(expected, line.Say(line.Drawn[at]));
+    }
+
+    private Trace Line(string name)
+        => _page.Pull.Traces.FirstOrDefault(t => t.Name == name)
+           ?? throw new InvalidOperationException(
+               "'" + name + "' is not a line on this chart. It draws: " +
+               string.Join(", ", _page.Pull.Traces.Select(t => t.Name)));
+
     public void TheShapeMarksDeathsAt(params int[] expected)
         => Assert.Equal(expected, _page.Pull.Deaths.ToArray());
 

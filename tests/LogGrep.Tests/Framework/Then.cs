@@ -650,6 +650,18 @@ public sealed class Then
         return this;
     }
 
+    public Then TheLineReadsAt(string name, TimeSpan when, string expected)
+    {
+        _check.TheLineReadsAt(name, when, expected);
+        return this;
+    }
+
+    public Then TheLineIsDrawnAt(string name, TimeSpan when, string expected)
+    {
+        _check.TheLineIsDrawnAt(name, when, expected);
+        return this;
+    }
+
     public Then TheShapeSaysAt(TimeSpan when, params string[] expected)
     {
         _check.TheShapeSaysAt(when, expected);

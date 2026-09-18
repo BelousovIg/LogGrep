@@ -228,6 +228,15 @@ public sealed class PullViewModel : ObservableObject
     /// </summary>
     public IReadOnlyList<BossKill> Kills => Record.Kills;
 
+    /// <summary>
+    /// How many seconds a drawn rate is averaged over.
+    ///
+    /// Five, because one second of damage is one swing: a crit lands and the line trebles, which
+    /// says something about that swing and nothing about the fight. Five smooths that out and still
+    /// shows a burst window starting and a phase change - anything longer starts hiding them.
+    /// </summary>
+    private const int Rolling = 5;
+
     private IReadOnlyList<Trace> BuildTraces()
     {
         var traces = new List<Trace>();
@@ -262,7 +271,7 @@ public sealed class PullViewModel : ObservableObject
         if (damage.Any(v => v > 0))
         {
             traces.Add(new Trace("damage", Color.FromRgb(0xE0, 0xA5, 0x54), damage,
-                v => Display.Rate(v) + "/s", IsOn("damage", false)));
+                v => Display.Rate(v) + "/s", IsOn("damage", false), smooth: Rolling));
         }
 
         var healing = everybody
@@ -272,7 +281,7 @@ public sealed class PullViewModel : ObservableObject
         if (healing.Any(v => v > 0))
         {
             traces.Add(new Trace("healing", Color.FromRgb(0x8E, 0x9B, 0xE8), healing,
-                v => Display.Rate(v) + "/s", IsOn("healing", false)));
+                v => Display.Rate(v) + "/s", IsOn("healing", false), smooth: Rolling));
         }
 
         return traces;

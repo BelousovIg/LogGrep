@@ -862,7 +862,12 @@ public sealed class CombatLogScanner
             // What the group put out, second by second - and what each of them put out, because a
             // rate over a whole attempt answers a question nobody asked once somebody is looking at
             // one minute of it.
-            int second = (int)Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds;
+            //
+            // The bucket a hit lands in is the second it ends, not the one it starts: the number at
+            // 1:30 is everything that happened in the second up to 1:30. That is what somebody
+            // reading a point on a chart means by it, and the other way round has the value at a
+            // moment describing a second that has not happened yet.
+            int second = (int)Math.Ceiling(Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds);
             _open!.Output(second, kind == EventKind.Heal ? 0 : amount, kind == EventKind.Heal ? amount : 0);
 
             if (actor != null)

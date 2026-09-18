@@ -714,7 +714,8 @@
                                                     <CheckBox IsChecked="{Binding IsOn, Mode=TwoWay}"
                                                               Margin="0,0,16,0"
                                                               Foreground="{Binding Paint}"
-                                                              Content="{Binding Name}" />
+                                                              Content="{Binding Name}"
+                                                              ToolTip="One point a second, each covering the second up to it. Rates are drawn as a rolling mean over five seconds, because one second of damage is one swing; the hover still reads the exact second." />
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
