@@ -234,6 +234,17 @@ public sealed class PullViewModel : ObservableObject
     /// Five, because one second of damage is one swing: a crit lands and the line trebles, which
     /// says something about that swing and nothing about the fight. Five smooths that out and still
     /// shows a burst window starting and a phase change - anything longer starts hiding them.
+    ///
+    /// Measured across widths on the real kill, 551 seconds of Nek'zali. Places where the line
+    /// doubled or halved between neighbouring seconds: 18 at one second, 7 at two, 2 at three, 1 at
+    /// five, and 1 at eight and ten. The biggest single-second step, as a share of the line's own
+    /// peak: 50%, 31%, 25%, 18%. Five is the knee - past it the jumps are gone and the width only
+    /// erodes the peak, 4.54M down to 4.19M by ten, while the median barely moves.
+    ///
+    /// A keystone run is rougher than this and stays rough: 437 jumps at one second and still 70 at
+    /// five, because a run is bursts of trash with gaps between them rather than one continuous
+    /// fight. Ten would halve that again. Left at five on purpose - one number for every chart is
+    /// worth more than a slightly better line on one kind of them.
     /// </summary>
     private const int Rolling = 5;
 
