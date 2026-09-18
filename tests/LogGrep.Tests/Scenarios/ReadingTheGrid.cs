@@ -45,6 +45,22 @@ public sealed class ReadingTheGrid : Scenario
     }
 
     [Fact]
+    public void A_row_carries_the_same_columns_an_attempt_does()
+    {
+        // Somebody reading down a night and somebody reading across one attempt are the same person,
+        // and should not have to learn two tables.
+        Given.IOpenedLog(ARaid().Pulls(2, Soulcoiler, Difficulty.Mythic, APull));
+
+        When.IAnalyseTheEncounter(Soulcoiler);
+
+        // 900K dealt once in each of two two-minute attempts: 1.8M over 240 seconds.
+        Then.TheGridRowReads("Nightblade", "Rogue", "Assassination", dps: "7.5K", hps: "—", dtps: "—")
+            .TheGridRowRoleMarkIs("Nightblade", Role.Damage)
+            .TheGridRowRoleMarkIs("Rockjaw", Role.Tank)
+            .TheGridRowRoleMarkIs("Sunwell", Role.Healer);
+    }
+
+    [Fact]
     public void Somebody_who_missed_an_attempt_is_not_shown_as_having_played_it_cleanly()
     {
         // Two attempts with the rogue, then one without them. A blank and a dot are different

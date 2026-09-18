@@ -611,15 +611,32 @@
 
                             <Grid Margin="0,0,0,4">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="{StaticResource ColAnalysisRole}" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerName}" MinWidth="60" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerClass}" MinWidth="60" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerSpec}" MinWidth="60" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDps}" MinWidth="60" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerHps}" MinWidth="60" />
+                                    <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" MinWidth="60" />
                                     <ColumnDefinition Width="60" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource MutedText}" Text="PLAYER" />
-                                <TextBlock Grid.Column="1" Style="{StaticResource MutedText}" Text="POOLS"
+                                <TextBlock Grid.Column="1" Style="{StaticResource MutedText}" Text="PLAYER" />
+                                <TextBlock Grid.Column="2" Style="{StaticResource MutedText}" Text="CLASS" />
+                                <TextBlock Grid.Column="3" Style="{StaticResource MutedText}" Text="SPEC" />
+                                <TextBlock Grid.Column="4" Style="{StaticResource MutedText}" Text="DPS"
+                                           HorizontalAlignment="Right" Margin="0,0,14,0"
+                                           ToolTip="Over the attempts they were in, not over the whole selection" />
+                                <TextBlock Grid.Column="5" Style="{StaticResource MutedText}" Text="HPS"
+                                           HorizontalAlignment="Right" Margin="0,0,14,0"
+                                           ToolTip="Over the attempts they were in, not over the whole selection" />
+                                <TextBlock Grid.Column="6" Style="{StaticResource MutedText}" Text="DTPS"
+                                           HorizontalAlignment="Right" Margin="0,0,14,0"
+                                           ToolTip="Damage taken per second, over the attempts they were in" />
+                                <TextBlock Grid.Column="7" Style="{StaticResource MutedText}" Text="POOLS"
                                            HorizontalAlignment="Right" Margin="0,0,10,0"
                                            ToolTip="What the whole selection cost them, in their own health pools" />
-                                <ItemsControl Grid.Column="2" ItemsSource="{Binding Analysis.Grid.Columns}">
+                                <ItemsControl Grid.Column="8" ItemsSource="{Binding Analysis.Grid.Columns}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <StackPanel Orientation="Horizontal" />
@@ -639,22 +656,48 @@
                                     <DataTemplate>
                                         <Grid Height="24">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="160" />
+                                                <ColumnDefinition Width="{StaticResource ColAnalysisRole}" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerName}" MinWidth="60" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerClass}" MinWidth="60" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerSpec}" MinWidth="60" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDps}" MinWidth="60" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerHps}" MinWidth="60" />
+                                                <ColumnDefinition Width="{Binding Source={x:Static vm:ColumnLayout.Current}, Mode=TwoWay, Path=PlayerDtps}" MinWidth="60" />
                                                 <ColumnDefinition Width="60" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
 
-                                            <TextBlock Grid.Column="0" Style="{StaticResource MutedText}"
+                                            <Path x:Name="RoleMark" Grid.Column="0"
+                                                  Width="11" Height="11" Stretch="Uniform"
+                                                  HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                  Visibility="Collapsed" />
+
+                                            <TextBlock Grid.Column="1" Style="{StaticResource MutedText}"
                                                        Foreground="{Binding ClassBrush}"
                                                        Text="{Binding Name}" Margin="0,0,10,0"
                                                        TextTrimming="CharacterEllipsis"
                                                        VerticalAlignment="Center"
                                                        ToolTip="{Binding FullName}" />
-                                            <TextBlock Grid.Column="1" Style="{StaticResource NumberText}"
+                                            <TextBlock Grid.Column="2" Style="{StaticResource MutedText}"
+                                                       Foreground="{Binding ClassBrush}"
+                                                       Text="{Binding ClassName}" Margin="0,0,10,0"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="3" Style="{StaticResource MutedText}"
+                                                       Text="{Binding SpecName}" Margin="0,0,10,0"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="4" Style="{StaticResource NumberText}"
+                                                       Text="{Binding DpsText}" />
+                                            <TextBlock Grid.Column="5" Style="{StaticResource NumberText}"
+                                                       Text="{Binding HpsText}" />
+                                            <TextBlock Grid.Column="6" Style="{StaticResource NumberText}"
+                                                       Text="{Binding DtpsText}" />
+                                            <TextBlock Grid.Column="7" Style="{StaticResource NumberText}"
                                                        Text="{Binding PoolsText}"
                                                        ToolTip="{Binding PresenceText}" />
 
-                                            <ItemsControl Grid.Column="2" ItemsSource="{Binding Cells}">
+                                            <ItemsControl Grid.Column="8" ItemsSource="{Binding Cells}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
                                                         <StackPanel Orientation="Horizontal" />
@@ -673,6 +716,25 @@
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
                                         </Grid>
+
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsTank}" Value="True">
+                                                <Setter TargetName="RoleMark" Property="Visibility" Value="Visible" />
+                                                <Setter TargetName="RoleMark" Property="Data"
+                                                        Value="{StaticResource TankShield}" />
+                                                <Setter TargetName="RoleMark" Property="Fill"
+                                                        Value="{StaticResource TankBrush}" />
+                                                <Setter TargetName="RoleMark" Property="ToolTip" Value="Tank" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsHealer}" Value="True">
+                                                <Setter TargetName="RoleMark" Property="Visibility" Value="Visible" />
+                                                <Setter TargetName="RoleMark" Property="Data"
+                                                        Value="{StaticResource HealerCross}" />
+                                                <Setter TargetName="RoleMark" Property="Fill"
+                                                        Value="{StaticResource HealerBrush}" />
+                                                <Setter TargetName="RoleMark" Property="ToolTip" Value="Healer" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

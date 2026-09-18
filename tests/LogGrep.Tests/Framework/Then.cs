@@ -584,6 +584,18 @@ public sealed class Then
         return this;
     }
 
+    public Then TheGridRowReads(string player, string className, string spec, string dps, string hps, string dtps)
+    {
+        _check.TheGridRowReads(player, className, spec, dps, hps, dtps);
+        return this;
+    }
+
+    public Then TheGridRowRoleMarkIs(string player, Role expected)
+    {
+        _check.TheGridRowRoleMarkIs(player, expected);
+        return this;
+    }
+
     public Then TheGridCellReads(string player, int attempt, string expected)
     {
         _check.TheGridCellReads(player, attempt, expected);

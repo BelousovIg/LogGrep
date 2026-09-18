@@ -15,8 +15,26 @@ namespace LogGrep.ViewModels;
 public sealed record GridCell(
     bool Present, double Pools, string Text, string Tooltip, int Attempt, string Player, Brush Paint);
 
-/// <summary>One person's row across the attempts of a selection.</summary>
-public sealed record GridRow(string Name, string FullName, Brush ClassBrush, IReadOnlyList<GridCell> Cells)
+/// <summary>
+/// One person's row across the attempts of a selection.
+///
+/// It carries the same columns an attempt''s roster does, in the same order, because somebody
+/// reading down a night and somebody reading across one attempt are the same person and should not
+/// have to learn two tables. The rates are over the attempts they were actually in - a night's
+/// damage divided by a night's length would charge them for the pulls they sat out.
+/// </summary>
+public sealed record GridRow(
+    string Name,
+    string FullName,
+    Brush ClassBrush,
+    string ClassName,
+    string SpecName,
+    bool IsTank,
+    bool IsHealer,
+    string DpsText,
+    string HpsText,
+    string DtpsText,
+    IReadOnlyList<GridCell> Cells)
 {
     /// <summary>What the whole selection cost them, which is what the rows sort on.</summary>
     public double Pools => Cells.Where(c => c.Present).Sum(c => c.Pools);
@@ -82,13 +100,14 @@ public sealed class AttemptGrid
             .GroupBy(p => p.Name, StringComparer.Ordinal)
             .ToList();
 
-        var gathered = new List<(PlayerStats First, List<Raw> Cells)>(people.Count);
+        var gathered = new List<(PlayerStats Latest, Totals Totals, List<Raw> Cells)>(people.Count);
         double worst = 0;
 
         foreach (var person in people)
         {
             var cells = new List<Raw>(pulls.Count);
-            bool anywhere = false;
+            var totals = new Totals();
+            PlayerStats? latest = null;
 
             for (int i = 0; i < pulls.Count; i++)
             {
@@ -101,7 +120,11 @@ public sealed class AttemptGrid
                     continue;
                 }
 
-                anywhere = true;
+                // The last attempt they were in, not the first: somebody who changed spec halfway
+                // through the night is playing the one they finished on.
+                latest = stats;
+                totals.Add(stats, pulls[i].Record.Duration.TotalSeconds);
+
                 var card = cards.For(pulls[i].Record, stats);
                 worst = Math.Max(worst, card.Pools);
 
@@ -109,20 +132,49 @@ public sealed class AttemptGrid
                     card.Worst?.Line ?? "Nothing was found for them in this attempt", i));
             }
 
-            if (anywhere) gathered.Add((person.First(), cells));
+            if (latest != null) gathered.Add((latest, totals, cells));
         }
 
         var rows = gathered
             .Select(entry => new GridRow(
-                PlayerName.Character(entry.First.Name),
-                PlayerName.Format(entry.First.Name),
-                ClassBrushes.For(entry.First.ClassColor),
-                entry.Cells.Select(c => Finish(c, entry.First.Name, worst)).ToArray()))
+                PlayerName.Character(entry.Latest.Name),
+                PlayerName.Format(entry.Latest.Name),
+                ClassBrushes.For(entry.Latest.ClassColor),
+                entry.Latest.ClassName,
+                entry.Latest.SpecName,
+                Specs.RoleOf(entry.Latest.SpecId) == Role.Tank,
+                Specs.RoleOf(entry.Latest.SpecId) == Role.Healer,
+                Display.Rate(entry.Totals.Per(entry.Totals.Damage)),
+                Display.Rate(entry.Totals.Per(entry.Totals.Healing)),
+                Display.Rate(entry.Totals.Per(entry.Totals.Taken)),
+                entry.Cells.Select(c => Finish(c, entry.Latest.Name, worst)).ToArray()))
             .OrderByDescending(r => r.Pools)
             .ThenBy(r => r.Name, StringComparer.CurrentCulture)
             .ToArray();
 
         return new AttemptGrid(columns, rows);
+    }
+
+    /// <summary>What somebody did across the attempts they were in, and over how long.</summary>
+    private sealed class Totals
+    {
+        public long Damage { get; private set; }
+
+        public long Healing { get; private set; }
+
+        public long Taken { get; private set; }
+
+        public double Seconds { get; private set; }
+
+        public void Add(PlayerStats stats, double seconds)
+        {
+            Damage += stats.Damage;
+            Healing += stats.Healing;
+            Taken += stats.DamageTaken;
+            Seconds += seconds;
+        }
+
+        public double Per(long total) => Seconds > 0.5 ? total / Seconds : 0;
     }
 
     private static GridCell Finish(Raw raw, string player, double worst)

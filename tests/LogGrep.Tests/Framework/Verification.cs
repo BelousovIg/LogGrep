@@ -554,15 +554,38 @@ public sealed class Verification
     public void TheGridCellReads(string player, int attempt, string expected)
         => Assert.Equal(expected, Cell(player, attempt).Text);
 
-    private GridCell Cell(string player, int attempt)
+    /// <summary>
+    /// The grid row's own columns - the same ones an attempt's roster carries, in the same order,
+    /// so that reading down a night and reading across one attempt are the same table.
+    /// </summary>
+    public void TheGridRowReads(string player, string className, string spec, string dps, string hps, string dtps)
     {
-        var row = _page.ViewModel.Analysis.Grid.Rows.FirstOrDefault(r => r.Name == player)
-            ?? throw new InvalidOperationException(
-                "'" + player + "' has no row. The grid lists: " +
-                string.Join(", ", _page.ViewModel.Analysis.Grid.Rows.Select(r => r.Name)));
+        var row = GridRowOf(player);
 
-        return row.Cells[attempt - 1];
+        Assert.Equal(className, row.ClassName);
+        Assert.Equal(spec, row.SpecName);
+        Assert.Equal(dps, row.DpsText);
+        Assert.Equal(hps, row.HpsText);
+        Assert.Equal(dtps, row.DtpsText);
     }
+
+    public void TheGridRowRoleMarkIs(string player, Role expected)
+    {
+        var row = GridRowOf(player);
+        var actual = row.IsTank ? Role.Tank : row.IsHealer ? Role.Healer : Role.Damage;
+
+        Assert.True(expected == actual,
+            "'" + player + "' should carry the " + Specs.NameOf(expected) + " mark, and carries " +
+            Specs.NameOf(actual) + ".");
+    }
+
+    private GridRow GridRowOf(string player)
+        => _page.ViewModel.Analysis.Grid.Rows.FirstOrDefault(r => r.Name == player)
+           ?? throw new InvalidOperationException(
+               "'" + player + "' has no row. The grid lists: " +
+               string.Join(", ", _page.ViewModel.Analysis.Grid.Rows.Select(r => r.Name)));
+
+    private GridCell Cell(string player, int attempt) => GridRowOf(player).Cells[attempt - 1];
 
     /// <summary>The seconds the chart marks a boss going down. Empty for an attempt that killed nothing.</summary>
     public void TheKillsAreMarkedAt(params TimeSpan[] when)
