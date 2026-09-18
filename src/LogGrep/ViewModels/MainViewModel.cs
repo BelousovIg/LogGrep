@@ -654,10 +654,10 @@ public sealed class MainViewModel : ObservableObject
     /// Ten wipes of thirty-one is a different evening from the thirty-one, and the numbers have to
     /// agree with the sentence at the top of the screen.
     /// </summary>
-    private void Judge(Selection selection, Role? role)
+    private AttemptGrid Judge(Selection selection, Role? role)
     {
         var pulls = selection.Pulls;
-        if (pulls.Count == 0) return;
+        if (pulls.Count == 0) return AttemptGrid.Nothing;
 
         var records = pulls.Select(p => p.Record).ToList();
         var written = new RuleFile(_fileSystem).Read(new SettingsService(_fileSystem).RulesPath);
@@ -670,6 +670,8 @@ public sealed class MainViewModel : ObservableObject
             pull.SetLens(role);
             pull.SetMistakes(byPull[pull.Record], cards);
         }
+
+        return AttemptGrid.Of(pulls, cards, role, Ours);
     }
 
     private void OnOursChanged(PersonRowViewModel person)

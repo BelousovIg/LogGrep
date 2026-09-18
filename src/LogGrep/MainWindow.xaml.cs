@@ -86,6 +86,18 @@ public partial class MainWindow : Window
 
     private void OnAnalyseSelected(object sender, RoutedEventArgs e) => Model.AnalyseSelected();
 
+    /// <summary>
+    /// Opens one cell of the report grid: that person, in that attempt. A row click would change who
+    /// and a column click when; a cell is both at once, which is the shortest way in.
+    /// </summary>
+    private void OnOpenCell(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: GridCell { Present: true } cell })
+        {
+            Model.Analysis.Open(cell.Attempt, cell.Player);
+        }
+    }
+
     /// <summary>Takes one file out of the list, which re-reads whatever is left of it.</summary>
     private void OnRemoveLog(object sender, RoutedEventArgs e)
     {

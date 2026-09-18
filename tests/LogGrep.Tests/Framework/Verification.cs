@@ -532,6 +532,38 @@ public sealed class Verification
     public void TheReportShowsPlayers(params string[] expected)
         => Assert.Equal(expected, _page.ReportPlayers().Select(p => p.Name).ToArray());
 
+    // The report grid: rows are who, columns are when.
+
+    public void TheGridHasColumns(int expected)
+        => Assert.True(expected == _page.ViewModel.Analysis.Grid.Columns.Count,
+            "The grid should have " + expected + " columns and has " +
+            _page.ViewModel.Analysis.Grid.Columns.Count + ".");
+
+    public void TheGridLists(params string[] expected)
+        => Assert.Equal(expected, _page.ViewModel.Analysis.Grid.Rows.Select(r => r.Name).ToArray());
+
+    /// <summary>Whether a cell says somebody was there, which is not the same as saying they were clean.</summary>
+    public void TheGridSaysTheyWereThere(string player, int attempt, bool expected)
+    {
+        var cell = Cell(player, attempt);
+        Assert.True(expected == cell.Present,
+            player + " should " + (expected ? "" : "not ") + "have been in attempt " + attempt +
+            ". The cell says: " + cell.Tooltip);
+    }
+
+    public void TheGridCellReads(string player, int attempt, string expected)
+        => Assert.Equal(expected, Cell(player, attempt).Text);
+
+    private GridCell Cell(string player, int attempt)
+    {
+        var row = _page.ViewModel.Analysis.Grid.Rows.FirstOrDefault(r => r.Name == player)
+            ?? throw new InvalidOperationException(
+                "'" + player + "' has no row. The grid lists: " +
+                string.Join(", ", _page.ViewModel.Analysis.Grid.Rows.Select(r => r.Name)));
+
+        return row.Cells[attempt - 1];
+    }
+
     public void TheScreenShowing(int expected)
         => Assert.True(expected == _page.ViewModel.Screen,
             "The window should be showing screen " + expected + " and shows " + _page.ViewModel.Screen + ".");

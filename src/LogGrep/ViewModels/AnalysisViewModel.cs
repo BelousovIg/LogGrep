@@ -20,13 +20,13 @@ namespace LogGrep.ViewModels;
 public sealed class AnalysisViewModel : ObservableObject
 {
     private readonly Func<IReadOnlyCollection<string>> _ours;
-    private readonly Action<Selection, Role?> _judge;
+    private readonly Func<Selection, Role?, AttemptGrid> _judge;
     private Selection _selection = Selection.Nothing;
     private PullViewModel? _pull;
     private string _player = string.Empty;
     private Role? _role;
 
-    public AnalysisViewModel(Func<IReadOnlyCollection<string>> ours, Action<Selection, Role?> judge)
+    public AnalysisViewModel(Func<IReadOnlyCollection<string>> ours, Func<Selection, Role?, AttemptGrid> judge)
     {
         _ours = ours;
         _judge = judge;
@@ -48,6 +48,15 @@ public sealed class AnalysisViewModel : ObservableObject
     public bool HasNothing => _selection.IsEmpty;
 
     public bool HasPull => _pull != null;
+
+    /// <summary>
+    /// The selection as a grid: rows are who, columns are when. Shown when no single attempt is in
+    /// focus, which is the whole point of the zoom - a row is a person, a column is an attempt, and
+    /// clicking either one is how the report narrows.
+    /// </summary>
+    public AttemptGrid Grid { get; private set; } = AttemptGrid.Nothing;
+
+    public bool ShowGrid => _pull == null && Grid.HasAnything;
 
     /// <summary>Which role the rows are narrowed to, or null for all of them.</summary>
     public Role? Role => _role;
@@ -128,6 +137,17 @@ public sealed class AnalysisViewModel : ObservableObject
         Changed();
     }
 
+    /// <summary>Opens one attempt of the sample, and one person in it.</summary>
+    public void Open(int attempt, string player)
+    {
+        var pulls = _selection.Pulls;
+        if (attempt < 0 || attempt >= pulls.Count) return;
+
+        _pull = pulls[attempt];
+        _player = player;
+        Changed();
+    }
+
     /// <summary>Drops the focus back to the whole sample, which is what the breadcrumb's root does.</summary>
     public void WidenToSample()
     {
@@ -151,9 +171,11 @@ public sealed class AnalysisViewModel : ObservableObject
         // The selection is what every baseline is drawn from, so changing it changes the numbers -
         // all of them, every time. Measured at 150ms for the rules and 74ms for every scorecard in
         // an evening, which is cheap enough that nothing has to be kept half-fresh.
-        _judge(_selection, _role);
+        Grid = _judge(_selection, _role);
 
         OnPropertyChanged(nameof(Selection));
+        OnPropertyChanged(nameof(Grid));
+        OnPropertyChanged(nameof(ShowGrid));
         OnPropertyChanged(nameof(Encounter));
         OnPropertyChanged(nameof(Pull));
         OnPropertyChanged(nameof(Player));

@@ -637,6 +637,29 @@
         </Setter>
     </Style>
 
+    <!-- A cell of the report grid: a block of colour with a number on it, and a click that opens
+         what it stands for. -->
+    <Style x:Key="CellButton" TargetType="Button">
+        <Setter Property="Foreground" Value="#FF17181B" />
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Cell" Background="{TemplateBinding Background}" CornerRadius="2"
+                            BorderBrush="Transparent" BorderThickness="1">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Cell" Property="BorderBrush" Value="{StaticResource FgBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- The screens. A tab strip rather than a set of windows, because the three jobs share the
          logs that are open and switching between them should cost nothing. -->
     <Style x:Key="Screens" TargetType="TabControl">

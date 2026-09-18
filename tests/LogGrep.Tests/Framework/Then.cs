@@ -566,6 +566,30 @@ public sealed class Then
         return this;
     }
 
+    public Then TheGridHasColumns(int expected)
+    {
+        _check.TheGridHasColumns(expected);
+        return this;
+    }
+
+    public Then TheGridLists(params string[] expected)
+    {
+        _check.TheGridLists(expected);
+        return this;
+    }
+
+    public Then TheGridSaysTheyWereThere(string player, int attempt, bool expected)
+    {
+        _check.TheGridSaysTheyWereThere(player, attempt, expected);
+        return this;
+    }
+
+    public Then TheGridCellReads(string player, int attempt, string expected)
+    {
+        _check.TheGridCellReads(player, attempt, expected);
+        return this;
+    }
+
     public Then TheScreenShowing(int expected)
     {
         _check.TheScreenShowing(expected);

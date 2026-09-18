@@ -555,10 +555,93 @@
                                Text="Open a log, then press Analyse on a fight, an attempt or a person."
                                Visibility="{Binding Analysis.HasNothing, Converter={StaticResource BoolToVis}}" />
 
+                    <!-- Rows are who, columns are when. The four views of the report are states of
+                         this one control rather than four screens: a row click changes who, a column
+                         click changes when, and somebody learns to read it once. -->
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Auto" Padding="16,12,16,0"
+                                  Visibility="{Binding Analysis.ShowGrid, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap"
+                                       Margin="0,0,0,8"
+                                       Text="Each column is an attempt. A cell is what it cost that person, in their own health pools; a dot is an attempt they were not in, which is not the same as a clean one. Click a cell to open it." />
+
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="60" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Style="{StaticResource MutedText}" Text="PLAYER" />
+                                <TextBlock Grid.Column="1" Style="{StaticResource MutedText}" Text="POOLS"
+                                           HorizontalAlignment="Right" Margin="0,0,10,0"
+                                           ToolTip="What the whole selection cost them, in their own health pools" />
+                                <ItemsControl Grid.Column="2" ItemsSource="{Binding Analysis.Grid.Columns}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Style="{StaticResource MutedText}" Width="30"
+                                                       TextAlignment="Center" Text="{Binding}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+
+                            <ItemsControl ItemsSource="{Binding Analysis.Grid.Rows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Height="24">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="160" />
+                                                <ColumnDefinition Width="60" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" Style="{StaticResource MutedText}"
+                                                       Foreground="{Binding ClassBrush}"
+                                                       Text="{Binding Name}" Margin="0,0,10,0"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"
+                                                       ToolTip="{Binding FullName}" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource NumberText}"
+                                                       Text="{Binding PoolsText}"
+                                                       ToolTip="{Binding PresenceText}" />
+
+                                            <ItemsControl Grid.Column="2" ItemsSource="{Binding Cells}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Width="28" Height="20" Margin="1"
+                                                                Style="{StaticResource CellButton}"
+                                                                Background="{Binding Paint}"
+                                                                Content="{Binding Text}"
+                                                                Click="OnOpenCell"
+                                                                ToolTip="{Binding Tooltip}"
+                                                                ToolTipService.ShowDuration="60000" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Border Height="12" Background="Transparent" />
+                        </StackPanel>
+                    </ScrollViewer>
+
                     <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled" Padding="16,12,16,0"
-                                  DataContext="{Binding Analysis.Pull}">
-                        <StackPanel>
+                                  Visibility="{Binding Analysis.HasPull, Converter={StaticResource BoolToVis}}">
+                        <StackPanel DataContext="{Binding Analysis.Pull}">
 
                             <!-- The attempt's own card. Not an average of the players below it: an
                                  average hides the one person who lost the pull behind nineteen who
