@@ -164,6 +164,30 @@ public sealed class CombatLogBuilder
     }
 
     /// <summary>
+    /// An attempt the log never saw the end of - the file stops mid-fight, or the game is still
+    /// writing and the fight is going on right now. The two look identical in the file, which is
+    /// exactly why neither of them is a result.
+    /// </summary>
+    public CombatLogBuilder Unfinished(Boss boss, Difficulty difficulty, Action<PullBuilder> body)
+    {
+        _boss = boss;
+
+        Line(_start, $"ENCOUNTER_START,{(int)boss},\"{BossName}\",{(int)difficulty},{_roster.Count},1");
+        foreach (var fighter in _roster) Line(_start, CombatantInfo(fighter));
+
+        _health.Clear();
+
+        var pull = new PullBuilder(this, _start);
+        body(pull);
+
+        _start += pull.Length + TimeSpan.FromMinutes(1);
+        return this;
+    }
+
+    /// <summary>What this log holds without its opening line, which is what gets appended to a file.</summary>
+    internal string Body => _text.ToString();
+
+    /// <summary>
     /// One keystone run. Unlike a boss, a run is never grouped with another - two runs of the same
     /// dungeon are two separate things that happen to share a name.
     /// </summary>

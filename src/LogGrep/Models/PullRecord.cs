@@ -21,6 +21,18 @@ public sealed class PullRecord
     public ContentKind Kind { get; init; }
 
     public bool Success { get; set; }
+
+    /// <summary>
+    /// Whether the log said how this attempt ended.
+    ///
+    /// A fight with a start and no end is not a wipe, and reporting it as one - which is what this
+    /// did, as a wipe of zero length - quietly added an attempt to every count a baseline rests on.
+    /// It happens for two reasons that look identical in the file: the log stops mid-fight, or the
+    /// game is still writing and the fight is going on right now. Neither is a result, so an
+    /// unfinished attempt stays visible in the log browser, where its byte range is still perfectly
+    /// good to cut out, and stays out of the analysis, where it is not an attempt at anything yet.
+    /// </summary>
+    public bool Finished { get; set; } = true;
     public DateTime StartTime { get; init; }
     public DateTime EndTime { get; set; }
     public TimeSpan Duration { get; set; }
@@ -53,8 +65,12 @@ public sealed class PullRecord
     public long Damage { get; set; }
     public long Healing { get; set; }
 
-    /// <summary>The file this attempt was read out of, and that every offset below points into.</summary>
-    public required LogSource Source { get; init; }
+    /// <summary>
+    /// The file this attempt was read out of, and that every offset below points into. Settable
+    /// because an attempt that came back from a cache has to be pointed at the file as it is now -
+    /// same bytes, but a fresh reading of its size and its place among the other logs.
+    /// </summary>
+    public required LogSource Source { get; set; }
 
     /// <summary>Byte range of the whole fight, from the START line to the end of the END line.</summary>
     public long StartOffset { get; init; }
@@ -78,4 +94,15 @@ public sealed class ScanResult
     public required LogSource Source { get; init; }
 
     public List<PullRecord> Pulls { get; } = new();
+
+    /// <summary>
+    /// How far a later read could pick up from: the end of the last fight this log finished. Not
+    /// the last line read, because a fight still in progress is not a result to keep.
+    /// </summary>
+    public long ReadTo { get; set; }
+
+    /// <summary>The zone and map lines in force at that point, which a later fight re-emits.</summary>
+    public ByteRange Zone { get; set; }
+
+    public ByteRange Map { get; set; }
 }

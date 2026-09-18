@@ -124,6 +124,16 @@ public sealed class LogGrepPage
         Pump(ViewModel.LoadAsync(paths));
     }
 
+    /// <summary>
+    /// The game writing more into a log that is already open - which is what a log does all evening.
+    /// The file keeps its name and its first line, so it is the same log with more in it.
+    /// </summary>
+    public void GrowLog(string name, CombatLogBuilder more)
+    {
+        string path = Folder + name;
+        _disk.File.AppendAllText(path, more.Body);
+    }
+
     /// <summary>Runs the dispatcher until the scan is done, the way a running window would.</summary>
     private void Pump(Task task)
     {

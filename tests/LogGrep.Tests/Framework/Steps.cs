@@ -106,6 +106,12 @@ public sealed class When
         return this;
     }
 
+    public When TheGameWritesMore(string name, CombatLogBuilder more)
+    {
+        _act.GrowLog(name, more);
+        return this;
+    }
+
     public When IReopenTheApp()
     {
         _act.Reopen();

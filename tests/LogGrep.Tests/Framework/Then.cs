@@ -536,6 +536,12 @@ public sealed class Then
         return this;
     }
 
+    public Then TheAttemptsJudgedAre(int expected)
+    {
+        _check.TheAttemptsJudgedAre(expected);
+        return this;
+    }
+
     public Then PeopleAreListed(params string[] expected)
     {
         _check.PeopleAreListed(expected);

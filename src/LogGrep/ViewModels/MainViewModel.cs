@@ -29,6 +29,7 @@ public sealed class MainViewModel : ObservableObject
 
     private readonly OpenLogs _openLogs;
     private readonly Outsiders _outsiders;
+    private readonly ScanCache _cache;
     private readonly HashSet<string> _setAside;
     private bool _logsExpanded = true;
     private string _status = "Open a World of Warcraft combat log to begin.";
@@ -50,6 +51,7 @@ public sealed class MainViewModel : ObservableObject
         string data = new SettingsService(fileSystem).DataDirectory;
         _openLogs = new OpenLogs(fileSystem, data);
         _outsiders = new Outsiders(fileSystem, data);
+        _cache = new ScanCache(fileSystem, data);
         _setAside = _outsiders.Load().ToHashSet(StringComparer.Ordinal);
 
         OpenCommand = new RelayCommand(Open, () => !IsBusy);
@@ -433,11 +435,60 @@ public sealed class MainViewModel : ObservableObject
         for (int i = 0; i < paths.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
-            scans.Add(scanner.Scan(paths[i], new Share(progress, done, sizes[i], total), ct));
+            scans.Add(Read(scanner, paths[i], sizes[i], new Share(progress, done, sizes[i], total), ct));
             done += sizes[i];
         }
 
         return Reading.Of(scans);
+    }
+
+    /// <summary>
+    /// One log, read as little as it can be.
+    ///
+    /// A file that has been read before and has not changed is not read at all - twelve seconds for
+    /// a gigabyte and a half, paid once in a log's life rather than at every start. A file that has
+    /// grown, which is what a log does while somebody is still raiding, is read from the end of the
+    /// last fight it finished, so the tail costs seconds rather than the file.
+    ///
+    /// A file that shrank, or whose first timestamp no longer matches, is not the same file however
+    /// it is named, and is read from the beginning without comment.
+    /// </summary>
+    private ScanResult Read(CombatLogScanner scanner, string path, long size,
+        IProgress<ScanProgress> progress, CancellationToken ct)
+    {
+        var recorded = scanner.Recorded(path);
+        var cached = recorded == default ? null : _cache.Load(_fileSystem.Path.GetFileName(path), recorded);
+
+        Resume? from = null;
+        if (cached != null && cached.Size <= size && cached.ReadTo > 0)
+        {
+            from = new Resume(cached.ReadTo, cached.Zone, cached.Map, recorded, cached.Pulls);
+        }
+
+        var scan = scanner.Scan(path, progress, ct, from);
+
+        // Everything that came back from the cache points at a LogSource from the day it was
+        // written. The bytes are the same; how big the file is now, and where it sits among the
+        // other logs, are read fresh every time.
+        foreach (var pull in scan.Pulls) pull.Source = scan.Source;
+
+        if (recorded != default)
+        {
+            _cache.Save(_fileSystem.Path.GetFileName(path), recorded, new ScanCache.Entry
+            {
+                Schema = ScanCache.Schema,
+                Size = size,
+                ReadTo = scan.ReadTo,
+                Zone = scan.Zone,
+                Map = scan.Map,
+
+                // Only what the log finished. A fight still in progress is read again next time,
+                // which is how it gets to become a real attempt.
+                Pulls = scan.Pulls.Where(p => p.Finished).ToList(),
+            });
+        }
+
+        return scan;
     }
 
     /// <summary>

@@ -8,6 +8,16 @@ namespace LogGrep.Parsing;
 public sealed record ScanProgress(double Percent, PullRecord? Pull);
 
 /// <summary>
+/// Where a previous read of the same file stopped, and what it had found by then.
+///
+/// <see cref="Offset"/> is the end of the last fight the log finished, not the last line read. A
+/// fight that was still going when the file was last looked at is not a result and is not kept as
+/// one - it is simply read again, and becomes a real attempt the moment the game writes its end.
+/// </summary>
+public sealed record Resume(
+    long Offset, ByteRange Zone, ByteRange Map, DateTime Recorded, IReadOnlyList<PullRecord> Pulls);
+
+/// <summary>
 /// Single pass, streaming scanner for retail WoW combat logs. It never holds the file in
 /// memory: lines are read into a rolling byte buffer, only the events we care about are
 /// parsed, and every pull is stored as a byte range so exporting is a raw copy later on.
@@ -92,11 +102,54 @@ public sealed class CombatLogScanner
     public CombatLogScanner(IFileSystem fileSystem) => _fileSystem = fileSystem;
 
     public ScanResult Scan(string path, IProgress<ScanProgress>? progress, CancellationToken ct)
+        => Scan(path, progress, ct, from: null);
+
+    /// <summary>
+    /// The first timestamp inside the file, read from its first line and nothing else.
+    ///
+    /// This is half of a log's identity - the other half is its name - and both are fixed for a file
+    /// the game only appends to. It is what decides whether a cache belongs to this log, so it has
+    /// to be answerable without reading the log, which is the whole point of having a cache.
+    /// </summary>
+    public DateTime Recorded(string path)
+    {
+        try
+        {
+            using var stream = _fileSystem.FileStream.New(path, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite, 4096, FileOptions.SequentialScan);
+
+            byte[] head = new byte[4096];
+            int read = stream.Read(head, 0, head.Length);
+            if (read <= 0) return default;
+
+            var line = head.AsSpan(0, read);
+            int newline = line.IndexOf((byte)'\n');
+            if (newline >= 0) line = line[..newline];
+
+            int eventStart = FindEventStart(line);
+            return eventStart < 0 ? default : LogTimestamp.Parse(Timestamp(line, eventStart), default);
+        }
+        catch (Exception)
+        {
+            // A file that cannot be peeked at will fail properly when it is read, with a message.
+            return default;
+        }
+    }
+
+    /// <summary>
+    /// Reads a log, optionally carrying on from where a previous read of the same file stopped.
+    ///
+    /// Almost nothing survives between fights in here - a segment opens on the start line and closes
+    /// on the end line - so picking up mid-file needs only three things: the offset, and the last
+    /// zone and map lines seen before it, which a later fight re-emits on export. That is the whole
+    /// reason this is cheap.
+    /// </summary>
+    public ScanResult Scan(string path, IProgress<ScanProgress>? progress, CancellationToken ct, Resume? from)
     {
         _progress = progress;
         _open = null;
-        _zoneChange = ByteRange.Empty;
-        _mapChange = ByteRange.Empty;
+        _zoneChange = from?.Zone ?? ByteRange.Empty;
+        _mapChange = from?.Map ?? ByteRange.Empty;
         _labels.Clear();
 
         var info = _fileSystem.FileInfo.New(path);
@@ -109,16 +162,27 @@ public sealed class CombatLogScanner
                 Size = info.Length,
                 Created = info.CreationTime,
                 Named = LogSource.TimeInName(info.Name),
+                Recorded = from?.Recorded ?? default,
             },
         };
+
+        if (from != null)
+        {
+            _result.Pulls.AddRange(from.Pulls);
+            _result.ReadTo = from.Offset;
+            _result.Zone = from.Zone;
+            _result.Map = from.Map;
+        }
 
         using var stream = _fileSystem.FileStream.New(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
             1 << 20, FileOptions.SequentialScan);
 
         byte[] buffer = new byte[InitialBufferSize];
         int filled = 0;
-        long bufferOrigin = 0;
+        long bufferOrigin = from?.Offset ?? 0;
         long nextProgressAt = ProgressStep;
+
+        if (bufferOrigin > 0) stream.Seek(bufferOrigin, SeekOrigin.Begin);
 
         while (true)
         {
@@ -168,7 +232,7 @@ public sealed class CombatLogScanner
         }
 
         // A log that was cut off mid-fight still gives us a usable (wiped) pull.
-        if (_open != null) Close(_open, success: false, _lastLineEnd, TimeSpan.Zero, _open.LastTimestamp);
+        if (_open != null) Close(_open, success: false, _lastLineEnd, TimeSpan.Zero, _open.LastTimestamp, finished: false);
 
         _result.Source.Pulls = _result.Pulls.Count;
         _result.Source.Encounters = _result.Pulls.Select(p => p.GroupKey).Distinct(StringComparer.Ordinal).Count();
@@ -289,7 +353,7 @@ public sealed class CombatLogScanner
     {
         // Boss pulls inside a keystone run belong to the run, they do not open a segment.
         if (_open is { IsKeystone: true }) return;
-        if (_open != null) Close(_open, success: false, start, TimeSpan.Zero, _open.LastTimestamp);
+        if (_open != null) Close(_open, success: false, start, TimeSpan.Zero, _open.LastTimestamp, finished: false);
 
         _fields.Split(line);
         int encounterId = _fields.Int(line, 1);
@@ -330,7 +394,7 @@ public sealed class CombatLogScanner
 
     private void OnChallengeStart(ReadOnlySpan<byte> line, int eventStart, long start)
     {
-        if (_open != null) Close(_open, success: false, start, TimeSpan.Zero, _open.LastTimestamp);
+        if (_open != null) Close(_open, success: false, start, TimeSpan.Zero, _open.LastTimestamp, finished: false);
 
         _fields.Split(line);
         string zone = _fields.Text(line, 1);
@@ -372,7 +436,7 @@ public sealed class CombatLogScanner
         Close(_open, success, end, totalTimeMs > 0 ? TimeSpan.FromMilliseconds(totalTimeMs) : TimeSpan.Zero, endTime);
     }
 
-    private void Close(OpenSegment segment, bool success, long endOffset, TimeSpan reportedDuration, DateTime endTime)
+    private void Close(OpenSegment segment, bool success, long endOffset, TimeSpan reportedDuration, DateTime endTime, bool finished = true)
     {
         _open = null;
 
@@ -426,6 +490,7 @@ public sealed class CombatLogScanner
             KeystoneLevel = segment.KeystoneLevel,
             Kind = segment.Kind,
             Success = success,
+            Finished = finished,
             StartTime = segment.StartTime,
             EndTime = endTime,
             Duration = duration,
@@ -445,6 +510,16 @@ public sealed class CombatLogScanner
         };
 
         _result.Pulls.Add(pull);
+
+        // Where a later read could pick up. Only a finished fight moves it: an unfinished one is
+        // read again next time, which is how it gets to become a real attempt.
+        if (finished)
+        {
+            _result.ReadTo = endOffset;
+            _result.Zone = _zoneChange;
+            _result.Map = _mapChange;
+        }
+
         Report(new ScanProgress(_result.Source.Size > 0 ? endOffset * 100.0 / _result.Source.Size : 0, pull));
     }
 

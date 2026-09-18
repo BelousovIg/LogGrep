@@ -17,13 +17,19 @@ public sealed class Attempts
         Written = written?.GroupBy(r => r.SpellId).ToDictionary(g => g.Key, g => g.First())
             ?? new Dictionary<int, WrittenRule>();
 
-        Pulls = pulls;
-        Encounter = pulls.Count > 0 ? pulls[0].EncounterName : string.Empty;
-
+        // Numbered over everything the log holds, judged over what it finished. An attempt with a
+        // start and no end is not an attempt at anything yet - it has no result and a length that
+        // only says when the file stopped - but it is still the seventh thing that happened, and
+        // renumbering around it would make the report disagree with the list it came from.
         for (int i = 0; i < pulls.Count; i++) _numbers[pulls[i]] = i + 1;
-        Composition = Shares(pulls);
+
+        Pulls = pulls.Where(p => p.Finished).ToList();
+        Encounter = Pulls.Count > 0 ? Pulls[0].EncounterName : string.Empty;
+
+        Composition = Shares(Pulls);
     }
 
+    /// <summary>The attempts worth judging: the ones the log saw the end of.</summary>
     public IReadOnlyList<PullRecord> Pulls { get; }
 
     /// <summary>

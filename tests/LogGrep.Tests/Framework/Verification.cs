@@ -514,6 +514,14 @@ public sealed class Verification
 
     public void TheRegistrySays(string expected) => Assert.Equal(expected, _page.ViewModel.PeopleSummary);
 
+    /// <summary>How many attempts the analysis counts, which is not every attempt the list shows.</summary>
+    public void TheAttemptsJudgedAre(int expected)
+    {
+        var judged = new LogGrep.Analysis.Attempts(_page.Encounter.Pulls.Select(p => p.Record).ToList());
+        Assert.True(expected == judged.Pulls.Count,
+            $"The analysis should judge {expected} attempts and judges {judged.Pulls.Count} of {_page.Encounter.Pulls.Count} listed.");
+    }
+
     // The card, the lane, and what the attempt cost.
 
     /// <summary>One of the four axes on a player row, exactly as the cell prints it.</summary>
