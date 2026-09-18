@@ -1,4 +1,4 @@
-using LogGrep.Models;
+﻿using LogGrep.Models;
 using LogGrep.ViewModels;
 using LogGrep.Tests.Logs;
 
@@ -27,6 +27,10 @@ public sealed class TestMethods
     public void LookAtPlayer(string name) => _page.LookAtPlayer(name);
 
     public void SortPlayersBy(PlayerColumn column) => _page.SortPlayersBy(column);
+
+    public void ReadTheFightFrom(TimeSpan from, TimeSpan to) => _page.ReadTheFightFrom(from, to);
+
+    public void ReadTheWholeAttempt() => _page.ReadTheWholeAttempt();
 
     public void RemoveLog(string name) => _page.RemoveLog(name);
 

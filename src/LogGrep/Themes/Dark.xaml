@@ -36,6 +36,9 @@
 
     <!-- roster table, one row per group member inside a pull -->
     <GridLength x:Key="ColRosterIndent">60</GridLength>
+
+    <!-- the report's own roster: just wide enough for the role mark, which is all that column is -->
+    <GridLength x:Key="ColAnalysisRole">18</GridLength>
     <GridLength x:Key="ColRosterName">170</GridLength>
     <GridLength x:Key="ColRosterClass">100</GridLength>
     <GridLength x:Key="ColRosterSpec">110</GridLength>

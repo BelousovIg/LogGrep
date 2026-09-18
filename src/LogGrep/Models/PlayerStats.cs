@@ -103,6 +103,9 @@ public readonly record struct Blow(int SpellId, string Spell, string Player, lon
 /// </summary>
 public readonly record struct CastRecord(int SpellId, string Spell, bool Stopped, string By, TimeSpan At);
 
+/// <summary>A moment somebody went down or got back up.</summary>
+public readonly record struct Flip(int Second, bool Up);
+
 /// <summary>What one group member did during a single pull.</summary>
 public sealed class PlayerStats
 {
@@ -145,6 +148,37 @@ public sealed class PlayerStats
     /// log's only account of who was holding the fight's attention.
     /// </summary>
     public long MeleeTaken { get; set; }
+
+    /// <summary>
+    /// When they went down and when they got back up, in order. A death is not the end of somebody's
+    /// fight - there are battle rezzes, soulstones and places where people simply stand back up.
+    /// </summary>
+    public IReadOnlyList<Flip> Flips { get; set; } = Array.Empty<Flip>();
+
+    /// <summary>
+    /// What they dealt, healed and took, second by second.
+    ///
+    /// A rate over a whole attempt answers a question nobody asked once somebody is looking at one
+    /// minute of it. These are what let the same three columns be read over any stretch of the
+    /// fight - and they are the reason a cached log costs a few megabytes rather than a few hundred
+    /// kilobytes, which is the trade.
+    /// </summary>
+    public IReadOnlyList<long> DamageLine { get; set; } = Array.Empty<long>();
+
+    public IReadOnlyList<long> HealingLine { get; set; } = Array.Empty<long>();
+
+    public IReadOnlyList<long> TakenLine { get; set; } = Array.Empty<long>();
+
+    /// <summary>What they dealt over a stretch of the fight, which is what a windowed rate is of.</summary>
+    public long Over(IReadOnlyList<long> line, int from, int to)
+    {
+        if (line.Count == 0) return 0;
+
+        long total = 0;
+        for (int i = Math.Max(0, from); i <= Math.Min(to, line.Count - 1); i++) total += line[i];
+
+        return total;
+    }
 
     /// <summary>
     /// How many seconds of the fight the enemy spent swinging at this person while it was swinging

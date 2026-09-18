@@ -18,6 +18,8 @@ public sealed class PullViewModel : ObservableObject
     private IReadOnlyList<TimeSpan> _collective = Array.Empty<TimeSpan>();
     private Role? _role;
     private IReadOnlyList<Trace>? _traces;
+    private int _from;
+    private int _to = int.MaxValue;
 
     public PullViewModel(PullRecord record, EncounterViewModel owner)
     {
@@ -120,6 +122,52 @@ public sealed class PullViewModel : ObservableObject
                     e.Card.Worst?.Headline ?? string.Empty))
                 .ToArray();
         }
+    }
+
+    /// <summary>
+    /// Which stretch of the fight the rates are read over. Dragging across the chart sets it; the
+    /// whole attempt is where it starts and what the reset goes back to.
+    /// </summary>
+    public int From
+    {
+        get => _from;
+        set => SetWindow(value, _to);
+    }
+
+    public int To
+    {
+        get => _to;
+        set => SetWindow(_from, value);
+    }
+
+    public bool IsWindowed => _from > 0 || _to < (int)Record.Duration.TotalSeconds;
+
+    public string WindowText => IsWindowed
+        ? "reading " + Display.Clock(TimeSpan.FromSeconds(_from)) + " to " +
+          Display.Clock(TimeSpan.FromSeconds(Math.Min(_to, (int)Record.Duration.TotalSeconds)))
+        : "reading the whole attempt";
+
+    /// <summary>Back to the whole attempt, which is where every rate on this screen starts.</summary>
+    public void ResetWindow() => SetWindow(0, int.MaxValue);
+
+    private void SetWindow(int from, int to)
+    {
+        int length = (int)Record.Duration.TotalSeconds;
+        from = Math.Clamp(from, 0, Math.Max(0, length));
+        to = to >= length ? int.MaxValue : Math.Clamp(to, from, length);
+
+        if (_from == from && _to == to) return;
+
+        _from = from;
+        _to = to;
+        _playersView = null;
+
+        OnPropertyChanged(nameof(From));
+        OnPropertyChanged(nameof(To));
+        OnPropertyChanged(nameof(IsWindowed));
+        OnPropertyChanged(nameof(WindowText));
+        OnPropertyChanged(nameof(PlayersView));
+        OnPropertyChanged(nameof(ShownText));
     }
 
     /// <summary>
@@ -245,7 +293,7 @@ public sealed class PullViewModel : ObservableObject
         var rows = Record.Roster
             .Where(stats => _role == null || Specs.RoleOf(stats.SpecId) == _role)
             .Select(stats => new PlayerRowViewModel(stats, Record.Duration, Owner.Report,
-                mistakes[stats.Name].ToArray(), _cards?.For(Record, stats), _collective))
+                mistakes[stats.Name].ToArray(), _cards?.For(Record, stats), _collective, _from, _to))
             .OrderBy(Group)
             .ThenByDescending(Rank)
             .ThenBy(p => p.Name, StringComparer.CurrentCulture)

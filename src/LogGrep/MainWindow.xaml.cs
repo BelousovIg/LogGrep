@@ -114,6 +114,9 @@ public partial class MainWindow : Window
 
     private void OnAnalyseSelected(object sender, RoutedEventArgs e) => Model.AnalyseSelected();
 
+    /// <summary>Puts the chart's window back to the whole attempt, and the rates with it.</summary>
+    private void OnResetWindow(object sender, RoutedEventArgs e) => Model.Analysis.Pull?.ResetWindow();
+
     /// <summary>
     /// Opens one cell of the report grid: that person, in that attempt. A row click would change who
     /// and a column click when; a cell is both at once, which is the shortest way in.

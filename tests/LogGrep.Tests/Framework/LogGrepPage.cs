@@ -233,6 +233,18 @@ public sealed class LogGrepPage
 
     public IReadOnlyList<PlayerRowViewModel> Players() => Pull.PlayersView.Cast<PlayerRowViewModel>().ToList();
 
+    /// <summary>
+    /// What dragging across the chart does: picks a stretch of the fight, and every rate under it is
+    /// read over that stretch instead of over the whole attempt.
+    /// </summary>
+    public void ReadTheFightFrom(TimeSpan from, TimeSpan to)
+    {
+        Pull.From = (int)from.TotalSeconds;
+        Pull.To = (int)to.TotalSeconds;
+    }
+
+    public void ReadTheWholeAttempt() => Pull.ResetWindow();
+
     public void SortPlayersBy(PlayerColumn column)
     {
         ViewModel.Sorting.Players.Toggle(column.ToString());

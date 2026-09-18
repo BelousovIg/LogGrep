@@ -483,6 +483,10 @@ public sealed class CombatLogScanner
                 MaxHealth = entry.Value.MaxHealth,
                 MeleeTaken = entry.Value.MeleeTaken,
                 HeldSeconds = held.TryGetValue(entry.Value.Name, out int seconds) ? seconds : 0,
+                Flips = entry.Value.Flips.Select(f => new Flip(f.Second, f.Up)).ToArray(),
+                DamageLine = PerSecond(entry.Value.DealtAt, (int)duration.TotalSeconds),
+                HealingLine = PerSecond(entry.Value.HealedAt, (int)duration.TotalSeconds),
+                TakenLine = PerSecond(entry.Value.TookAt, (int)duration.TotalSeconds),
                 Struck = entry.Value.Struck,
                 WasHit = entry.Value.WasHit,
                 Spells = entry.Value.Spells
@@ -598,6 +602,7 @@ public sealed class CombatLogScanner
         var elapsed = Elapsed(at);
         var (span, damage, biggest, from) = victim.Event(at, elapsed);
 
+        victim.Down((int)elapsed.TotalSeconds);
         victim.Deaths.Add(new DeathRecord(elapsed, victim.Causes(at))
         {
             Span = span,
@@ -647,7 +652,7 @@ public sealed class CombatLogScanner
             // And the pool again, from the block a cast carries. This is the surest place to find
             // it: everybody casts all fight, including a healer who dealt no damage and stood out
             // of everything, who would otherwise never be measured at all.
-            if (_fields.Count > 15) PlayerAt(line, 12)?.Saw(_fields.Long(line, 14), _fields.Long(line, 15));
+            if (_fields.Count > 15) PlayerAt(line, 12)?.Saw((int)Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds, _fields.Long(line, 14), _fields.Long(line, 15));
 
             return;
         }
@@ -812,7 +817,7 @@ public sealed class CombatLogScanner
         // dealer in the raid and quietly made a nonsense of everything built on a pool. Following
         // the field rather than the role is also what keeps a pet's pool off its owner, because a
         // pet's GUID is not a player's.
-        if (advancedAt >= 0) PlayerAt(line, advancedAt)?.Saw(_fields.Long(line, advancedAt + 2), _fields.Long(line, advancedAt + 3));
+        if (advancedAt >= 0) PlayerAt(line, advancedAt)?.Saw((int)Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds, _fields.Long(line, advancedAt + 2), _fields.Long(line, advancedAt + 3));
 
         bool fromTheGroup = affiliation != 0 && affiliation != AffiliationOutsider && (sourceFlags & ControlPlayer) != 0;
         if (fromTheGroup)
@@ -834,11 +839,16 @@ public sealed class CombatLogScanner
             // exactly what a spell nobody has a reason to press looks like.
             if (actor != null && prefixParams >= 3) actor.Did(_fields.Int(line, 9), amount);
 
-            // What the group put out, second by second. Two more lines for the shape of an attempt,
-            // and they cost one addition each: a damage line that falls away while the enemy's does
-            // not is a raid losing people, and one that never rises is a raid that never got going.
-            _open!.Output((int)Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds,
-                kind == EventKind.Heal ? 0 : amount, kind == EventKind.Heal ? amount : 0);
+            // What the group put out, second by second - and what each of them put out, because a
+            // rate over a whole attempt answers a question nobody asked once somebody is looking at
+            // one minute of it.
+            int second = (int)Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds;
+            _open!.Output(second, kind == EventKind.Heal ? 0 : amount, kind == EventKind.Heal ? amount : 0);
+
+            if (actor != null)
+            {
+                actor.Second(kind == EventKind.Heal ? actor.HealedAt : actor.DealtAt, second, amount);
+            }
 
             // Who opened on the boss. A pull belongs to the tank: whoever lands the first blow takes
             // the threat with it, and on the first seconds of a fight that is the whole story.
@@ -912,6 +922,10 @@ public sealed class CombatLogScanner
             // here describes whoever dealt the hit, so reading it as the victim's put the boss's
             // seven hundred million on the person being hit, and "this took 52% of them" was a
             // share of the attacker.
+            // Something hitting them proves they are on their feet, which is how a battle rez
+            // shows up without the app having to know what one is.
+            victim.Up((int)Elapsed(at).TotalSeconds);
+            victim.Second(victim.TookAt, (int)Elapsed(at).TotalSeconds, amount);
             victim.Moved(-amount);
             victim.Hit(at, prefixParams >= 3 ? Label(line, 10) : "Melee", amount,
                 victim.Health, victim.MaxHealth);
@@ -1076,7 +1090,14 @@ public sealed class CombatLogScanner
         return line;
     }
 
-    /// <summary>How many of the group were still up, one point a second.</summary>
+    /// <summary>
+    /// How many of the group were on their feet, one point a second.
+    ///
+    /// Read from when each of them went down and got back up rather than from their deaths alone. A
+    /// death is not the end of somebody's fight - there are battle rezzes, soulstones and places
+    /// where people simply stand back up - and counting one as permanent had an arena reading two
+    /// left standing at the end of a fight everybody walked out of.
+    /// </summary>
     private static IReadOnlyList<int> Alive(IReadOnlyList<PlayerStats> roster, int seconds)
     {
         if (roster.Count == 0 || seconds <= 0) return Array.Empty<int>();
@@ -1084,10 +1105,23 @@ public sealed class CombatLogScanner
         var line = new int[seconds + 1];
         for (int i = 0; i <= seconds; i++)
         {
-            line[i] = roster.Count(p => !p.Deaths.Any(d => d.At.TotalSeconds <= i));
+            line[i] = roster.Count(p => Standing(p, i));
         }
 
         return line;
+    }
+
+    /// <summary>Whether they were up at that second: the state after the last thing that changed it.</summary>
+    private static bool Standing(PlayerStats player, int second)
+    {
+        bool up = true;
+        foreach (var flip in player.Flips)
+        {
+            if (flip.Second > second) break;
+            up = flip.Up;
+        }
+
+        return up;
     }
 
     private static ulong Hash(ReadOnlySpan<byte> value)
@@ -1252,12 +1286,15 @@ public sealed class CombatLogScanner
         /// </summary>
         public long Health { get; private set; }
 
-        public void Saw(long health, long maxHealth)
+        public void Saw(int second, long health, long maxHealth)
         {
             if (maxHealth <= 0) return;
 
             Pool(maxHealth);
             Health = Math.Clamp(health, 0, MaxHealth);
+
+            // The log talking about them as alive is what says they got back up.
+            if (health > 0) Up(second);
         }
 
         /// <summary>Carries the last reading forward through what has landed on them since.</summary>
@@ -1274,6 +1311,60 @@ public sealed class CombatLogScanner
 
         /// <summary>Enemy melee that landed on them, which is the log's only account of threat.</summary>
         public long MeleeTaken { get; private set; }
+
+        /// <summary>
+        /// What they dealt, healed and took, second by second.
+        ///
+        /// Kept per second rather than as three totals because a rate over the whole attempt answers
+        /// a question nobody asked once somebody is looking at one minute of it. A ten-minute fight
+        /// is six hundred numbers per person per measure, which is a few hundred kilobytes a pull -
+        /// the price of being able to ask "what were they doing between two and three minutes".
+        /// </summary>
+        public Dictionary<int, long> DealtAt { get; } = new();
+
+        public Dictionary<int, long> HealedAt { get; } = new();
+
+        public Dictionary<int, long> TookAt { get; } = new();
+
+        /// <summary>
+        /// When they went down and when they got back up, in order.
+        ///
+        /// Somebody who dies is not gone for the rest of the fight - a battle rez, a soulstone, a
+        /// healer's own, and in some places simply standing back up. Counting a death as permanent
+        /// had an arena reading two people left standing at the end of a fight everybody walked out
+        /// of.
+        ///
+        /// Getting up is read from the log talking about them as alive again: their own events state
+        /// their health, and something that hits them proves it. A spell still ticking from before
+        /// they died carries their block reading zero, so it cannot raise them by mistake.
+        /// </summary>
+        public List<(int Second, bool Up)> Flips { get; } = new();
+
+        public void Down(int second) => Flip(second, up: false);
+
+        public void Up(int second) => Flip(second, up: true);
+
+        private void Flip(int second, bool up)
+        {
+            if (second < 0) return;
+            if (Flips.Count == 0)
+            {
+                if (up) return;   // they were up to begin with; saying so again says nothing
+                Flips.Add((second, false));
+                return;
+            }
+
+            if (Flips[^1].Up == up) return;
+            Flips.Add((second, up));
+        }
+
+        public void Second(Dictionary<int, long> line, int second, long amount)
+        {
+            if (second < 0 || amount <= 0) return;
+
+            line.TryGetValue(second, out long was);
+            line[second] = was + amount;
+        }
 
         public void Swung(long amount) => MeleeTaken += amount;
 

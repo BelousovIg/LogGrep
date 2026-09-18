@@ -596,6 +596,12 @@ public sealed class Then
         return this;
     }
 
+    public Then TheAttemptIsReadOver(string expected)
+    {
+        _check.TheAttemptIsReadOver(expected);
+        return this;
+    }
+
     public Then TheGroupStoodAt(TimeSpan when, int expected)
     {
         _check.TheGroupStoodAt(when, expected);

@@ -13,13 +13,17 @@ public sealed class PlayerRowViewModel
     private readonly Action<string> _report;
     private readonly IReadOnlyList<Finding> _mistakes;
     private readonly Scorecard? _card;
+    private readonly int _from;
+    private readonly int _to;
 
     public PlayerRowViewModel(PlayerStats stats, TimeSpan duration, Action<string> report,
         IReadOnlyList<Finding> mistakes, Scorecard? card = null,
-        IReadOnlyList<TimeSpan>? collective = null)
+        IReadOnlyList<TimeSpan>? collective = null, int from = 0, int to = int.MaxValue)
     {
         _stats = stats;
         _seconds = duration.TotalSeconds;
+        _from = Math.Max(0, from);
+        _to = Math.Min(to, (int)duration.TotalSeconds);
         _report = report;
         _mistakes = mistakes;
         _card = card;
@@ -141,12 +145,29 @@ public sealed class PlayerRowViewModel
            "      " + mistake.Cost.Text + Environment.NewLine +
            "      " + mistake.Advice;
 
-    /// <summary>Raw values behind the formatted cells, so the columns sort on numbers and times.</summary>
-    public double DpsValue => Rate(_stats.Damage);
+    /// <summary>
+    /// Raw values behind the formatted cells, so the columns sort on numbers and times.
+    ///
+    /// Over whatever stretch of the fight is open rather than over the whole of it. Somebody looking
+    /// at the last minute of a ten-minute attempt is asking about the last minute, and a rate
+    /// averaged over the other nine is an answer to a question they did not ask.
+    /// </summary>
+    public double DpsValue => Windowed(_stats.DamageLine, _stats.Damage);
 
-    public double HpsValue => Rate(_stats.Healing);
+    public double HpsValue => Windowed(_stats.HealingLine, _stats.Healing);
 
-    public double DtpsValue => Rate(_stats.DamageTaken);
+    public double DtpsValue => Windowed(_stats.TakenLine, _stats.DamageTaken);
+
+    /// <summary>Whether the numbers are about part of the fight rather than all of it.</summary>
+    public bool IsWindowed => _from > 0 || _to < (int)_seconds;
+
+    private double Windowed(IReadOnlyList<long> line, long whole)
+    {
+        if (!IsWindowed || line.Count == 0) return Rate(whole);
+
+        double span = Math.Max(1, _to - _from + 1);
+        return _stats.Over(line, _from, _to) / span;
+    }
 
     /// <summary>Null for a survivor, which keeps them at the bottom whichever way the column points.</summary>
     public TimeSpan? FirstDeath => _stats.Deaths.Count == 0 ? null : _stats.Deaths[0].At;

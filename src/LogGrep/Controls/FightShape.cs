@@ -26,8 +26,9 @@ public sealed class FightShape : FrameworkElement
 
     private static readonly Brush Label = Frozen(new SolidColorBrush(Color.FromRgb(0x62, 0x66, 0x70)));
 
-    private static readonly Pen DeathMark =
-        Frozen(new Pen(new SolidColorBrush(Color.FromRgb(0xE0, 0x70, 0x6D)), 1.5));
+    private static readonly Brush Bone = Frozen(new SolidColorBrush(Color.FromRgb(0xE0, 0x70, 0x6D)));
+
+    private static readonly Brush Socket = Frozen(new SolidColorBrush(Color.FromRgb(0x17, 0x18, 0x1B)));
 
     public static readonly DependencyProperty TracesProperty = DependencyProperty.Register(
         nameof(Traces), typeof(IReadOnlyList<Trace>), typeof(FightShape),
@@ -36,6 +37,34 @@ public sealed class FightShape : FrameworkElement
     public static readonly DependencyProperty DeathsProperty = DependencyProperty.Register(
         nameof(Deaths), typeof(IReadOnlyList<int>), typeof(FightShape),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty FromProperty = DependencyProperty.Register(
+        nameof(From), typeof(int), typeof(FightShape),
+        new FrameworkPropertyMetadata(0,
+            FrameworkPropertyMetadataOptions.AffectsRender | FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+    public static readonly DependencyProperty ToProperty = DependencyProperty.Register(
+        nameof(To), typeof(int), typeof(FightShape),
+        new FrameworkPropertyMetadata(int.MaxValue,
+            FrameworkPropertyMetadataOptions.AffectsRender | FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+    private static readonly Brush Shade = Frozen(new SolidColorBrush(Color.FromArgb(0x30, 0x4C, 0x8F, 0xD8)));
+
+    private double _dragFrom = -1;
+    private double _dragTo = -1;
+
+    /// <summary>The stretch of the fight being read, in seconds. Dragging across the chart sets it.</summary>
+    public int From
+    {
+        get => (int)GetValue(FromProperty);
+        set => SetValue(FromProperty, value);
+    }
+
+    public int To
+    {
+        get => (int)GetValue(ToProperty);
+        set => SetValue(ToProperty, value);
+    }
 
     public FightShape()
     {
@@ -82,15 +111,22 @@ public sealed class FightShape : FrameworkElement
             dc.DrawText(Small(Display.Clock(TimeSpan.FromSeconds(t))), new Point(x + 3, height - 14));
         }
 
+        // What is being read, shaded. Everything outside it is still drawn, because a stretch of a
+        // fight only means something against the fight it came out of.
+        if (seconds > 0)
+        {
+            double a = _dragFrom >= 0 ? Math.Min(_dragFrom, _dragTo) : From / seconds * width;
+            double b = _dragFrom >= 0
+                ? Math.Max(_dragFrom, _dragTo)
+                : (To >= seconds ? width : To / seconds * width);
+
+            if (b - a > 1 && (a > 0 || b < width)) dc.DrawRectangle(Shade, null, new Rect(a, 0, b - a, height));
+        }
+
         var deaths = Deaths;
         if (deaths != null && seconds > 0)
         {
-            foreach (int at in deaths)
-            {
-                double x = Math.Clamp(at / seconds, 0, 1) * width;
-                dc.DrawLine(DeathMark, new Point(x - 3, height - 9), new Point(x + 3, height - 3));
-                dc.DrawLine(DeathMark, new Point(x - 3, height - 3), new Point(x + 3, height - 9));
-            }
+            foreach (int at in deaths) Skull(dc, Math.Clamp(at / seconds, 0, 1) * width, height - 7);
         }
 
         foreach (var trace in Traces ?? Array.Empty<Trace>())
@@ -117,6 +153,12 @@ public sealed class FightShape : FrameworkElement
             return;
         }
 
+        if (_dragFrom >= 0)
+        {
+            _dragTo = e.GetPosition(this).X;
+            InvalidateVisual();
+        }
+
         int at = (int)Math.Round(Math.Clamp(e.GetPosition(this).X / ActualWidth, 0, 1) * seconds);
         var said = new List<string> { "at " + Display.Clock(TimeSpan.FromSeconds(at)) };
 
@@ -126,6 +168,66 @@ public sealed class FightShape : FrameworkElement
         if (deaths is { Count: > 0 }) said.Add(deaths.Count == 1 ? "somebody died here" : deaths.Count + " died here");
 
         ToolTip = string.Join(Environment.NewLine, said);
+    }
+
+    /// <summary>
+    /// Dragging across the chart picks a stretch of the fight to read. A double-click puts it back,
+    /// because the way out has to be as cheap as the way in or people stop using the way in.
+    /// </summary>
+    protected override void OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonDown(e);
+
+        if (e.ClickCount == 2)
+        {
+            From = 0;
+            To = int.MaxValue;
+            _dragFrom = _dragTo = -1;
+            InvalidateVisual();
+            return;
+        }
+
+        _dragFrom = _dragTo = e.GetPosition(this).X;
+        CaptureMouse();
+    }
+
+    protected override void OnMouseLeftButtonUp(System.Windows.Input.MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonUp(e);
+
+        if (_dragFrom < 0) return;
+
+        ReleaseMouseCapture();
+
+        double seconds = Longest();
+        double a = Math.Min(_dragFrom, _dragTo);
+        double b = Math.Max(_dragFrom, _dragTo);
+        _dragFrom = _dragTo = -1;
+
+        // A click rather than a drag. Picking a stretch two pixels wide is nobody's intention, and
+        // leaving the window alone is what they meant.
+        if (seconds <= 0 || ActualWidth <= 2 || b - a < 4)
+        {
+            InvalidateVisual();
+            return;
+        }
+
+        From = (int)Math.Round(Math.Clamp(a / ActualWidth, 0, 1) * seconds);
+        To = (int)Math.Round(Math.Clamp(b / ActualWidth, 0, 1) * seconds);
+    }
+
+    /// <summary>
+    /// A small skull where somebody went down. Drawn rather than set as a character, because a glyph
+    /// at this size depends on whichever font happens to carry it and half of them do not.
+    /// </summary>
+    private static void Skull(DrawingContext dc, double x, double y)
+    {
+        // A cranium, a jaw under it, and two sockets cut back out - four shapes, and it reads at
+        // nine pixels, which a cross also did but said nothing about what it was.
+        dc.DrawEllipse(Bone, null, new Point(x, y - 1), 4, 3.6);
+        dc.DrawRectangle(Bone, null, new Rect(x - 2.2, y + 1.6, 4.4, 2.6));
+        dc.DrawEllipse(Socket, null, new Point(x - 1.6, y - 1.2), 1.2, 1.3);
+        dc.DrawEllipse(Socket, null, new Point(x + 1.6, y - 1.2), 1.2, 1.3);
     }
 
     private static void Draw(DrawingContext dc, Trace trace, double width, double height, double seconds)

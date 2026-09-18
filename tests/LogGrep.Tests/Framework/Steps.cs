@@ -197,4 +197,16 @@ public sealed class When
         _act.SortPlayersBy(column);
         return this;
     }
+
+    public When IReadTheFightFrom(TimeSpan from, TimeSpan to)
+    {
+        _act.ReadTheFightFrom(from, to);
+        return this;
+    }
+
+    public When IReadTheWholeAttempt()
+    {
+        _act.ReadTheWholeAttempt();
+        return this;
+    }
 }

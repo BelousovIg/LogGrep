@@ -564,6 +564,9 @@ public sealed class Verification
         return row.Cells[attempt - 1];
     }
 
+    /// <summary>Which stretch of the attempt the numbers below the chart are about.</summary>
+    public void TheAttemptIsReadOver(string expected) => Assert.Equal(expected, _page.Pull.WindowText);
+
     /// <summary>Whether the enemy ever stated its health, which is what a progress line is made of.</summary>
     public void TheAttemptHasAShape(bool expected)
         => Assert.True(expected == (_page.Pull.Record.EnemyHealth.Count > 0),
