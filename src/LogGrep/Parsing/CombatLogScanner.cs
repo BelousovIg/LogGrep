@@ -534,7 +534,7 @@ public sealed class CombatLogScanner
             // And the pool again, from the block a cast carries. This is the surest place to find
             // it: everybody casts all fight, including a healer who dealt no damage and stood out
             // of everything, who would otherwise never be measured at all.
-            if (_fields.Count > 15) PlayerAt(line, 12)?.Saw(_fields.Long(line, 15));
+            if (_fields.Count > 15) PlayerAt(line, 12)?.Saw(_fields.Long(line, 14), _fields.Long(line, 15));
 
             return;
         }
@@ -699,7 +699,7 @@ public sealed class CombatLogScanner
         // dealer in the raid and quietly made a nonsense of everything built on a pool. Following
         // the field rather than the role is also what keeps a pet's pool off its owner, because a
         // pet's GUID is not a player's.
-        if (advancedAt >= 0) PlayerAt(line, advancedAt)?.Saw(_fields.Long(line, advancedAt + 3));
+        if (advancedAt >= 0) PlayerAt(line, advancedAt)?.Saw(_fields.Long(line, advancedAt + 2), _fields.Long(line, advancedAt + 3));
 
         bool fromTheGroup = affiliation != 0 && affiliation != AffiliationOutsider && (sourceFlags & ControlPlayer) != 0;
         if (fromTheGroup)
@@ -734,7 +734,11 @@ public sealed class CombatLogScanner
         if (kind == EventKind.Heal)
         {
             double when = LogTimestamp.SecondsOfDay(line, eventStart);
-            if (when >= 0) PlayerAt(line, 5)?.Heal(when, amount);
+            var healed = PlayerAt(line, 5);
+            if (when >= 0) healed?.Heal(when, amount);
+
+            // Healing puts it back, so a fight reads as a grind rather than as one long slide.
+            healed?.Moved(amount);
             return;
         }
 
@@ -769,20 +773,13 @@ public sealed class CombatLogScanner
 
         if (at >= 0)
         {
-            // KNOWN WRONG, and left alone deliberately. The advanced block on this line describes
-            // whoever dealt the hit - its second field is the owner GUID, which is how a pet's
-            // damage finds its player - so these two numbers are the attacker's health, not the
-            // victim's. The share a hit took of somebody no longer reads them: a death's pool now
-            // comes from PlayerStats.MaxHealth, which is learned from events the player caused and
-            // is correct. What still reads them is the walk back to the last moment they were
-            // whole, and that heuristic was measured and tuned against the real log as it stands.
-            // Changing it is its own piece of work with its own measurement, not a footnote to
-            // somebody else's. The generated log writes this block as the target's, which is why
-            // no scenario ever caught it.
-            long health = advancedAt >= 0 ? _fields.Long(line, advancedAt + 2) : 0;
-            long maxHealth = advancedAt >= 0 ? _fields.Long(line, advancedAt + 3) : 0;
-
-            victim.Hit(at, prefixParams >= 3 ? Label(line, 10) : "Melee", amount, health, maxHealth);
+            // Their own health, carried forward rather than read off this line. The advanced block
+            // here describes whoever dealt the hit, so reading it as the victim's put the boss's
+            // seven hundred million on the person being hit, and "this took 52% of them" was a
+            // share of the attacker.
+            victim.Moved(-amount);
+            victim.Hit(at, prefixParams >= 3 ? Label(line, 10) : "Melee", amount,
+                victim.Health, victim.MaxHealth);
         }
 
         // Enemy spell damage, rolled up per spell and person. A swing has no spell id and cannot
@@ -1061,7 +1058,30 @@ public sealed class CombatLogScanner
         /// </summary>
         public long MaxHealth { get; private set; }
 
-        public void Saw(long maxHealth) => Pool(maxHealth);
+        /// <summary>
+        /// Where their health was when the log last stated it, carried forward through everything
+        /// that landed on them in between.
+        ///
+        /// The log only states somebody's health on events they caused, so it is a reading that goes
+        /// stale between their own casts - and everybody casts constantly, so it never goes stale
+        /// for long. What it replaced was worse than stale: the health of whoever was hitting them.
+        /// </summary>
+        public long Health { get; private set; }
+
+        public void Saw(long health, long maxHealth)
+        {
+            if (maxHealth <= 0) return;
+
+            Pool(maxHealth);
+            Health = Math.Clamp(health, 0, MaxHealth);
+        }
+
+        /// <summary>Carries the last reading forward through what has landed on them since.</summary>
+        public void Moved(long by)
+        {
+            if (MaxHealth <= 0) return;
+            Health = Math.Clamp(Health + by, 0, MaxHealth);
+        }
 
         public void Pool(long maxHealth)
         {

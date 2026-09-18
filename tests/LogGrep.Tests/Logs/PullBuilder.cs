@@ -126,7 +126,7 @@ public sealed class PullBuilder
         {
             _log.Line(_start + at,
                 $"SPELL_CAST_SUCCESS,{_log.Units(player, _log.BossName)},{(int)spell}," +
-                $"\"{spell.NameOf()}\",0x1");
+                $"\"{spell.NameOf()}\",0x1,{_log.Advanced(player)}");
 
             // A spell that does nothing cannot be under-used in any sense the app can measure, so
             // a scenario about under-using one has to give it something to do.
@@ -147,7 +147,7 @@ public sealed class PullBuilder
     {
         _log.Line(_start + _at,
             $"SPELL_CAST_SUCCESS,{_log.Units(player, _log.BossName)},{(int)spell}," +
-            $"\"{spell.NameOf()}\",0x1");
+            $"\"{spell.NameOf()}\",0x1,{_log.Advanced(player)}");
         return this;
     }
 
@@ -179,8 +179,9 @@ public sealed class PullBuilder
     /// <summary>A plain melee swing, which carries no spell id and so no way to stand elsewhere.</summary>
     public PullBuilder BossSwingsAt(string target, long amount)
     {
+        _log.Took(target, amount);
         _log.Line(_start + _at,
-            $"SWING_DAMAGE,{_log.Units(_log.BossName, target)},{_log.Advanced(target, amount)}," +
+            $"SWING_DAMAGE,{_log.Units(_log.BossName, target)},{_log.Advanced(_log.BossName)}," +
             $"{amount},0,1,0,0,0,nil,nil,nil");
         return this;
     }
@@ -206,7 +207,10 @@ public sealed class PullBuilder
     }
 
     private void Damage(string source, string target, long amount, Ability spell)
-        => _log.Line(_start + _at,
+    {
+        _log.Took(target, amount);
+        _log.Line(_start + _at,
             $"SPELL_DAMAGE,{_log.Units(source, target)},{(int)spell}," +
-            $"\"{spell.NameOf()}\",0x1,{_log.Advanced(target, amount)},{amount},0,1,0,0,0,nil,nil,nil");
+            $"\"{spell.NameOf()}\",0x1,{_log.Advanced(source)},{amount},0,1,0,0,0,nil,nil,nil");
+    }
 }

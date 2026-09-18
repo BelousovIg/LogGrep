@@ -42,6 +42,9 @@ public sealed class CombatLogBuilder
     /// <summary>Everybody's health pool. One number for the raid keeps a scenario's arithmetic readable.</summary>
     public const long HealthPool = 1_000_000;
 
+    /// <summary>What a boss has, which is nothing like what a person has.</summary>
+    public const long BossPool = 500_000_000;
+
     private readonly StringBuilder _text = new();
     private readonly Dictionary<string, long> _health = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _builds = new(StringComparer.Ordinal);
@@ -140,6 +143,15 @@ public sealed class CombatLogBuilder
         // Everybody starts an attempt whole.
         _health.Clear();
 
+        // And everybody states their own health at the start, the way a real log does on every
+        // event somebody causes. Without it the app would only learn a player's pool if they dealt
+        // damage - and a scenario about somebody being killed is exactly the one where they do not.
+        foreach (var fighter in _roster)
+        {
+            Line(_start, $"SPELL_CAST_SUCCESS,{Units(fighter.Name, fighter.Name)}," +
+                         $"{(int)Ability.WellFed},\"{Ability.WellFed.NameOf()}\",0x1,{Advanced(fighter.Name)}");
+        }
+
         var pull = new PullBuilder(this, _start);
         body(pull);
 
@@ -221,19 +233,28 @@ public sealed class CombatLogBuilder
     /// Health is tracked as the fight goes: the hit is applied here, and what the block reports is
     /// what is left afterwards, which is what the game reports too.
     /// </summary>
-    internal string Advanced(string target, long amount)
+    internal string Advanced(string source)
     {
-        _health.TryGetValue(target, out long left);
-        if (left <= 0) left = HealthPool;
-
-        left = Math.Max(0, left - amount);
-        _health[target] = left;
+        _health.TryGetValue(source, out long left);
+        if (left <= 0) left = PoolOf(source);
 
         // infoGUID, ownerGUID, currentHP, maxHP, then the stats nothing reads, then the position
         // fields that close the block - the app anchors on the first decimal to find the end.
-        return $"{Actor(target)},0000000000000000,{left},{HealthPool},0,0,0,0,0,0,0,0," +
+        return $"{Actor(source)},0000000000000000,{left},{PoolOf(source)},0,0,0,0,0,0,0,0," +
                "1234.56,789.01,2000,3.14,80";
     }
+
+    /// <summary>What a hit does to whoever it lands on, which the block on that line never says.</summary>
+    internal void Took(string target, long amount)
+    {
+        _health.TryGetValue(target, out long left);
+        if (left <= 0) left = PoolOf(target);
+
+        _health[target] = Math.Max(0, left - amount);
+    }
+
+    /// <summary>A boss is not a person-sized thing, and writing it as one hid a real bug for weeks.</summary>
+    private long PoolOf(string name) => name == BossName ? BossPool : HealthPool;
 
     /// <summary>Healing puts it back, so a fight can be a grind rather than one long slide.</summary>
     internal void Healed(string target, long amount)
