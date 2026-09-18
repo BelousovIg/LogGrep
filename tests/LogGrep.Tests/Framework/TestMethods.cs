@@ -32,6 +32,8 @@ public sealed class TestMethods
 
     public void ReadTheWholeAttempt() => _page.ReadTheWholeAttempt();
 
+    public void SwitchLine(string name, bool on) => _page.SwitchLine(name, on);
+
     public void RemoveLog(string name) => _page.RemoveLog(name);
 
     public void Reopen() => _page.Reopen();

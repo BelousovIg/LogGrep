@@ -1,3 +1,4 @@
+using LogGrep.Models;
 using LogGrep.Tests.Framework;
 using LogGrep.Tests.Logs;
 using static LogGrep.Tests.Logs.CombatLogBuilder;
@@ -83,6 +84,48 @@ public sealed class TheShapeOfAnAttempt : Scenario
         Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
 
         Then.TheKillIsMarkedAt(null);
+    }
+
+    [Fact]
+    public void A_line_switched_off_stops_answering_in_the_hover()
+    {
+        // Turning a switch off is somebody saying they are not asking about that line. A hover that
+        // keeps answering anyway is the reason they turned it off.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        Then.TheShapeSaysAt(30.Seconds(), "at 0:30", "standing 3 up");
+
+        When.ISwitchOffTheLine("standing");
+
+        Then.TheShapeSaysAt(30.Seconds(), "at 0:30");
+    }
+
+    [Fact]
+    public void Narrowing_the_rows_narrows_the_chart_with_them()
+    {
+        // The chart sits over the table and has to be about the same people. A damage line drawn
+        // over the whole raid above a table showing one healer is the group's answer beside one
+        // person's question.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
+            .At(30.Seconds()).Deals("Nightblade", to: Soulcoiler, amount: 900_000)
+            .At(40.Seconds()).Heals("Sunwell", target: "Rockjaw", amount: 200_000)
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        Then.TheShapeOffers("standing", "damage", "healing");
+
+        When.IAnalyseThePull(Soulcoiler, number: 1).INarrowTo(Role.Healer);
+
+        Then.TheShapeOffers("standing", "healing")
+            .TheShapeSaysAt(30.Seconds(), "at 0:30", "standing 1 up");
     }
 
     [Fact]

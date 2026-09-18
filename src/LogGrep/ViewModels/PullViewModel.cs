@@ -18,6 +18,7 @@ public sealed class PullViewModel : ObservableObject
     private IReadOnlyList<TimeSpan> _collective = Array.Empty<TimeSpan>();
     private Role? _role;
     private IReadOnlyList<Trace>? _traces;
+    private readonly Dictionary<string, bool> _switches = new(StringComparer.Ordinal);
     private int _from;
     private int _to = int.MaxValue;
 
@@ -50,8 +51,37 @@ public sealed class PullViewModel : ObservableObject
 
         _role = role;
         _playersView = null;
+
+        // The chart is about the same people as the rows under it. Narrowing to the healers and
+        // leaving a damage line drawn over everybody would put the group's answer next to one
+        // person's question, which is the one thing a chart beside a table must not do.
+        Remember();
+        _traces = null;
+
         OnPropertyChanged(nameof(PlayersView));
+        OnPropertyChanged(nameof(Traces));
+        OnPropertyChanged(nameof(Deaths));
+        OnPropertyChanged(nameof(ShownText));
     }
+
+    /// <summary>
+    /// Which lines were switched on, so that rebuilding them does not quietly turn every switch back
+    /// on behind somebody who had just turned three of them off.
+    /// </summary>
+    private void Remember()
+    {
+        if (_traces == null) return;
+
+        foreach (var trace in _traces) _switches[trace.Name] = trace.IsOn;
+    }
+
+    private bool IsOn(string name, bool byDefault)
+        => _switches.TryGetValue(name, out bool on) ? on : byDefault;
+
+    /// <summary>Whoever the rows are showing, which is who the chart is about.</summary>
+    private IReadOnlyList<PlayerStats> Shown => Record.Roster
+        .Where(stats => _role == null || Specs.RoleOf(stats.SpecId) == _role)
+        .ToArray();
 
     /// <summary>
     /// Hands the attempt what the analysis found. The player rows are dropped rather than patched:
@@ -178,7 +208,11 @@ public sealed class PullViewModel : ObservableObject
 
     /// <summary>The seconds somebody went down, which is where the other lines bend.</summary>
     public IReadOnlyList<int> Deaths
-        => Record.Roster.SelectMany(p => p.Deaths).Select(d => (int)d.At.TotalSeconds).OrderBy(s => s).ToArray();
+        => Shown.SelectMany(p => p.Deaths).Select(d => (int)d.At.TotalSeconds).OrderBy(s => s).ToArray();
+
+    /// <summary>What the chart says at one second, which is what its hover shows.</summary>
+    public string Readout(int second)
+        => string.Join(Environment.NewLine, ChartReadout.At(Traces, Deaths, Kill, second));
 
     /// <summary>
     /// The second the enemy went down, or nothing for an attempt that did not put it down.
@@ -193,35 +227,93 @@ public sealed class PullViewModel : ObservableObject
     private IReadOnlyList<Trace> BuildTraces()
     {
         var traces = new List<Trace>();
+        bool everybody = _role == null;
+        var shown = Shown;
+        int seconds = (int)Record.Duration.TotalSeconds;
 
+        // The enemy is the enemy whoever is being looked at, so this line never narrows.
         if (Record.EnemyHealth.Count > 0)
         {
             traces.Add(new Trace("enemy", Color.FromRgb(0xE0, 0x70, 0x6D),
-                Record.EnemyHealth.ToArray(), v => Display.Percent(v), on: true));
+                Record.EnemyHealth.ToArray(), v => Display.Percent(v), IsOn("enemy", true)));
         }
 
-        if (Record.Standing.Count > 0)
+        // The rest are about people, so they are about whoever the rows are showing. Unnarrowed they
+        // are the scan's own lines rather than a sum of the roster: the scan also counted what the
+        // group's pets put out, and nobody's row owns a pet.
+        var standing = everybody
+            ? Record.Standing.Select(v => (double)v).ToArray()
+            : OnTheirFeet(shown, seconds);
+
+        if (standing.Length > 0)
         {
-            traces.Add(new Trace("standing", Color.FromRgb(0x69, 0xC0, 0x7A),
-                Record.Standing.Select(v => (double)v).ToArray(),
-                v => Display.Count((int)v) + " up", on: true));
+            traces.Add(new Trace("standing", Color.FromRgb(0x69, 0xC0, 0x7A), standing,
+                v => Display.Count((int)v) + " up", IsOn("standing", true)));
         }
 
-        if (Record.DamageLine.Count > 0)
+        var damage = everybody
+            ? Record.DamageLine.Select(v => (double)v).ToArray()
+            : Summed(shown, p => p.DamageLine, seconds);
+
+        if (damage.Any(v => v > 0))
         {
-            traces.Add(new Trace("damage", Color.FromRgb(0xE0, 0xA5, 0x54),
-                Record.DamageLine.Select(v => (double)v).ToArray(),
-                v => Display.Rate(v) + "/s", on: false));
+            traces.Add(new Trace("damage", Color.FromRgb(0xE0, 0xA5, 0x54), damage,
+                v => Display.Rate(v) + "/s", IsOn("damage", false)));
         }
 
-        if (Record.HealingLine.Count > 0)
+        var healing = everybody
+            ? Record.HealingLine.Select(v => (double)v).ToArray()
+            : Summed(shown, p => p.HealingLine, seconds);
+
+        if (healing.Any(v => v > 0))
         {
-            traces.Add(new Trace("healing", Color.FromRgb(0x8E, 0x9B, 0xE8),
-                Record.HealingLine.Select(v => (double)v).ToArray(),
-                v => Display.Rate(v) + "/s", on: false));
+            traces.Add(new Trace("healing", Color.FromRgb(0x8E, 0x9B, 0xE8), healing,
+                v => Display.Rate(v) + "/s", IsOn("healing", false)));
         }
 
         return traces;
+    }
+
+    /// <summary>
+    /// How many of them were up, second by second. A death is not the end of somebody's fight, so
+    /// this walks their ups and downs rather than counting the ones who never went down.
+    /// </summary>
+    private static double[] OnTheirFeet(IReadOnlyList<PlayerStats> shown, int seconds)
+    {
+        var line = new double[Math.Max(0, seconds) + 1];
+
+        foreach (var player in shown)
+        {
+            int next = 0;
+            bool up = true;
+
+            for (int second = 0; second < line.Length; second++)
+            {
+                while (next < player.Flips.Count && player.Flips[next].Second <= second)
+                {
+                    up = player.Flips[next].Up;
+                    next++;
+                }
+
+                if (up) line[second]++;
+            }
+        }
+
+        return line;
+    }
+
+    private static double[] Summed(IReadOnlyList<PlayerStats> shown,
+        Func<PlayerStats, IReadOnlyList<long>> pick, int seconds)
+    {
+        var line = new double[Math.Max(0, seconds) + 1];
+
+        foreach (var player in shown)
+        {
+            var own = pick(player);
+            for (int second = 0; second < own.Count && second < line.Length; second++) line[second] += own[second];
+        }
+
+        return line;
     }
 
     /// <summary>The moments one thing caught much of the group, drawn as a band on the enemy's lane.</summary>

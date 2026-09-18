@@ -610,6 +610,10 @@ public sealed class Verification
     public void TheShapeMarksDeathsAt(params int[] expected)
         => Assert.Equal(expected, _page.Pull.Deaths.ToArray());
 
+    /// <summary>What the chart says under the pointer at that moment, line by line.</summary>
+    public void TheShapeSaysAt(TimeSpan when, params string[] expected)
+        => Assert.Equal(expected, _page.Pull.Readout((int)when.TotalSeconds).Split(Environment.NewLine));
+
     public void TheScreenShowing(int expected)
         => Assert.True(expected == _page.ViewModel.Screen,
             "The window should be showing screen " + expected + " and shows " + _page.ViewModel.Screen + ".");

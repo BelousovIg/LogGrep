@@ -209,4 +209,16 @@ public sealed class When
         _act.ReadTheWholeAttempt();
         return this;
     }
+
+    public When ISwitchOffTheLine(string name)
+    {
+        _act.SwitchLine(name, on: false);
+        return this;
+    }
+
+    public When ISwitchOnTheLine(string name)
+    {
+        _act.SwitchLine(name, on: true);
+        return this;
+    }
 }

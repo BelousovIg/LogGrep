@@ -644,6 +644,12 @@ public sealed class Then
         return this;
     }
 
+    public Then TheShapeSaysAt(TimeSpan when, params string[] expected)
+    {
+        _check.TheShapeSaysAt(when, expected);
+        return this;
+    }
+
     public Then TheShapeMarksDeathsAt(params int[] expected)
     {
         _check.TheShapeMarksDeathsAt(expected);

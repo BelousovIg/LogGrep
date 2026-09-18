@@ -182,16 +182,8 @@ public sealed class FightShape : FrameworkElement
         }
 
         int at = (int)Math.Round(Math.Clamp(e.GetPosition(this).X / ActualWidth, 0, 1) * seconds);
-        var said = new List<string> { "at " + Display.Clock(TimeSpan.FromSeconds(at)) };
 
-        said.AddRange(traces.Where(t => t.Values.Count > 0).Select(t => t.At(at)));
-
-        var deaths = Deaths?.Where(d => Math.Abs(d - at) <= 1).ToList();
-        if (deaths is { Count: > 0 }) said.Add(deaths.Count == 1 ? "somebody died here" : deaths.Count + " died here");
-
-        if (Kill is { } killed && Math.Abs(killed - at) <= 1) said.Add("the enemy died here");
-
-        ToolTip = string.Join(Environment.NewLine, said);
+        ToolTip = string.Join(Environment.NewLine, ChartReadout.At(traces, Deaths, Kill, at));
     }
 
     /// <summary>

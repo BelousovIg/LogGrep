@@ -245,6 +245,16 @@ public sealed class LogGrepPage
 
     public void ReadTheWholeAttempt() => Pull.ResetWindow();
 
+    /// <summary>The switch under the chart that takes one line off it.</summary>
+    public void SwitchLine(string name, bool on)
+    {
+        var trace = Pull.Traces.FirstOrDefault(t => t.Name == name)
+            ?? throw new InvalidOperationException(
+                $"'{name}' is not a line on this chart. It draws: {Names(Pull.Traces.Select(t => t.Name))}");
+
+        trace.IsOn = on;
+    }
+
     public void SortPlayersBy(PlayerColumn column)
     {
         ViewModel.Sorting.Players.Toggle(column.ToString());
