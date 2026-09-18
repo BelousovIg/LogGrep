@@ -38,7 +38,9 @@ public sealed class PullViewModel : ObservableObject
 
     public bool HasMistakes => _mistakes.Count > 0;
 
-    public string MistakesText => _mistakes.Count == 0 ? "—" : Display.Count(_mistakes.Count);
+    public string MistakesText => _mistakes.Count == 0
+        ? "—"
+        : Display.Mistakes(_mistakes.Count, _mistakes.Count(f => f.Serious));
 
     /// <summary>
     /// Narrows the roster to one role, or back to all of it. A role belongs to an attempt rather
@@ -397,6 +399,53 @@ public sealed class PullViewModel : ObservableObject
     public string StartText => Record.StartTime.ToString("MMM dd HH:mm:ss", CultureInfo.InvariantCulture);
 
     public string DurationText => Display.Duration(Record.Duration);
+
+
+    /// <summary>
+    /// How much of the boss was still standing when the attempt ended.
+    ///
+    /// The whole point of a night of attempts in one glance: nobody remembers which pull was the
+    /// close one, and "8%" beside "64%" says it without a sentence. A kill is nothing left; an
+    /// attempt the log never read a boss's health on says so with a dash rather than with a zero,
+    /// because none left and never known are different answers.
+    /// </summary>
+    public string LeftText
+    {
+        get
+        {
+            if (Record.Success) return Display.Percent(0);
+
+            double down = 0;
+            foreach (double v in Record.BossProgress)
+            {
+                if (!double.IsNaN(v) && v > down) down = v;
+            }
+
+            return Record.BossProgress.Count == 0 ? "—" : Display.Percent(1 - down);
+        }
+    }
+
+    /// <summary>
+    /// Which phase the attempt died in, or finished in. The first is where every fight starts, so an
+    /// attempt with no walls in it ended in it.
+    /// </summary>
+    public string EndPhaseText
+    {
+        get
+        {
+            int number = 1;
+            foreach (var phase in Record.Phases)
+            {
+                if (phase.Second <= Record.Duration.TotalSeconds) number = phase.Number;
+            }
+
+            return "P" + number;
+        }
+    }
+
+
+    /// <summary>When the attempt was pulled, to the minute - which is how an evening is talked about.</summary>
+    public string TimeOfDayText => Display.TimeOfDay(Record.StartTime);
 
     public string ParticipantsText => Record.Participants > 0 ? Record.Participants.ToString() : "—";
 

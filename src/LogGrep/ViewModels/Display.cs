@@ -36,6 +36,25 @@ public static class Display
     public static string Seconds(double value)
         => value < 0.5 ? "—" : Math.Round(value, MidpointRounding.AwayFromZero).ToString("0", Inv) + "s";
 
+    /// <summary>
+    /// The time of day a thing happened, to the minute. Invariant and twenty-four hour, because an
+    /// evening of pulls is read as a sequence and "9:05 PM" sorts by eye no better than it reads.
+    /// </summary>
+    public static string TimeOfDay(DateTime when) => when.ToString("HH:mm", Inv);
+
+    /// <summary>
+    /// A count of mistakes with the serious ones marked beside it: nothing, "!", or "!!" for two or
+    /// more. Twelve small things and one serious one are the same number and not the same night, and
+    /// a mark is the cheapest thing that can say so inside a cell the width of two characters.
+    /// </summary>
+    public static string Mistakes(int all, int serious)
+        => all == 0 ? string.Empty : Count(all) + serious switch
+        {
+            0 => string.Empty,
+            1 => " !",
+            _ => " !!",
+        };
+
     /// <summary>A plain count of things. Invariant so that no locale puts a separator in it.</summary>
     public static string Count(int value) => value.ToString(Inv);
 

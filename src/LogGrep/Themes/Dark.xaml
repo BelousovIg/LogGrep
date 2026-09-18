@@ -642,6 +642,31 @@
 
     <!-- A cell of the report grid: a block of colour with a number on it, and a click that opens
          what it stands for. -->
+    <!--
+        One attempt of a night, as a tag. Two unequal halves: the small one carries what was left of
+        the boss and the phase it was left in, the large one which attempt it was and when. A row of
+        them is the evening at a glance, before any table of it is read.
+    -->
+    <Style x:Key="TagButton" TargetType="Button">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Margin" Value="0,0,6,6" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Tag" Background="{StaticResource InputBrush}" CornerRadius="3"
+                            BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Tag" Property="BorderBrush" Value="{StaticResource FgBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="CellButton" TargetType="Button">
         <Setter Property="Foreground" Value="#FF17181B" />
         <Setter Property="FontSize" Value="10" />

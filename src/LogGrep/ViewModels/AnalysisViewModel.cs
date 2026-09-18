@@ -39,6 +39,18 @@ public sealed class AnalysisViewModel : ObservableObject
     /// <summary>The attempts the baselines are drawn from, and how that choice was made.</summary>
     public Selection Selection => _selection;
 
+    /// <summary>
+    /// The sample as a row of tags, one per attempt, in the order the grid numbers them.
+    ///
+    /// It is the first thing on the report and the cheapest: nobody remembers which pull was the
+    /// close one, and a row of "64%" with one "8%" in it says so before any table is read. Numbered
+    /// by position in the sample rather than in the encounter, so a tag and the column under it are
+    /// the same attempt even when the sample has been narrowed to the wipes.
+    /// </summary>
+    public IReadOnlyList<AttemptTag> Tags => _selection.Pulls
+        .Select((pull, i) => new AttemptTag(i, Display.Count(i + 1), pull))
+        .ToArray();
+
     public EncounterViewModel? Encounter => _selection.Encounter;
 
     /// <summary>The attempt being looked at, or null when the whole sample is.</summary>
@@ -245,6 +257,7 @@ public sealed class AnalysisViewModel : ObservableObject
 
         OnPropertyChanged(nameof(Selection));
         OnPropertyChanged(nameof(Grid));
+        OnPropertyChanged(nameof(Tags));
         OnPropertyChanged(nameof(ShowGrid));
         OnPropertyChanged(nameof(Encounter));
         OnPropertyChanged(nameof(Pull));
@@ -267,3 +280,16 @@ public sealed class AnalysisViewModel : ObservableObject
 /// are already standing is not somewhere to go.
 /// </summary>
 public sealed record Crumb(string Text, int Depth, bool Climbable);
+
+/// <summary>
+/// One attempt as a tag: what was left of the boss and in which phase, against which attempt it was,
+/// how long it ran and when in the evening it happened.
+///
+/// The number is its place in the sample, which is what the grid's columns count by, so a tag and
+/// the column under it always name the same attempt.
+/// </summary>
+public sealed record AttemptTag(int Index, string Number, PullViewModel Pull)
+{
+    /// <summary>"7 (2:31)" - which attempt it was and how long it ran.</summary>
+    public string TagText => Number + " (" + Pull.DurationText + ")";
+}

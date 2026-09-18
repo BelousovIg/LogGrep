@@ -129,6 +129,18 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Opens one attempt from the row of tags above the grid. The same thing a cell click does,
+    /// less the person: a tag is about the attempt and nobody in particular.
+    /// </summary>
+    private void OnOpenAttemptTag(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: AttemptTag tag })
+        {
+            Model.Analysis.Open(tag.Index, string.Empty);
+        }
+    }
+
     /// <summary>Takes one file out of the list, which re-reads whatever is left of it.</summary>
     private void OnRemoveLog(object sender, RoutedEventArgs e)
     {

@@ -86,6 +86,18 @@ public sealed record Finding(
     /// </summary>
     public bool Timeless { get; init; }
 
+    /// <summary>
+    /// Whether this one is serious.
+    ///
+    /// Not a weight and not a cost - those sort findings against each other and answer "how much".
+    /// This answers a different question: whether the thing was the kind of mistake that decides an
+    /// attempt rather than shaves it. A count of twelve small things and a count of one serious one
+    /// look identical, and they are not, so the count carries a mark for the serious ones beside it.
+    ///
+    /// It is set by the rule that found it, because only the rule knows. Nothing infers it.
+    /// </summary>
+    public bool Serious { get; init; }
+
     /// <summary>"0:31 took a tank mechanic" - the line a row shows before anybody opens anything.</summary>
     public string Line => Timeless ? Headline : Display.Clock(At) + " " + Headline;
 }

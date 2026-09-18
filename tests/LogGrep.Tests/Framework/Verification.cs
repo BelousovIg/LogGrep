@@ -621,6 +621,15 @@ public sealed class Verification
     public void TheShapeOffers(params string[] expected)
         => Assert.Equal(expected, _page.Pull.Traces.Select(t => t.Name).ToArray());
 
+    /// <summary>
+    /// The row of tags above the grid, each one as the four things it shows: what was left of the
+    /// boss, the phase it was left in, which attempt it was with its length, and when it ran.
+    /// </summary>
+    public void TheAttemptTagsRead(params string[] expected)
+        => Assert.Equal(expected, _page.ViewModel.Analysis.Tags
+            .Select(t => t.Pull.LeftText + " " + t.Pull.EndPhaseText + " " + t.TagText + " " + t.Pull.TimeOfDayText)
+            .ToArray());
+
     /// <summary>Where the chart says a phase began, and which one it calls it.</summary>
     public void ThePhasesBeginAt(params TimeSpan[] when)
         => Assert.Equal(when.Select(w => (int)w.TotalSeconds).ToArray(),

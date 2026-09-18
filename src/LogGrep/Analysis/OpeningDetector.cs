@@ -63,7 +63,10 @@ public sealed class OpeningDetector : IDetector
                     "you hit the enemy a whole action before any tank did",
                     "Threat starts with whoever lands the first blow. Opening ahead of the tank " +
                     "hands it to you, and everything the boss does for the next few seconds is " +
-                    "aimed at you rather than at them.");
+                    "aimed at you rather than at them.",
+                    // Serious: a pull that opens in the wrong hands is not a shaved percent, it is
+                    // the first seconds of the fight spent putting it where it should have started.
+                    serious: true);
             }
 
             var hit = Early(pull, tanks, p => p.WasHit);
@@ -100,7 +103,7 @@ public sealed class OpeningDetector : IDetector
     }
 
     private Finding Report(Attempts attempts, PullRecord pull, PlayerStats player,
-        string headline, string evidence, string advice)
+        string headline, string evidence, string advice, bool serious = false)
     {
         var death = attempts.DeathAfter(pull, player.Name, TimeSpan.Zero, Soon);
 
@@ -114,6 +117,6 @@ public sealed class OpeningDetector : IDetector
             pull,
             player.Name,
             player.SpecId,
-            TimeSpan.Zero);
+            TimeSpan.Zero) { Serious = serious };
     }
 }

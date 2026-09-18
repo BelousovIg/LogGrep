@@ -13,7 +13,7 @@ namespace LogGrep.ViewModels;
 /// cleanest player in it.
 /// </summary>
 public sealed record GridCell(
-    bool Present, int Mistakes, string Text, string Tooltip, int Attempt, string Player, Brush Paint);
+    bool Present, int Mistakes, int Serious, string Text, string Tooltip, int Attempt, string Player, Brush Paint);
 
 /// <summary>
 /// One person's row across the attempts of a selection.
@@ -36,10 +36,12 @@ public sealed record GridRow(
     string DtpsText,
     IReadOnlyList<GridCell> Cells)
 {
-    /// <summary>How many mistakes the whole selection found against them.</summary>
+    /// <summary>How many mistakes the whole selection found against them, and how many were serious.</summary>
     public int Mistakes => Cells.Where(c => c.Present).Sum(c => c.Mistakes);
 
-    public string MistakesText => Mistakes == 0 ? "—" : Display.Count(Mistakes);
+    public int Serious => Cells.Where(c => c.Present).Sum(c => c.Serious);
+
+    public string MistakesText => Mistakes == 0 ? "—" : Display.Mistakes(Mistakes, Serious);
 
     /// <summary>How many of the attempts they were actually in, for the hover.</summary>
     public string PresenceText
@@ -116,7 +118,7 @@ public sealed class AttemptGrid
 
                 if (stats == null || (role != null && Specs.RoleOf(stats.SpecId) != role))
                 {
-                    cells.Add(new Raw(false, 0, "They were not in this attempt", i));
+                    cells.Add(new Raw(false, 0, 0, "They were not in this attempt", i));
                     continue;
                 }
 
@@ -132,7 +134,7 @@ public sealed class AttemptGrid
                 var card = cards.For(pulls[i].Record, stats);
                 worst = Math.Max(worst, card.Findings.Count);
 
-                cells.Add(new Raw(true, card.Findings.Count,
+                cells.Add(new Raw(true, card.Findings.Count, card.Findings.Count(f => f.Serious),
                     card.Worst?.Line ?? "Nothing was found for them in this attempt", i));
             }
 
@@ -202,8 +204,8 @@ public sealed class AttemptGrid
     }
 
     private static GridCell Finish(Raw raw, string player, double worst)
-        => new(raw.Present, raw.Mistakes,
-            !raw.Present ? "·" : raw.Mistakes == 0 ? string.Empty : Display.Count(raw.Mistakes),
+        => new(raw.Present, raw.Mistakes, raw.Serious,
+            !raw.Present ? "·" : Display.Mistakes(raw.Mistakes, raw.Serious),
             raw.Tooltip, raw.Attempt, player, Paint(raw, worst));
 
     /// <summary>
@@ -230,5 +232,5 @@ public sealed class AttemptGrid
         return brush;
     }
 
-    private readonly record struct Raw(bool Present, int Mistakes, string Tooltip, int Attempt);
+    private readonly record struct Raw(bool Present, int Mistakes, int Serious, string Tooltip, int Attempt);
 }

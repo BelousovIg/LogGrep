@@ -650,6 +650,12 @@ public sealed class Then
         return this;
     }
 
+    public Then TheAttemptTagsRead(params string[] expected)
+    {
+        _check.TheAttemptTagsRead(expected);
+        return this;
+    }
+
     public Then ThePhasesBeginAt(params TimeSpan[] when)
     {
         _check.ThePhasesBeginAt(when);

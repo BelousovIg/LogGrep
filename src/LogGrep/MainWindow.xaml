@@ -1,4 +1,4 @@
-<Window x:Class="LogGrep.MainWindow"
+﻿<Window x:Class="LogGrep.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:LogGrep.ViewModels"
@@ -605,9 +605,60 @@
                                   HorizontalScrollBarVisibility="Auto" Padding="16,12,16,0"
                                   Visibility="{Binding Analysis.ShowGrid, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
+                            <!-- The night as a row of tags, before any table of it. Nobody remembers
+                                 which pull was the close one; a wall of "64%" with one "8%" in it
+                                 says so without a sentence, and the tag opens that attempt. -->
+                            <ItemsControl ItemsSource="{Binding Analysis.Tags}" Margin="0,0,0,10">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource TagButton}" Click="OnOpenAttemptTag"
+                                                ToolTip="{Binding Pull.StartText}">
+                                            <Grid Width="116" Height="34">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="42" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- The smaller half: what was left of the boss, and
+                                                     the phase it was left in. -->
+                                                <Border Grid.Column="0" Background="{StaticResource WindowBrush}"
+                                                        CornerRadius="3,0,0,3" />
+                                                <TextBlock Grid.Column="0" Style="{StaticResource NumberText}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" Margin="0,0,0,9"
+                                                           Text="{Binding Pull.LeftText}" />
+                                                <TextBlock Grid.Column="0" Style="{StaticResource MutedText}"
+                                                           FontSize="9"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Bottom" Margin="0,0,0,2"
+                                                           Text="{Binding Pull.EndPhaseText}" />
+
+                                                <!-- The larger half: which attempt it was, how long
+                                                     it ran, and when in the evening. -->
+                                                <TextBlock Grid.Column="1" Style="{StaticResource MutedText}"
+                                                           Foreground="{StaticResource FgBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" Margin="0,0,0,9"
+                                                           Text="{Binding TagText}" />
+                                                <TextBlock Grid.Column="1" Style="{StaticResource MutedText}"
+                                                           FontSize="9"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Bottom" Margin="0,0,0,2"
+                                                           Text="{Binding Pull.TimeOfDayText}" />
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
                             <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap"
                                        Margin="0,0,0,8"
-                                       Text="Each column is an attempt. A cell is what it cost that person, in their own health pools; a dot is an attempt they were not in, which is not the same as a clean one. Click a cell to open it." />
+                                       Text="Each column is an attempt. A cell is how many mistakes were found against that person in it; a dot is an attempt they were not in, which is not the same as a clean one. Click a cell to open it." />
 
                             <Grid Margin="0,0,0,4">
                                 <Grid.ColumnDefinitions>
