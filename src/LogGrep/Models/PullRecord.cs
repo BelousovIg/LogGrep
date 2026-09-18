@@ -53,6 +53,22 @@ public sealed class PullRecord
     public IReadOnlyList<Blow> Blows { get; set; } = Array.Empty<Blow>();
 
     /// <summary>
+    /// How far down the enemy was, second by second, from the start of the attempt. A share of its
+    /// pool per second, carried forward through the seconds it said nothing.
+    ///
+    /// This is the story of an attempt in one line: whether the group pushed the thing and lost it
+    /// late, or never moved it at all. Empty when the log never stated the enemy's health, which is
+    /// what happens on a fight named after something that never acts.
+    /// </summary>
+    public IReadOnlyList<double> EnemyHealth { get; set; } = Array.Empty<double>();
+
+    /// <summary>
+    /// How many of the group were still standing, second by second. Together with the line above it
+    /// this is the whole shape of an attempt: whether the raid melted at once or was worn down.
+    /// </summary>
+    public IReadOnlyList<int> Standing { get; set; } = Array.Empty<int>();
+
+    /// <summary>
     /// Seconds in which the enemy was swinging at one or two people rather than at the room. This is
     /// the only stretch of a fight that says anything about threat: in a phase where a boss hits
     /// everybody, who it hit is a fact about the phase.

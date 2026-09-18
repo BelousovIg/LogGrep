@@ -564,6 +564,22 @@ public sealed class Verification
         return row.Cells[attempt - 1];
     }
 
+    /// <summary>Whether the enemy ever stated its health, which is what a progress line is made of.</summary>
+    public void TheAttemptHasAShape(bool expected)
+        => Assert.True(expected == (_page.Pull.Record.EnemyHealth.Count > 0),
+            "The attempt should " + (expected ? "" : "not ") + "have a line for the enemy.");
+
+    /// <summary>How many of the group were still up at that moment.</summary>
+    public void TheGroupStoodAt(TimeSpan when, int expected)
+    {
+        var line = _page.Pull.Record.Standing;
+        int at = Math.Clamp((int)when.TotalSeconds, 0, Math.Max(0, line.Count - 1));
+
+        Assert.True(line.Count > 0 && expected == line[at],
+            expected + " should have been standing at " + Display.Clock(when) + "; " +
+            (line.Count == 0 ? "there is no line" : line[at] + " were"));
+    }
+
     public void TheScreenShowing(int expected)
         => Assert.True(expected == _page.ViewModel.Screen,
             "The window should be showing screen " + expected + " and shows " + _page.ViewModel.Screen + ".");

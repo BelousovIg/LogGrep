@@ -590,6 +590,18 @@ public sealed class Then
         return this;
     }
 
+    public Then TheAttemptHasAShape(bool expected)
+    {
+        _check.TheAttemptHasAShape(expected);
+        return this;
+    }
+
+    public Then TheGroupStoodAt(TimeSpan when, int expected)
+    {
+        _check.TheGroupStoodAt(when, expected);
+        return this;
+    }
+
     public Then TheScreenShowing(int expected)
     {
         _check.TheScreenShowing(expected);

@@ -643,6 +643,17 @@
                                   Visibility="{Binding Analysis.HasPull, Converter={StaticResource BoolToVis}}">
                         <StackPanel DataContext="{Binding Analysis.Pull}">
 
+                            <!-- The shape of the attempt: how far down the enemy went, and how many
+                                 of the group were still up. Two lines on one clock, and between them
+                                 they tell the story a table cannot. -->
+                            <Border Background="{StaticResource InputBrush}" CornerRadius="3"
+                                    Padding="8" Margin="0,0,0,8"
+                                    ToolTip="Red is the enemy's health, green is how many of the group were standing">
+                                <ctl:FightShape Height="64"
+                                                Enemy="{Binding Record.EnemyHealth}"
+                                                Group="{Binding Record.Standing}" />
+                            </Border>
+
                             <!-- The attempt's own card. Not an average of the players below it: an
                                  average hides the one person who lost the pull behind nineteen who
                                  did not, so this is the loss itself, and then who it went to. -->
@@ -754,9 +765,24 @@
                                 <ctl:SortHeader Grid.Column="6" Column="Mistakes" Title="WORST"
                                                 Sort="{Binding Sorting.Players}"
                                                 ToolTip="The most expensive thing that happened to them. Sorted by what the attempt cost them, in health pools" />
-                                <TextBlock Grid.Column="7" Style="{StaticResource MutedText}"
-                                           Text="THE FIGHT" Margin="6,0,0,0"
-                                           ToolTip="Everything that happened, on the attempt's own clock. Hover a mark to read it" />
+                                <StackPanel Grid.Column="7" Orientation="Horizontal" Margin="6,0,0,0"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Style="{StaticResource MutedText}" Text="THE FIGHT" Margin="0,0,12,0" />
+
+                                    <!-- The legend. The lane says everything with a shape and a
+                                       colour, and a language nobody is taught is a language nobody
+                                       reads. -->
+                                    <TextBlock Style="{StaticResource MutedText}" Text="● mechanic"
+                                               Foreground="#FFE0A554" Margin="0,0,10,0" />
+                                    <TextBlock Style="{StaticResource MutedText}" Text="▲ interrupt"
+                                               Foreground="#FF8E9BE8" Margin="0,0,10,0" />
+                                    <TextBlock Style="{StaticResource MutedText}" Text="● idle"
+                                               Foreground="#FF9096A0" Margin="0,0,10,0" />
+                                    <TextBlock Style="{StaticResource MutedText}" Text="✕ death"
+                                               Foreground="#FFE0706D" Margin="0,0,10,0" />
+                                    <TextBlock Style="{StaticResource MutedText}" Text="○ caught the group"
+                                               ToolTip="A hollow mark is one thing that caught much of the group, not one person's mistake" />
+                                </StackPanel>
                             </Grid>
 
                             <ItemsControl ItemsSource="{Binding PlayersView}">

@@ -522,6 +522,8 @@ public sealed class CombatLogScanner
             Blows = segment.Blows.Values.ToArray(),
             HealCeiling = segment.Players.Values.Count == 0 ? 0 : segment.Players.Values.Max(p => p.BestHealing),
             ThreatSeconds = threat,
+            EnemyHealth = Curve(segment.Left, (int)duration.TotalSeconds),
+            Standing = Alive(roster, (int)duration.TotalSeconds),
             Casts = segment.Casts.ToArray(),
             Damage = segment.Damage,
             Healing = segment.Healing,
@@ -866,6 +868,21 @@ public sealed class CombatLogScanner
         {
             victim.Took(Elapsed(at));
 
+            // The enemy states its own health on everything it does, so the fight has a progress
+            // line in it for free: how far down the thing was, second by second. It is the one
+            // measurement that tells the story of an attempt without a table - whether the group
+            // pushed it and lost, or never moved it at all.
+            if (advancedAt >= 0 && string.Equals(Label(line, 2), _open!.Name, StringComparison.Ordinal))
+            {
+                // By pool rather than by name. A fight often has several creatures under the boss's
+                // own name - copies, adds, whatever the encounter is built out of - and sampling all
+                // of them gave a line that bounced between full and empty every few seconds and
+                // reported nought per cent on every attempt. The one with the largest pool is the
+                // thing the fight is about; anything smaller sharing its name is scenery.
+                _open.Health((int)Elapsed(at).TotalSeconds,
+                    _fields.Long(line, advancedAt + 2), _fields.Long(line, advancedAt + 3));
+            }
+
             // A swing carries no spell id, which is exactly what makes it worth counting on its
             // own: it is the enemy hitting whoever it is looking at, and where it lands is the only
             // reading the log gives of who is holding its attention.
@@ -1017,6 +1034,41 @@ public sealed class CombatLogScanner
             Name = Encoding.UTF8.GetString(name),
             Guid = Encoding.UTF8.GetString(id),
         };
+    }
+
+    /// <summary>
+    /// The enemy's health as a line, one point a second, carried forward through the gaps. A boss
+    /// states its health whenever it acts, which is often, but not every second - and a line with
+    /// holes in it would be drawn as a line that dropped to nothing and came back.
+    /// </summary>
+    private static IReadOnlyList<double> Curve(Dictionary<int, double> stated, int seconds)
+    {
+        if (stated.Count == 0 || seconds <= 0) return Array.Empty<double>();
+
+        var line = new double[seconds + 1];
+        double last = 1;
+
+        for (int i = 0; i <= seconds; i++)
+        {
+            if (stated.TryGetValue(i, out double share)) last = share;
+            line[i] = last;
+        }
+
+        return line;
+    }
+
+    /// <summary>How many of the group were still up, one point a second.</summary>
+    private static IReadOnlyList<int> Alive(IReadOnlyList<PlayerStats> roster, int seconds)
+    {
+        if (roster.Count == 0 || seconds <= 0) return Array.Empty<int>();
+
+        var line = new int[seconds + 1];
+        for (int i = 0; i <= seconds; i++)
+        {
+            line[i] = roster.Count(p => !p.Deaths.Any(d => d.At.TotalSeconds <= i));
+        }
+
+        return line;
     }
 
     private static ulong Hash(ReadOnlySpan<byte> value)
@@ -1457,6 +1509,31 @@ public sealed class CombatLogScanner
         /// in which it hit half the raid is a mechanic wearing a swing's clothes.
         /// </summary>
         public Dictionary<int, HashSet<string>> Swings { get; } = new();
+
+        /// <summary>How far down the thing the fight is named after was, second by second.</summary>
+        public Dictionary<int, double> Left { get; } = new();
+
+        /// <summary>The largest pool seen under that name, which is what says which thing it is.</summary>
+        private long _biggest;
+
+        public void Health(int second, long current, long max)
+        {
+            if (max <= 0) return;
+
+            // A bigger pool than anything so far means the real thing has finally acted, and
+            // whatever was being sampled until now was something else wearing its name.
+            if (max > _biggest)
+            {
+                _biggest = max;
+                Left.Clear();
+            }
+            else if (max < _biggest)
+            {
+                return;
+            }
+
+            Left[second] = Math.Clamp(current / (double)max, 0, 1);
+        }
 
         public void Swing(int second, string victim)
         {

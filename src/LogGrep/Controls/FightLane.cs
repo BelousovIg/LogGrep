@@ -36,6 +36,15 @@ public sealed class FightLane : FrameworkElement
     /// <summary>How close the pointer has to be to a mark before its hover belongs to that mark.</summary>
     private const double Grab = 7;
 
+    /// <summary>
+    /// How close two marks have to be on screen before they are drawn as one with everything in it.
+    ///
+    /// A ten-minute fight across three hundred pixels is half a second to the pixel, so two things
+    /// four seconds apart land on top of each other and read as one heavier mark - a lie about both.
+    /// Merged, the heaviest keeps its shape and the hover lists the rest.
+    /// </summary>
+    private const double Together = 9;
+
     private static readonly Pen Baseline = Frozen(new Pen(new SolidColorBrush(Color.FromRgb(0x32, 0x35, 0x3C)), 1));
 
     private static readonly Brush Mechanic = Frozen(new SolidColorBrush(Color.FromRgb(0xE0, 0xA5, 0x54)));
@@ -122,7 +131,14 @@ public sealed class FightLane : FrameworkElement
         var marks = Marks;
         if (marks == null || marks.Count == 0) return;
 
-        foreach (var mark in marks)
+        // A tick at every minute, so a mark sits somewhere rather than just somewhere along.
+        for (double t = 60; t < Seconds; t += 60)
+        {
+            double tick = Math.Clamp(t / Seconds, 0, 1) * (width - 2) + 1;
+            dc.DrawLine(Baseline, new Point(tick, middle - 4), new Point(tick, middle + 4));
+        }
+
+        foreach (var mark in Merge(marks, width))
         {
             double x = Math.Clamp(mark.At / Seconds, 0, 1) * (width - 2) + 1;
             double radius = Radius(mark.Size);
@@ -178,7 +194,7 @@ public sealed class FightLane : FrameworkElement
         string? text = null;
         double best = Grab;
 
-        foreach (var mark in marks)
+        foreach (var mark in Merge(marks, ActualWidth))
         {
             double x = Math.Clamp(mark.At / Seconds, 0, 1) * (ActualWidth - 2) + 1;
             double gap = Math.Abs(x - at);
@@ -189,6 +205,47 @@ public sealed class FightLane : FrameworkElement
         }
 
         ToolTip = text;
+    }
+
+    /// <summary>
+    /// Marks that would land on top of each other, drawn as one. The heaviest of a cluster keeps its
+    /// shape and its size - what a person needs to see first is the worst thing in it - and the
+    /// hover lists everything that went into it.
+    /// </summary>
+    private IReadOnlyList<LaneMark> Merge(IReadOnlyList<LaneMark> marks, double width)
+    {
+        if (marks.Count < 2 || Seconds <= 0 || width <= 2) return marks;
+
+        double apart = Together / (width - 2) * Seconds;
+        var merged = new List<LaneMark>(marks.Count);
+        int i = 0;
+
+        while (i < marks.Count)
+        {
+            int j = i + 1;
+            while (j < marks.Count && marks[j].At - marks[i].At <= apart) j++;
+
+            if (j - i == 1)
+            {
+                merged.Add(marks[i]);
+                i = j;
+                continue;
+            }
+
+            var cluster = marks.Skip(i).Take(j - i).ToList();
+            var heaviest = cluster.OrderByDescending(m => m.Size).First();
+
+            merged.Add(heaviest with
+            {
+                Collective = cluster.Any(m => m.Collective),
+                Text = cluster.Count + " things here:" + Environment.NewLine +
+                       string.Join(Environment.NewLine, cluster.Select(m => "  " + m.Text)),
+            });
+
+            i = j;
+        }
+
+        return merged;
     }
 
     /// <summary>
