@@ -140,7 +140,8 @@
         <!-- The three things the window is for, kept apart. Browsing and cutting a log is one job,
              reading a report is another, and saying who counts as ours is a third; one screen trying
              to be all of them is how the table filled up with things nobody opened it to read. -->
-        <TabControl Grid.Row="3" Grid.RowSpan="2" Style="{StaticResource Screens}">
+        <TabControl Grid.Row="3" Grid.RowSpan="2" Style="{StaticResource Screens}"
+                    SelectedIndex="{Binding Screen, Mode=TwoWay}">
             <TabItem Header="LOGS">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -716,7 +717,7 @@
                             </Grid.ColumnDefinitions>
 
                             <TextBlock Grid.Column="0" Style="{StaticResource MutedText}" Text="OURS"
-                                       VerticalAlignment="Center" />
+                                       VerticalAlignment="Center" Margin="10,0,0,0" />
                             <TextBlock Grid.Column="1" Style="{StaticResource MutedText}" Text="CHARACTER"
                                        VerticalAlignment="Center" />
                             <TextBlock Grid.Column="2" Style="{StaticResource MutedText}" Text="REALM"
@@ -760,7 +761,7 @@
                                             </Grid.ColumnDefinitions>
 
                                             <CheckBox Grid.Column="0" IsChecked="{Binding IsOurs, Mode=TwoWay}"
-                                                      VerticalAlignment="Center"
+                                                      VerticalAlignment="Center" Margin="10,0,0,0"
                                                       ToolTip="Whether this character is one of ours" />
                                             <TextBlock Grid.Column="1" Style="{StaticResource MutedText}"
                                                        Foreground="{Binding ClassBrush}"
@@ -806,28 +807,45 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0" Style="{StaticResource LinkButton}" Content="Select all"
-                        Command="{Binding SelectAllCommand}" />
-                <Button Grid.Column="1" Style="{StaticResource LinkButton}" Content="Clear"
-                        Command="{Binding SelectNoneCommand}" />
-                <Button Grid.Column="2" Style="{StaticResource LinkButton}" Content="Expand all"
-                        Command="{Binding ExpandAllCommand}" />
-                <Button Grid.Column="3" Style="{StaticResource LinkButton}" Content="Collapse all"
-                        Command="{Binding CollapseAllCommand}" />
+                <!-- The buttons belong to whatever screen is open. "Select all" meant the attempts
+                     even while the registry was showing, which is a button lying about what it does. -->
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal"
+                            Visibility="{Binding OnLogs, Converter={StaticResource BoolToVis}}">
+                    <Button Style="{StaticResource LinkButton}" Content="Select all"
+                            Command="{Binding SelectAllCommand}" />
+                    <Button Style="{StaticResource LinkButton}" Content="Clear"
+                            Command="{Binding SelectNoneCommand}" />
+                    <Button Style="{StaticResource LinkButton}" Content="Expand all"
+                            Command="{Binding ExpandAllCommand}" />
+                    <Button Style="{StaticResource LinkButton}" Content="Collapse all"
+                            Command="{Binding CollapseAllCommand}" />
 
-                <!-- What the detectors found goes out as one file per player, which is how anybody
-                     reads it: nobody wants the whole night, they want their own part of it. -->
-                <Button Grid.Column="4" Style="{StaticResource LinkButton}" Content="Save report"
-                        Command="{Binding ExportFindingsCommand}" ToolTip="{Binding FindingsSummary}" />
+                    <!-- What the detectors found goes out as one file per player, which is how anybody
+                         reads it: nobody wants the whole night, they want their own part of it. -->
+                    <Button Style="{StaticResource LinkButton}" Content="Save report"
+                            Command="{Binding ExportFindingsCommand}" ToolTip="{Binding FindingsSummary}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal"
+                            Visibility="{Binding OnPeople, Converter={StaticResource BoolToVis}}">
+                    <Button Style="{StaticResource LinkButton}" Content="All ours"
+                            Command="{Binding AllOursCommand}"
+                            ToolTip="Count every character the logs have seen" />
+                    <Button Style="{StaticResource LinkButton}" Content="None ours"
+                            Command="{Binding NoneOursCommand}"
+                            ToolTip="Set everybody aside, then tick back the ones you want" />
+                </StackPanel>
 
                 <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Left" Margin="16,0,0,0">
                     <TextBlock Style="{StaticResource MutedText}" Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
 
                 <TextBlock Grid.Column="6" Style="{StaticResource MutedText}" Text="{Binding SelectionText}"
-                           Margin="0,0,16,0" />
+                           Margin="0,0,16,0"
+                           Visibility="{Binding OnLogs, Converter={StaticResource BoolToVis}}" />
 
-                <StackPanel Grid.Column="7" Orientation="Horizontal">
+                <StackPanel Grid.Column="7" Orientation="Horizontal"
+                            Visibility="{Binding OnLogs, Converter={StaticResource BoolToVis}}">
                     <CheckBox Content="as single file" IsChecked="{Binding AsSingleFile, Mode=TwoWay}"
                               Margin="0,0,16,0"
                               ToolTip="Write every selected pull into a single file" />

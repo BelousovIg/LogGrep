@@ -28,13 +28,14 @@ public sealed class MainViewModel : ObservableObject
     private CancellationTokenSource? _cancellation;
 
     private readonly OpenLogs _openLogs;
-    private readonly OurPeople _ourPeople;
-    private readonly HashSet<string> _ours;
+    private readonly Outsiders _outsiders;
+    private readonly HashSet<string> _setAside;
     private bool _logsExpanded = true;
     private string _status = "Open a World of Warcraft combat log to begin.";
     private double _progress;
     private bool _isBusy;
     private bool _asSingleFile = true;
+    private int _screen;
 
     /// <summary>The real disk. Tests hand in a fake one instead.</summary>
     public MainViewModel() : this(new FileSystem())
@@ -48,8 +49,8 @@ public sealed class MainViewModel : ObservableObject
 
         string data = new SettingsService(fileSystem).DataDirectory;
         _openLogs = new OpenLogs(fileSystem, data);
-        _ourPeople = new OurPeople(fileSystem, data);
-        _ours = _ourPeople.Load().ToHashSet(StringComparer.Ordinal);
+        _outsiders = new Outsiders(fileSystem, data);
+        _setAside = _outsiders.Load().ToHashSet(StringComparer.Ordinal);
 
         OpenCommand = new RelayCommand(Open, () => !IsBusy);
         ExportCommand = new RelayCommand(Export, () => !IsBusy && SelectedPullCount > 0);
@@ -59,6 +60,8 @@ public sealed class MainViewModel : ObservableObject
         ExpandAllCommand = new RelayCommand(() => SetExpanded(true), () => Encounters.Count > 0);
         CollapseAllCommand = new RelayCommand(() => SetExpanded(false), () => Encounters.Count > 0);
         ExportFindingsCommand = new RelayCommand(ExportFindings, () => !IsBusy && Findings.Count > 0);
+        AllOursCommand = new RelayCommand(() => SetAllOurs(true), () => People.Count > 0);
+        NoneOursCommand = new RelayCommand(() => SetAllOurs(false), () => People.Count > 0);
 
         _encountersView = new ListCollectionView(Encounters);
         Sorting.Encounters.Changed += (_, _) => _encountersView.CustomSort = Sorting.Encounters.Comparer;
@@ -74,22 +77,22 @@ public sealed class MainViewModel : ObservableObject
     public bool HasPeople => People.Count > 0;
 
     /// <summary>
-    /// Marking nobody is not the same answer as marking nobody as ours. An untouched registry means
-    /// the question has not been asked yet, and until it is, everybody counts - which the window
-    /// says out loud rather than leaving an analysis mysteriously empty.
+    /// Everybody starts as ours, and the work is crossing off the strangers who passed through. It
+    /// is the smaller job on a raid night, and it means somebody who joins next month is one of ours
+    /// the moment they turn up rather than silently missing until anybody notices the box.
     /// </summary>
-    public bool NobodyIsMarked => _ours.Count == 0;
-
     public string PeopleSummary => People.Count == 0
         ? "No logs read yet"
-        : _ours.Count == 0
-            ? Display.Count(People.Count) + " characters, none marked - all of them count as ours"
-            : Display.Count(_ours.Count) + " of " + Display.Count(People.Count) + " marked as ours";
+        : _setAside.Count == 0
+            ? Display.Count(People.Count) + " characters, all of them ours"
+            : Display.Count(People.Count - SetAsideHere) + " of " + Display.Count(People.Count) +
+              " ours, " + Display.Count(SetAsideHere) + " set aside";
 
-    /// <summary>The characters an analysis is about: those marked, or everybody when none are.</summary>
-    public IReadOnlyCollection<string> Ours => _ours.Count == 0
-        ? People.Select(p => p.Id).ToArray()
-        : _ours;
+    /// <summary>The characters an analysis is about: everybody the logs saw, less those set aside.</summary>
+    public IReadOnlyCollection<string> Ours
+        => People.Where(p => p.IsOurs).Select(p => p.Id).ToArray();
+
+    private int SetAsideHere => People.Count(p => !p.IsOurs);
 
     /// <summary>Sort state of all three tables, handed down to the encounter and pull rows.</summary>
     public Sorting Sorting { get; } = new();
@@ -138,6 +141,28 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand ExpandAllCommand { get; }
     public RelayCommand CollapseAllCommand { get; }
     public RelayCommand ExportFindingsCommand { get; }
+    public RelayCommand AllOursCommand { get; }
+    public RelayCommand NoneOursCommand { get; }
+
+    /// <summary>
+    /// Which screen is open. The bar along the bottom belongs to whatever is above it - "select all"
+    /// meant the attempts even while the registry was showing, which is a button lying about what it
+    /// will do.
+    /// </summary>
+    public int Screen
+    {
+        get => _screen;
+        set
+        {
+            if (!Set(ref _screen, value)) return;
+            OnPropertyChanged(nameof(OnLogs));
+            OnPropertyChanged(nameof(OnPeople));
+        }
+    }
+
+    public bool OnLogs => _screen == 0;
+
+    public bool OnPeople => _screen == 1;
 
     /// <summary>
     /// The logs the window has open. Adding is what "Open log" does now - the reading is whatever
@@ -530,23 +555,28 @@ public sealed class MainViewModel : ObservableObject
 
         foreach (var character in Models.People.In(pulls))
         {
-            People.Add(new PersonRowViewModel(character, _ours.Contains(character.Guid), OnOursChanged));
+            People.Add(new PersonRowViewModel(character, !_setAside.Contains(character.Guid), OnOursChanged));
         }
 
         OnPropertyChanged(nameof(HasPeople));
         OnPropertyChanged(nameof(PeopleSummary));
-        OnPropertyChanged(nameof(NobodyIsMarked));
+        RaiseCommandStates();
     }
 
     private void OnOursChanged(PersonRowViewModel person)
     {
-        if (person.IsOurs) _ours.Add(person.Id);
-        else _ours.Remove(person.Id);
+        if (person.IsOurs) _setAside.Remove(person.Id);
+        else _setAside.Add(person.Id);
 
-        _ourPeople.Save(_ours);
+        _outsiders.Save(_setAside);
 
         OnPropertyChanged(nameof(PeopleSummary));
-        OnPropertyChanged(nameof(NobodyIsMarked));
+    }
+
+    /// <summary>Puts everybody on one side of the line, which is where a long list is worth starting.</summary>
+    private void SetAllOurs(bool ours)
+    {
+        foreach (var person in People) person.IsOurs = ours;
     }
 
     private void Cancel() => _cancellation?.Cancel();
@@ -657,6 +687,8 @@ public sealed class MainViewModel : ObservableObject
         ExpandAllCommand.RaiseCanExecuteChanged();
         CollapseAllCommand.RaiseCanExecuteChanged();
         ExportFindingsCommand.RaiseCanExecuteChanged();
+        AllOursCommand.RaiseCanExecuteChanged();
+        NoneOursCommand.RaiseCanExecuteChanged();
     }
 
     /// <summary>

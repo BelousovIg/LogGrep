@@ -97,11 +97,10 @@ public sealed class KeepingTheRoster : Scenario
     }
 
     [Fact]
-    public void An_untouched_registry_means_everybody_counts()
+    public void Everybody_starts_as_ours()
     {
-        // Marking nobody is not the same answer as saying nobody is ours. Until the question has
-        // been asked, an analysis is about the whole group, and the screen says so rather than
-        // coming up empty and leaving somebody to guess why.
+        // The list is kept the negative way round: a raid is mostly the same people with the odd
+        // stranger passing through, so the work is crossing a few off rather than ticking twenty on.
         var log = new CombatLogBuilder()
             .Raid(
                 Tank("Rockjaw", Spec.ProtectionWarrior),
@@ -112,11 +111,12 @@ public sealed class KeepingTheRoster : Scenario
         Given.IOpenedLog(log);
 
         Then.OursAre("Rockjaw", "Sunwell", "Nightblade")
-            .TheRegistrySays("3 characters, none marked - all of them count as ours");
+            .PersonIsOurs("Nightblade", true)
+            .TheRegistrySays("3 characters, all of them ours");
     }
 
     [Fact]
-    public void Marking_somebody_narrows_it_to_those_who_are_marked()
+    public void Setting_somebody_aside_drops_them_from_the_analysis()
     {
         var log = new CombatLogBuilder()
             .Raid(
@@ -127,10 +127,10 @@ public sealed class KeepingTheRoster : Scenario
 
         Given.IOpenedLog(log);
 
-        When.IMarkAsOurs("Rockjaw").IMarkAsOurs("Sunwell");
+        When.IUnmarkAsOurs("Nightblade");
 
         Then.OursAre("Rockjaw", "Sunwell")
-            .TheRegistrySays("2 of 3 marked as ours");
+            .TheRegistrySays("2 of 3 ours, 1 set aside");
     }
 
     [Fact]
@@ -145,9 +145,9 @@ public sealed class KeepingTheRoster : Scenario
 
         Given.IOpenedLog(log);
 
-        When.IMarkAsOurs("Rockjaw").IReopenTheApp();
+        When.IUnmarkAsOurs("Nightblade").IReopenTheApp();
 
-        Then.PersonIsOurs("Rockjaw", true)
-            .PersonIsOurs("Sunwell", false);
+        Then.PersonIsOurs("Nightblade", false)
+            .PersonIsOurs("Rockjaw", true);
     }
 }
