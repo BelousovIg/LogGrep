@@ -10,7 +10,7 @@
     <AssemblyTitle>LogGrep</AssemblyTitle>
     <Product>LogGrep</Product>
     <Description>Splits large World of Warcraft combat logs into per-pull files.</Description>
-    <Version>1.0.15</Version>
+    <Version>1.0.16</Version>
   </PropertyGroup>
 
   <ItemGroup>
