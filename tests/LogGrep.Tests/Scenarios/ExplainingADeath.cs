@@ -212,11 +212,15 @@ public sealed class ExplainingADeath : Scenario
     {
         // No single big hit - a stream of small ones over half a minute. That is a different
         // conversation, and it is not only the dead player's.
+        //
+        // The arithmetic, against a million-point pool: the hit at thirty seconds leaves them at
+        // eighty-five per cent, which is the last moment they were whole, and everything after it
+        // is the event.
         var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
             .Lasting(3.Minutes())
-            .At(30.Seconds()).BossHits("Nightblade", 100_000, with: Ability.CreepingRot)
-            .At(40.Seconds()).BossHits("Nightblade", 100_000, with: Ability.CreepingRot)
-            .At(50.Seconds()).BossHits("Nightblade", 100_000, with: Ability.CreepingRot)
+            .At(30.Seconds()).BossHits("Nightblade", 150_000, with: Ability.CreepingRot)
+            .At(40.Seconds()).BossHits("Nightblade", 150_000, with: Ability.CreepingRot)
+            .At(50.Seconds()).BossHits("Nightblade", 150_000, with: Ability.CreepingRot)
             .At(1.Minutes()).Kills("Nightblade", with: Ability.CreepingRot, amount: 100_000)
             .Wipe());
 
@@ -224,6 +228,26 @@ public sealed class ExplainingADeath : Scenario
 
         Then.TheDeathReads("Nightblade", "ground down over 0:30")
             .And.DeathAdvises("Nightblade", "as much a conversation for the healers");
+    }
+
+    [Fact]
+    public void A_scratch_they_shrugged_off_is_not_where_the_trouble_started()
+    {
+        // A graze at ten seconds and a real hit at twenty, then the slide. The event began at the
+        // real hit: ninety per cent of somebody is still somebody, and calling the graze the start
+        // of it would stretch every death back to the first scratch of the fight.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(3.Minutes())
+            .At(10.Seconds()).BossHits("Nightblade", 40_000, with: Ability.CreepingRot)
+            .At(20.Seconds()).BossHits("Nightblade", 60_000, with: Ability.CreepingRot)
+            .At(30.Seconds()).BossHits("Nightblade", 150_000, with: Ability.CreepingRot)
+            .At(40.Seconds()).BossHits("Nightblade", 150_000, with: Ability.CreepingRot)
+            .At(50.Seconds()).Kills("Nightblade", with: Ability.CreepingRot, amount: 100_000)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.TheDeathReads("Nightblade", "ground down over 0:30");
     }
 
     [Fact]

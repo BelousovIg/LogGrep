@@ -32,8 +32,20 @@ public sealed class CombatLogScanner
     /// </summary>
     private const double HistorySeconds = 45;
 
-    /// <summary>How close to full counts as whole, when walking back to find where trouble began.</summary>
-    private const double WholeShare = 0.95;
+    /// <summary>
+    /// How close to full counts as whole, when walking back to find where trouble began.
+    ///
+    /// Everybody in a raid is chipped constantly, so at ninety-five per cent "in trouble" means "not
+    /// topped off" and the walk back almost never terminates: on the real evening it ran to the edge
+    /// of its own window for thirty-seven per cent of three hundred and fifteen deaths, which is a
+    /// measure returning its own ceiling rather than measuring anything. At eighty it terminates for
+    /// all but six per cent, and the median span falls from forty-four seconds to nine - a sentence
+    /// about a death rather than about the size of the window.
+    ///
+    /// Eighty is also the point a person would recognise: a fifth of somebody gone is when a healer
+    /// starts looking at them.
+    /// </summary>
+    private const double WholeShare = 0.80;
 
     /// <summary>
     /// The window the healing ceiling is measured over. What the group has actually landed on one
