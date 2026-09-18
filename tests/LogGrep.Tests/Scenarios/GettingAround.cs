@@ -45,20 +45,60 @@ public sealed class GettingAround : Scenario
     }
 
     [Fact]
-    public void Clicking_a_step_of_the_trail_climbs_back_to_it()
+    public void Letting_go_of_the_attempt_keeps_the_person()
     {
+        // The report narrows in two directions at once - which part of the night, and who it is
+        // about - and each has to be let go of on its own. Somebody reading one player in one pull
+        // wants that player over the whole night without going back to the top and starting again.
         Given.IOpenedLog(ARaid().Pulls(4, Soulcoiler, Difficulty.Mythic, APull))
             .IOpenedPull(Soulcoiler, number: 2);
 
         When.IAnalyseThePlayer(Soulcoiler, number: 2, player: "Nightblade")
             .IClimbTheTrailTo(depth: 1);
 
-        // Back to the attempt, with the person let go of.
-        Then.TheTrailReads("The Soulcoiler", "attempt 2");
+        Then.TheTrailReads("The Soulcoiler", "Nightblade");
+    }
 
-        When.IClimbTheTrailTo(depth: 0);
+    [Fact]
+    public void Letting_go_of_the_person_keeps_the_attempt()
+    {
+        Given.IOpenedLog(ARaid().Pulls(4, Soulcoiler, Difficulty.Mythic, APull))
+            .IOpenedPull(Soulcoiler, number: 2);
+
+        When.IAnalyseThePlayer(Soulcoiler, number: 2, player: "Nightblade")
+            .IClimbTheTrailTo(depth: 2);
+
+        Then.TheTrailReads("The Soulcoiler", "attempt 2");
+    }
+
+    [Fact]
+    public void The_encounter_at_the_head_of_the_trail_is_the_way_home()
+    {
+        Given.IOpenedLog(ARaid().Pulls(4, Soulcoiler, Difficulty.Mythic, APull))
+            .IOpenedPull(Soulcoiler, number: 2);
+
+        When.IAnalyseThePlayer(Soulcoiler, number: 2, player: "Nightblade")
+            .IClimbTheTrailTo(depth: 0);
 
         Then.TheTrailReads("The Soulcoiler");
+    }
+
+    [Fact]
+    public void A_name_points_the_report_at_that_person_and_leaves_the_range()
+    {
+        // Over a whole encounter it gives that person over the encounter; inside one attempt it
+        // gives them in that attempt. One gesture, one rule, two destinations.
+        Given.IOpenedLog(ARaid().Pulls(4, Soulcoiler, Difficulty.Mythic, APull));
+
+        When.IAnalyseTheEncounter(Soulcoiler).IClickTheNameOf("Nightblade");
+
+        Then.TheTrailReads("The Soulcoiler", "Nightblade");
+
+        When.IClimbTheTrailTo(depth: 0)
+            .IAnalyseThePull(Soulcoiler, number: 3)
+            .IClickTheNameOf("Nightblade");
+
+        Then.TheTrailReads("The Soulcoiler", "attempt 3", "Nightblade");
     }
 
     [Fact]

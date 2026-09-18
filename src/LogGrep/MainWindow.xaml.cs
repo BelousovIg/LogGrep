@@ -162,6 +162,24 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Points the report at whoever was clicked, and leaves the range alone: a name over a whole
+    /// encounter gives that person over the encounter, the same name inside one attempt gives them
+    /// in that attempt. One gesture, one rule.
+    /// </summary>
+    private void OnLookAtPlayer(object sender, RoutedEventArgs e)
+    {
+        switch ((sender as FrameworkElement)?.DataContext)
+        {
+            case GridRow row:
+                Model.Analysis.LookAt(row.RawName);
+                break;
+            case PlayerRowViewModel player:
+                Model.Analysis.LookAt(player.RawName);
+                break;
+        }
+    }
+
     /// <summary>Takes one file out of the list, which re-reads whatever is left of it.</summary>
     private void OnRemoveLog(object sender, RoutedEventArgs e)
     {

@@ -25,6 +25,7 @@ public sealed record GridCell(
 /// </summary>
 public sealed record GridRow(
     string Name,
+    string RawName,
     string FullName,
     Brush ClassBrush,
     string ClassName,
@@ -150,6 +151,7 @@ public sealed class AttemptGrid
             .ThenBy(entry => PlayerName.Character(entry.Latest.Name), StringComparer.CurrentCulture)
             .Select(entry => new GridRow(
                 PlayerName.Character(entry.Latest.Name),
+                entry.Latest.Name,
                 PlayerName.Format(entry.Latest.Name),
                 ClassBrushes.For(entry.Latest.ClassColor),
                 entry.Latest.ClassName,

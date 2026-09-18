@@ -106,6 +106,20 @@ public sealed class LogGrepPage
 
     public void AnalysePull(Boss boss, int number) => ViewModel.Analyse(Of(boss), Of(boss).Pulls[number - 1]);
 
+    /// <summary>
+    /// Clicking a name in whichever table the report is showing. The raw name is what the app knows
+    /// people by; a scenario says the one it can read.
+    /// </summary>
+    public void LookAtInTheReport(string player)
+    {
+        string? raw = ViewModel.Analysis.Grid.Rows.FirstOrDefault(r => r.Name == player)?.RawName
+            ?? ViewModel.Analysis.Pull?.PlayersView.Cast<PlayerRowViewModel>()
+                .FirstOrDefault(p => p.Name == player)?.RawName;
+
+        ViewModel.Analysis.LookAt(raw ?? throw new InvalidOperationException(
+            "'" + player + "' is not in either table of the report."));
+    }
+
     public void AnalysePlayer(Boss boss, int number, string player)
     {
         var pull = Of(boss).Pulls[number - 1];

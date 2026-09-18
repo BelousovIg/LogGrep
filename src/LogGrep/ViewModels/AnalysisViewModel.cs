@@ -94,38 +94,70 @@ public sealed class AnalysisViewModel : ObservableObject
         {
             if (_selection.Encounter == null) return Array.Empty<Crumb>();
 
+            // Two things are narrowed here and they are independent: which part of the night, and
+            // who it is about. So the trail is the encounter and then one chip per narrowing, each
+            // of which lets go of its own and leaves the other alone - a report where the way in is
+            // two dimensions and the way out is one is a report somebody gets stuck in.
             var trail = new List<Crumb> { new(_selection.Encounter.Name, 0, _pull != null || _player.Length > 0) };
 
             if (_pull != null)
             {
                 trail.Add(new Crumb(
                     "attempt " + Display.Count(_selection.Encounter.Pulls.IndexOf(_pull) + 1),
-                    1, _player.Length > 0));
+                    1, true, Closes: true));
             }
 
-            if (_player.Length > 0) trail.Add(new Crumb(PlayerName.Character(_player), 2, false));
+            if (_player.Length > 0)
+            {
+                trail.Add(new Crumb(PlayerName.Character(_player), 2, true, Closes: true));
+            }
 
             return trail;
         }
     }
 
-    /// <summary>Climbs back to one of them: the sample, or the attempt inside it.</summary>
+    /// <summary>
+    /// Lets go of one of the two narrowings, or of both.
+    ///
+    /// The encounter at the head of the trail drops both, which is the way home. The chips after it
+    /// drop one each and leave the other standing: letting go of the attempt keeps the person, which
+    /// is how somebody reading one player in one pull gets to that player over the whole night
+    /// without going back to the top and starting again.
+    /// </summary>
     public void GoTo(int depth)
     {
-        if (depth == 0)
+        switch (depth)
         {
-            _pull = null;
-            _player = string.Empty;
-        }
-        else if (depth == 1)
-        {
-            _player = string.Empty;
-        }
-        else
-        {
-            return;
+            case 0:
+                _pull = null;
+                _player = string.Empty;
+                break;
+            case 1:
+                _pull = null;
+                break;
+            case 2:
+                _player = string.Empty;
+                break;
+            default:
+                return;
         }
 
+        Changed();
+    }
+
+    /// <summary>
+    /// Points the report at one person, leaving the range where it is.
+    ///
+    /// The one rule the whole report navigates by: a click sets the dimension it names and does not
+    /// touch the other. Clicking a name over a whole encounter gives that person over the encounter;
+    /// clicking a name inside one attempt gives that person in that attempt. It is the same gesture
+    /// and the same rule, which is why it does not need a second one for the second case.
+    /// </summary>
+    public void LookAt(string player)
+    {
+        if (string.Equals(_player, player, StringComparison.Ordinal)) return;
+
+        _player = player;
         Changed();
     }
 
@@ -279,7 +311,13 @@ public sealed class AnalysisViewModel : ObservableObject
 /// One piece of the trail. <see cref="Climbable"/> is false for the last one, because the place you
 /// are already standing is not somewhere to go.
 /// </summary>
-public sealed record Crumb(string Text, int Depth, bool Climbable);
+/// <summary>
+/// One piece of the trail. <see cref="Closes"/> marks the ones that are a narrowing rather than a
+/// place - they are drawn with a cross, because clicking them lets that narrowing go rather than
+/// travelling to it, and a label that reads "attempt 7" and means "stop looking at attempt 7" has
+/// to say which of the two it is.
+/// </summary>
+public sealed record Crumb(string Text, int Depth, bool Climbable, bool Closes = false);
 
 /// <summary>
 /// One attempt as a tag: what was left of the boss and in which phase, against which attempt it was,

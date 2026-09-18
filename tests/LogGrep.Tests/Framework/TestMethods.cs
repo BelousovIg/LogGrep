@@ -60,6 +60,8 @@ public sealed class TestMethods
 
     public void AnalysePull(Boss boss, int number) => _page.AnalysePull(boss, number);
 
+    public void LookAtInTheReport(string player) => _page.LookAtInTheReport(player);
+
     public void AnalysePlayer(Boss boss, int number, string player) => _page.AnalysePlayer(boss, number, player);
 
     public void GrowLog(string name, CombatLogBuilder more) => _page.GrowLog(name, more);

@@ -553,6 +553,11 @@
                                             <Button x:Name="Step" Style="{StaticResource LinkButton}"
                                                     Content="{Binding Text}" Click="OnClimbTo"
                                                     ToolTip="Back to this" />
+                                            <Button x:Name="Drop" Style="{StaticResource LinkButton}"
+                                                    Content="&#x00D7;" Margin="3,0,0,0"
+                                                    Visibility="Collapsed"
+                                                    Click="OnClimbTo"
+                                                    ToolTip="Let this one go and keep the rest" />
                                             <TextBlock x:Name="Arrow" Style="{StaticResource MutedText}"
                                                        Text="  &#x203A;  " VerticalAlignment="Center" />
                                         </StackPanel>
@@ -562,6 +567,18 @@
                                                 <Setter TargetName="Step" Property="Foreground"
                                                         Value="{StaticResource FgBrush}" />
                                                 <Setter TargetName="Step" Property="ToolTip" Value="{x:Null}" />
+                                                <Setter TargetName="Arrow" Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+
+                                            <!-- A narrowing rather than a place. Clicking it lets
+                                                 that one go and leaves the other standing, so it is
+                                                 drawn as something to close rather than to visit. -->
+                                            <DataTrigger Binding="{Binding Closes}" Value="True">
+                                                <Setter TargetName="Step" Property="IsEnabled" Value="False" />
+                                                <Setter TargetName="Step" Property="Foreground"
+                                                        Value="{StaticResource FgBrush}" />
+                                                <Setter TargetName="Step" Property="ToolTip" Value="{x:Null}" />
+                                                <Setter TargetName="Drop" Property="Visibility" Value="Visible" />
                                                 <Setter TargetName="Arrow" Property="Visibility" Value="Collapsed" />
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
@@ -732,12 +749,14 @@
                                                   HorizontalAlignment="Left" VerticalAlignment="Center"
                                                   Visibility="Collapsed" />
 
-                                            <TextBlock Grid.Column="1" Style="{StaticResource MutedText}"
-                                                       Foreground="{Binding ClassBrush}"
-                                                       Text="{Binding Name}" Margin="0,0,10,0"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       VerticalAlignment="Center"
-                                                       ToolTip="{Binding FullName}" />
+                                            <!-- A name is a way in: it points the report at that
+                                                 person and leaves the range where it is. -->
+                                            <Button Grid.Column="1" Style="{StaticResource NameButton}"
+                                                    Foreground="{Binding ClassBrush}"
+                                                    Content="{Binding Name}" Margin="0,0,10,0"
+                                                    VerticalAlignment="Center"
+                                                    Click="OnLookAtPlayer"
+                                                    ToolTip="{Binding FullName}" />
                                             <TextBlock Grid.Column="2" Style="{StaticResource MutedText}"
                                                        Foreground="{Binding ClassBrush}"
                                                        Text="{Binding ClassName}" Margin="0,0,10,0"
@@ -1063,11 +1082,11 @@
                                                       VerticalAlignment="Center"
                                                       Visibility="Collapsed" />
 
-                                                <TextBlock Grid.Column="1" Style="{StaticResource MutedText}"
-                                                           Foreground="{Binding ClassBrush}"
-                                                           Text="{Binding Name}" Margin="0,0,10,0"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           ToolTip="{Binding FullName}" />
+                                                <Button Grid.Column="1" Style="{StaticResource NameButton}"
+                                                        Foreground="{Binding ClassBrush}"
+                                                        Content="{Binding Name}" Margin="0,0,10,0"
+                                                        Click="OnLookAtPlayer"
+                                                        ToolTip="{Binding FullName}" />
                                                 <TextBlock Grid.Column="2" Style="{StaticResource MutedText}"
                                                            Text="{Binding ClassName}" Margin="0,0,10,0"
                                                            Foreground="{Binding ClassBrush}"

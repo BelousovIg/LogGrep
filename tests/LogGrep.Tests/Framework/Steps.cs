@@ -149,6 +149,12 @@ public sealed class When
         return this;
     }
 
+    public When IClickTheNameOf(string player)
+    {
+        _act.LookAtInTheReport(player);
+        return this;
+    }
+
     public When IClimbTheTrailTo(int depth)
     {
         _act.ClimbTo(depth);
