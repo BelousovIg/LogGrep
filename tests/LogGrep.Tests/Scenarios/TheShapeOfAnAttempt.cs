@@ -57,6 +57,35 @@ public sealed class TheShapeOfAnAttempt : Scenario
     }
 
     [Fact]
+    public void A_kill_is_marked_where_the_enemy_went_down()
+    {
+        // The end of a won fight. A wipe and a kill are the same shape until the last seconds of
+        // them, and this is the mark that says which of the two is on the screen.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
+            .At(1.Minutes()).Deals("Nightblade", to: Soulcoiler, amount: 900_000)
+            .Kill());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        Then.TheKillIsMarkedAt(2.Minutes());
+    }
+
+    [Fact]
+    public void A_wipe_has_nothing_to_mark()
+    {
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        Then.TheKillIsMarkedAt(null);
+    }
+
+    [Fact]
     public void A_fight_whose_enemy_never_acts_simply_has_no_line()
     {
         // Council fights and anything named after a group rather than a creature. An empty line is

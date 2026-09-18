@@ -596,6 +596,12 @@ public sealed class Then
         return this;
     }
 
+    public Then TheKillIsMarkedAt(TimeSpan? when)
+    {
+        _check.TheKillIsMarkedAt(when);
+        return this;
+    }
+
     public Then TheAttemptIsReadOver(string expected)
     {
         _check.TheAttemptIsReadOver(expected);

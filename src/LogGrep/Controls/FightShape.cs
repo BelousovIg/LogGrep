@@ -30,12 +30,19 @@ public sealed class FightShape : FrameworkElement
 
     private static readonly Brush Socket = Frozen(new SolidColorBrush(Color.FromRgb(0x17, 0x18, 0x1B)));
 
+    /// <summary>The kill mark. Light blue, which is the one colour no line on this chart uses.</summary>
+    private static readonly Brush Crown = Frozen(new SolidColorBrush(Color.FromRgb(0x8F, 0xC7, 0xF0)));
+
     public static readonly DependencyProperty TracesProperty = DependencyProperty.Register(
         nameof(Traces), typeof(IReadOnlyList<Trace>), typeof(FightShape),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnTracesChanged));
 
     public static readonly DependencyProperty DeathsProperty = DependencyProperty.Register(
         nameof(Deaths), typeof(IReadOnlyList<int>), typeof(FightShape),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty KillProperty = DependencyProperty.Register(
+        nameof(Kill), typeof(int?), typeof(FightShape),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public static readonly DependencyProperty FromProperty = DependencyProperty.Register(
@@ -86,6 +93,13 @@ public sealed class FightShape : FrameworkElement
         set => SetValue(DeathsProperty, value);
     }
 
+    /// <summary>The second the enemy went down, or nothing for an attempt that did not kill it.</summary>
+    public int? Kill
+    {
+        get => (int?)GetValue(KillProperty);
+        set => SetValue(KillProperty, value);
+    }
+
     protected override void OnRender(DrawingContext dc)
     {
         double width = ActualWidth;
@@ -133,6 +147,14 @@ public sealed class FightShape : FrameworkElement
         {
             if (trace.IsOn) Draw(dc, trace, width, height, seconds);
         }
+
+        // The kill, on top of everything else. A wipe and a kill are the same shape until the last
+        // few seconds of them, and this is the one mark that says which of the two somebody is
+        // looking at without them reading the lines first.
+        if (Kill is { } killed && seconds > 0)
+        {
+            Star(dc, Math.Clamp(Math.Clamp(killed / seconds, 0, 1) * width, 7, width - 7), 8);
+        }
     }
 
     /// <summary>
@@ -166,6 +188,8 @@ public sealed class FightShape : FrameworkElement
 
         var deaths = Deaths?.Where(d => Math.Abs(d - at) <= 1).ToList();
         if (deaths is { Count: > 0 }) said.Add(deaths.Count == 1 ? "somebody died here" : deaths.Count + " died here");
+
+        if (Kill is { } killed && Math.Abs(killed - at) <= 1) said.Add("the enemy died here");
 
         ToolTip = string.Join(Environment.NewLine, said);
     }
@@ -228,6 +252,33 @@ public sealed class FightShape : FrameworkElement
         dc.DrawRectangle(Bone, null, new Rect(x - 2.2, y + 1.6, 4.4, 2.6));
         dc.DrawEllipse(Socket, null, new Point(x - 1.6, y - 1.2), 1.2, 1.3);
         dc.DrawEllipse(Socket, null, new Point(x + 1.6, y - 1.2), 1.2, 1.3);
+    }
+
+    /// <summary>
+    /// A star where the enemy went down. Drawn rather than set as a glyph for the same reason the
+    /// skull is: at this size it would depend on whichever font happened to carry it.
+    /// </summary>
+    private static void Star(DrawingContext dc, double x, double y)
+    {
+        const int Points = 5;
+        var figure = new PathFigure { IsClosed = true, IsFilled = true };
+
+        // Ten corners alternating between the outer and inner radius, starting at the top.
+        for (int i = 0; i < Points * 2; i++)
+        {
+            double radius = i % 2 == 0 ? 6.5 : 2.8;
+            double angle = -Math.PI / 2 + i * Math.PI / Points;
+            var corner = new Point(x + Math.Cos(angle) * radius, y + Math.Sin(angle) * radius);
+
+            if (i == 0) figure.StartPoint = corner;
+            else figure.Segments.Add(new LineSegment(corner, true));
+        }
+
+        var path = new PathGeometry();
+        path.Figures.Add(figure);
+        path.Freeze();
+
+        dc.DrawGeometry(Crown, null, path);
     }
 
     private static void Draw(DrawingContext dc, Trace trace, double width, double height, double seconds)

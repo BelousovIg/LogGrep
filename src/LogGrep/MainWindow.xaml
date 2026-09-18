@@ -695,6 +695,7 @@
                                     <ctl:FightShape Height="96"
                                                     Traces="{Binding Traces}"
                                                     Deaths="{Binding Deaths}"
+                                                    Kill="{Binding Kill}"
                                                     From="{Binding From, Mode=TwoWay}"
                                                     To="{Binding To, Mode=TwoWay}" />
 
@@ -721,6 +722,18 @@
                                         <!-- Which stretch is being read, and the way out of it. The
                                              rates in the table below are over this window, so saying
                                              what it is matters more than the drag that set it. -->
+                                        <!-- The two marks that are not lines, so nobody has to work
+                                             out what a small shape at the edge of a chart means. -->
+                                        <TextBlock Style="{StaticResource MutedText}" Text="✕ death"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#FFE0706D" Margin="0,0,10,0"
+                                                   ToolTip="A skull along the bottom, where somebody went down" />
+                                        <TextBlock Style="{StaticResource MutedText}" Text="★ kill"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#FF8FC7F0"
+                                                   Visibility="{Binding IsSuccess, Converter={StaticResource BoolToVis}}"
+                                                   ToolTip="A star along the top, where the enemy went down" />
+
                                         <TextBlock Style="{StaticResource MutedText}"
                                                    VerticalAlignment="Center" Margin="8,0,8,0"
                                                    Text="{Binding WindowText}"

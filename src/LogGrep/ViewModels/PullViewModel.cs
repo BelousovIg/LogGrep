@@ -180,6 +180,16 @@ public sealed class PullViewModel : ObservableObject
     public IReadOnlyList<int> Deaths
         => Record.Roster.SelectMany(p => p.Deaths).Select(d => (int)d.At.TotalSeconds).OrderBy(s => s).ToArray();
 
+    /// <summary>
+    /// The second the enemy went down, or nothing for an attempt that did not put it down.
+    ///
+    /// The end of the fight rather than a death event of its own: the game closes the encounter the
+    /// moment the last of it dies, and that is the one second a kill is certainly at. A council is
+    /// several corpses and one ending, so taking the ending is also the only answer that works for
+    /// every fight rather than for the ones with a single creature in them.
+    /// </summary>
+    public int? Kill => Record.Success ? (int)Record.Duration.TotalSeconds : null;
+
     private IReadOnlyList<Trace> BuildTraces()
     {
         var traces = new List<Trace>();

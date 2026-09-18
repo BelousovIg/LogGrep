@@ -564,6 +564,10 @@ public sealed class Verification
         return row.Cells[attempt - 1];
     }
 
+    /// <summary>The second the chart marks the enemy going down, or nothing for a wipe.</summary>
+    public void TheKillIsMarkedAt(TimeSpan? when)
+        => Assert.Equal(when is null ? null : (int?)when.Value.TotalSeconds, _page.Pull.Kill);
+
     /// <summary>Which stretch of the attempt the numbers below the chart are about.</summary>
     public void TheAttemptIsReadOver(string expected) => Assert.Equal(expected, _page.Pull.WindowText);
 
