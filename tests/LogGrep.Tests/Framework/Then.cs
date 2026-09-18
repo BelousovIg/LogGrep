@@ -542,6 +542,24 @@ public sealed class Then
         return this;
     }
 
+    public Then TheReportIsOn(string expected)
+    {
+        _check.TheReportIsOn(expected);
+        return this;
+    }
+
+    public Then TheReportMeasuresOver(string expected)
+    {
+        _check.TheReportMeasuresOver(expected);
+        return this;
+    }
+
+    public Then TheScreenShowing(int expected)
+    {
+        _check.TheScreenShowing(expected);
+        return this;
+    }
+
     public Then PeopleAreListed(params string[] expected)
     {
         _check.PeopleAreListed(expected);

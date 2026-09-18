@@ -92,6 +92,9 @@ public sealed class PlayerRowViewModel
     /// <summary>"Name - Realm", what the cell shows on hover.</summary>
     public string FullName => PlayerName.Format(_stats.Name);
 
+    /// <summary>The log's own spelling, which is what the analysis looks somebody up by.</summary>
+    public string RawName => _stats.Name;
+
     public string ClassName => _stats.ClassName;
 
     public string SpecName => _stats.SpecName;

@@ -69,6 +69,23 @@ public sealed class LogGrepPage
 
     public void MarkAsOurs(string name, bool ours) => Person(name).IsOurs = ours;
 
+    public void AnalyseEncounter(Boss boss) => ViewModel.Analyse(Of(boss));
+
+    public void AnalysePull(Boss boss, int number) => ViewModel.Analyse(Of(boss), Of(boss).Pulls[number - 1]);
+
+    public void AnalysePlayer(Boss boss, int number, string player)
+    {
+        var pull = Of(boss).Pulls[number - 1];
+        var row = pull.PlayersView.Cast<PlayerRowViewModel>().FirstOrDefault(p => p.Name == player)
+            ?? throw new InvalidOperationException($"'{player}' is not in that attempt.");
+
+        ViewModel.Analyse(Of(boss), pull, row.RawName);
+    }
+
+    private EncounterViewModel Of(Boss boss)
+        => Encounters.FirstOrDefault(e => e.Name == boss.NameOf())
+           ?? throw new InvalidOperationException($"'{boss.NameOf()}' is not in the reading.");
+
     public void Reopen()
     {
         _encounter = null;

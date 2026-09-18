@@ -112,6 +112,24 @@ public sealed class When
         return this;
     }
 
+    public When IAnalyseTheEncounter(Boss boss)
+    {
+        _act.AnalyseEncounter(boss);
+        return this;
+    }
+
+    public When IAnalyseThePull(Boss boss, int number)
+    {
+        _act.AnalysePull(boss, number);
+        return this;
+    }
+
+    public When IAnalyseThePlayer(Boss boss, int number, string player)
+    {
+        _act.AnalysePlayer(boss, number, player);
+        return this;
+    }
+
     public When IReopenTheApp()
     {
         _act.Reopen();

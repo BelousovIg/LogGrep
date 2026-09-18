@@ -44,6 +44,29 @@ public partial class MainWindow : Window
     private void OnOpenSettings(object sender, RoutedEventArgs e)
         => new SettingsWindow { Owner = this }.ShowDialog();
 
+    /// <summary>
+    /// Opens the report on whatever row the button sits in. The same gesture at all three levels of
+    /// the tree, and the same rule behind it: the sample is the encounter entire, and what was
+    /// clicked is only what the screen is pointed at.
+    /// </summary>
+    private void OnAnalyse(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement element) return;
+
+        switch (element.DataContext)
+        {
+            case EncounterViewModel encounter:
+                Model.Analyse(encounter);
+                break;
+            case PullViewModel pull:
+                Model.Analyse(pull.Owner, pull);
+                break;
+            case PlayerRowViewModel player when element.Tag is PullViewModel inside:
+                Model.Analyse(inside.Owner, inside, player.RawName);
+                break;
+        }
+    }
+
     /// <summary>Takes one file out of the list, which re-reads whatever is left of it.</summary>
     private void OnRemoveLog(object sender, RoutedEventArgs e)
     {

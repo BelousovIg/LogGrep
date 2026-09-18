@@ -76,6 +76,9 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>Every character any loaded log has ever mentioned, and which of them are ours.</summary>
     public ObservableCollection<PersonRowViewModel> People { get; } = new();
 
+    /// <summary>What the report is about, and what of it is on screen.</summary>
+    public AnalysisViewModel Analysis { get; } = new();
+
     public bool HasPeople => People.Count > 0;
 
     /// <summary>
@@ -158,13 +161,16 @@ public sealed class MainViewModel : ObservableObject
         {
             if (!Set(ref _screen, value)) return;
             OnPropertyChanged(nameof(OnLogs));
+            OnPropertyChanged(nameof(OnAnalysis));
             OnPropertyChanged(nameof(OnPeople));
         }
     }
 
     public bool OnLogs => _screen == 0;
 
-    public bool OnPeople => _screen == 1;
+    public bool OnAnalysis => _screen == 1;
+
+    public bool OnPeople => _screen == 2;
 
     /// <summary>
     /// The logs the window has open. Adding is what "Open log" does now - the reading is whatever
@@ -290,6 +296,7 @@ public sealed class MainViewModel : ObservableObject
             Findings = Array.Empty<Finding>();
             _reading = Reading.Nothing;
             RebuildPeople(Array.Empty<PullRecord>());
+        Analysis.Forget();
             Status = "Open a log to start.";
             RaiseSelectionChanged();
             return Task.CompletedTask;
@@ -343,6 +350,7 @@ public sealed class MainViewModel : ObservableObject
         Findings = Array.Empty<Finding>();
         _reading = Reading.Nothing;
         RebuildPeople(Array.Empty<PullRecord>());
+        Analysis.Forget();
 
         // A file that has gone since it was added keeps its row and says so. Removing it is then
         // somebody's decision rather than something the app did quietly on their behalf.
@@ -614,6 +622,16 @@ public sealed class MainViewModel : ObservableObject
         RaiseCommandStates();
     }
 
+    /// <summary>
+    /// Opens the report on something the tree was pointing at. The sample is the encounter entire,
+    /// whatever was clicked: drilling in to look closer must not take the numbers away.
+    /// </summary>
+    public void Analyse(EncounterViewModel encounter, PullViewModel? pull = null, string player = "")
+    {
+        Analysis.Show(encounter, pull, player);
+        Screen = 1;
+    }
+
     private void OnOursChanged(PersonRowViewModel person)
     {
         if (person.IsOurs) _setAside.Remove(person.Id);
@@ -752,7 +770,7 @@ public sealed class MainViewModel : ObservableObject
         // never will, and they are what the log audits itself against.
         var written = new RuleFile(_fileSystem).Read(new SettingsService(_fileSystem).RulesPath);
 
-        Findings = Analysis.Findings.In(pulls, written);
+        Findings = LogGrep.Analysis.Findings.In(pulls, written);
 
         // Pushed down the tree so every row can show its own share of them.
         var byPull = Findings.ToLookup(f => f.Pull);

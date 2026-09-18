@@ -514,6 +514,20 @@ public sealed class Verification
 
     public void TheRegistrySays(string expected) => Assert.Equal(expected, _page.ViewModel.PeopleSummary);
 
+    // The report, and what it is pointed at.
+
+    /// <summary>Where the report is: the sample, then whatever has been narrowed down to inside it.</summary>
+    public void TheReportIsOn(string expected)
+        => Assert.Equal(expected, _page.ViewModel.Analysis.Breadcrumb);
+
+    /// <summary>What every number on it is measured over, which is never one attempt.</summary>
+    public void TheReportMeasuresOver(string expected)
+        => Assert.Equal(expected, _page.ViewModel.Analysis.SampleText);
+
+    public void TheScreenShowing(int expected)
+        => Assert.True(expected == _page.ViewModel.Screen,
+            "The window should be showing screen " + expected + " and shows " + _page.ViewModel.Screen + ".");
+
     /// <summary>How many attempts the analysis counts, which is not every attempt the list shows.</summary>
     public void TheAttemptsJudgedAre(int expected)
     {

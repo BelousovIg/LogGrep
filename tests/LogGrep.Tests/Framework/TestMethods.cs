@@ -32,6 +32,12 @@ public sealed class TestMethods
 
     public void MarkAsOurs(string name, bool ours) => _page.MarkAsOurs(name, ours);
 
+    public void AnalyseEncounter(Boss boss) => _page.AnalyseEncounter(boss);
+
+    public void AnalysePull(Boss boss, int number) => _page.AnalysePull(boss, number);
+
+    public void AnalysePlayer(Boss boss, int number, string player) => _page.AnalysePlayer(boss, number, player);
+
     public void GrowLog(string name, CombatLogBuilder more) => _page.GrowLog(name, more);
 
     public void DeleteFile(string name) => _page.DeleteFile(name);
