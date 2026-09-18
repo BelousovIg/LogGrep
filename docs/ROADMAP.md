@@ -702,6 +702,104 @@ On the real log: five findings over twenty-six attempts, two of them a pull open
 then died inside ten seconds of opening it, and three where the tank never touched the enemy at all.
 Total findings 172 to 177.
 
+## The second run of milestones
+
+Eleven milestones built the rules. Reading their output on a real evening showed that the window
+cannot carry them: one table trying to be a log browser and a report at once, a column of sentences
+that stops fitting at the fourth rule, and two of four indexes pinned at 100% because they were
+built on findings, and findings are rare by design.
+
+`ANALYSIS.md` is the design these come from. The order is not by interest: first what corrects
+numbers already on screen, then what makes the data cheap, then the frame, and only then the numbers
+and how they are shown - because the first attempt built an interface on top of wrong numbers and
+both halves had to be done twice.
+
+### 12. Who the people are
+
+A character's identity comes from the log's own GUID rather than from a name that a transfer or a
+rename can change. A **People** tab lists every character seen across every loaded log - roles
+played, attempts, when they were last seen - and carries the flag that says which of them are ours.
+The flag outlives the session. An empty registry means everybody is ours, said out loud rather than
+shown as an empty screen. Grouping a person's alts under one human is deliberately out of scope.
+
+### 13. A specialization is the unit of comparison
+
+Somebody who respecs mid-evening is doing a different job, and the baselines do not know it: they
+are kept per player, so a night of tanking and three pulls of healing average into one nonsense.
+The unit becomes the pair of person and spec. A player's card over many attempts splits by spec
+rather than averaging across a respec, the role filters select attempts rather than people, and no
+conclusion about improvement crosses one.
+
+### 14. A death read against the right health
+
+The walk back to the last moment somebody was whole still reads the attacker's health, because a
+combat log's advanced block describes whoever caused the event. It survived because the generated
+log writes that block as the target's - not the format the game produces - so no scenario could see
+it. Both halves are one piece of work: the generator writes what the game writes, the victim's
+health is modelled from what landed on them, and the walk back is re-measured on the real log.
+
+### 15. Read once, resume from where it stopped
+
+A log is identified by its name and the first timestamp inside it - both immutable for a file that
+is only ever appended to - and its whole parse is cached beside the app. Twelve seconds are paid
+once in a log's life rather than at every start. A log that has grown is read from the end of the
+last **closed** fight, so the tail costs seconds rather than the file. A fight with a start and no
+end stops being reported as a zero-length wipe: it is its own state, visible in the log browser,
+absent from the analysis, and resolved by the next refresh. The analysis itself is always recomputed
+whole - at 150ms for the detectors and 74ms for every scorecard in an evening, nothing else is worth
+the risk of an answer built half from old numbers.
+
+### 16. Four screens instead of one
+
+**Logs** goes back to being what it was: encounters, attempts, who was in them, and the file the
+export cuts. Not one conclusion on it. **Analysis** is the report. **People** is the registry.
+**Settings** gains the Blizzard key's own button and what the rules file disagrees with the log
+about. An analyse button sits in the last column of all three levels of the tree, and what it opens
+follows one rule: **the sample is the whole encounter, the focus is what was clicked.** Drilling
+into one attempt must not shrink the sample to it, or every baseline disappears at the moment
+somebody looks closer.
+
+### 17. Saying what is being analysed
+
+Two selectors across the top, always visible, always a sentence with numbers in it: who, and which
+attempts. Picking attempts is a tree plus the filters that actually produce a subset - difficulty,
+result, the last few, long enough to mean anything. The selection remembers **how** it was made, so
+a rule grows when a log does and a hand-picked list does not change behind somebody's back. And the
+selection is what the baselines are drawn from, which the screen has to say, because the same person
+scores differently under two different selections and that must never look like a bug.
+
+### 18. Numbers taken from the data
+
+The two axes built on findings are rebuilt on baselines, and the finding becomes the explanation of
+a number rather than its source.
+
+Survival stops being a percentage at all. The question a death asks is not what share of the damage
+was avoidable - it is **whether they could have lived**: was the incoming rate inside what this group
+has been seen to heal through, and was there a moment where acting differently would have mattered.
+The app already measures the healing ceiling, what reached them, the biggest hit as a share of their
+pool and how much of it went in two seconds. The answer is a verdict with its evidence, not a score.
+
+Mechanics is rebuilt against the rest of the group in the same attempt. And the tank's number needs
+settling: after restricting it to the boss's own swings it still reads 28%, which is either a boss
+that hits everybody - the likely answer - or a measure still catching the wrong thing.
+
+### 19. The analysis screen
+
+Four slots: where you are and the headline, a picture at the current scale, a grid whose rows are
+who and whose columns are when, and the detail of whatever was opened. The four views are zoom
+states of that grid rather than four destinations - a row click changes who, a column click changes
+when. A cell where somebody was not present must never look like a cell where nothing was found.
+Comparing people transposes the grid, rows open down to the particulars, and there is no overall
+place in a ranking, because a ranking drawn from a combat log sets a raid against itself.
+
+### 20. The lane, and the pictures
+
+The lane takes the full width, because a time axis needs it, and gains the legend, the ticks and the
+height it never had. Marks that fall on each other are merged and come apart under a zoom; the
+enemy's lane needs the opposite treatment, since five hundred casts is a solid bar. And the one new
+measurement in the whole plan is also the cheapest: the boss's health through the fight and the
+number of people still standing, which together tell the story of an attempt better than any table.
+
 ## What this means for the window
 
 `ANALYSIS.md` carries this further, and is where the work after these milestones comes from: what
