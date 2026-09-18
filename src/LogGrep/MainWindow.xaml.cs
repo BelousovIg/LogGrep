@@ -68,6 +68,34 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Climbs back up the trail to whichever piece of it was clicked.</summary>
+    private void OnClimbTo(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: Crumb crumb }) Model.Analysis.GoTo(crumb.Depth);
+    }
+
+    /// <summary>
+    /// The side buttons of a mouse, which every other window on the machine uses for this. Handled
+    /// as a preview so a button press anywhere in the window works, rather than only over whatever
+    /// happens not to swallow it.
+    /// </summary>
+    protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+    {
+        base.OnPreviewMouseDown(e);
+
+        switch (e.ChangedButton)
+        {
+            case MouseButton.XButton1 when Model.BackCommand.CanExecute(null):
+                Model.BackCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case MouseButton.XButton2 when Model.ForwardCommand.CanExecute(null):
+                Model.ForwardCommand.Execute(null);
+                e.Handled = true;
+                break;
+        }
+    }
+
     /// <summary>
     /// The two selectors. Narrowing the sample is a claim about which attempts count, so it re-runs
     /// the rules over exactly what is left - the numbers and the sentence above them always agree.

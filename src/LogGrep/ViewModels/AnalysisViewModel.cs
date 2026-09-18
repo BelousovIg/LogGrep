@@ -25,6 +25,10 @@ public sealed class AnalysisViewModel : ObservableObject
     private PullViewModel? _pull;
     private string _player = string.Empty;
     private Role? _role;
+    private bool _replaying;
+
+    /// <summary>Raised whenever the report moves somewhere, so the trail can note it.</summary>
+    public event Action? Moved;
 
     public AnalysisViewModel(Func<IReadOnlyCollection<string>> ours, Func<Selection, Role?, AttemptGrid> judge)
     {
@@ -66,6 +70,52 @@ public sealed class AnalysisViewModel : ObservableObject
     public bool OnlyHealers => _role == Models.Role.Healer;
 
     public bool OnlyDamage => _role == Models.Role.Damage;
+
+    /// <summary>
+    /// The trail, as pieces somebody can click rather than as one sentence. A report that can be
+    /// drilled into and not climbed out of is a report with a dead end in it, and the way back was
+    /// already written on screen - it just was not doing anything.
+    /// </summary>
+    public IReadOnlyList<Crumb> Crumbs
+    {
+        get
+        {
+            if (_selection.Encounter == null) return Array.Empty<Crumb>();
+
+            var trail = new List<Crumb> { new(_selection.Encounter.Name, 0, _pull != null || _player.Length > 0) };
+
+            if (_pull != null)
+            {
+                trail.Add(new Crumb(
+                    "attempt " + Display.Count(_selection.Encounter.Pulls.IndexOf(_pull) + 1),
+                    1, _player.Length > 0));
+            }
+
+            if (_player.Length > 0) trail.Add(new Crumb(PlayerName.Character(_player), 2, false));
+
+            return trail;
+        }
+    }
+
+    /// <summary>Climbs back to one of them: the sample, or the attempt inside it.</summary>
+    public void GoTo(int depth)
+    {
+        if (depth == 0)
+        {
+            _pull = null;
+            _player = string.Empty;
+        }
+        else if (depth == 1)
+        {
+            _player = string.Empty;
+        }
+        else
+        {
+            return;
+        }
+
+        Changed();
+    }
 
     /// <summary>Where this is: the sample, then what has been narrowed down to inside it.</summary>
     public string Breadcrumb
@@ -166,12 +216,32 @@ public sealed class AnalysisViewModel : ObservableObject
         Changed();
     }
 
+    /// <summary>
+    /// Puts the report exactly where it was, without noting the move. Going back is not a place of
+    /// its own - recording it would make the back button walk in circles.
+    /// </summary>
+    internal void Restore(Selection selection, PullViewModel? pull, string player, Role? role)
+    {
+        _replaying = true;
+        _selection = selection;
+        _pull = pull;
+        _player = player;
+        _role = role;
+        Changed();
+        _replaying = false;
+    }
+
+    /// <summary>Everything about where the report is, for the trail to keep.</summary>
+    internal Place Here(int screen) => new(screen, _selection, _pull, _player, _role);
+
     private void Changed()
     {
+        OnPropertyChanged(nameof(Crumbs));
         // The selection is what every baseline is drawn from, so changing it changes the numbers -
         // all of them, every time. Measured at 150ms for the rules and 74ms for every scorecard in
         // an evening, which is cheap enough that nothing has to be kept half-fresh.
         Grid = _judge(_selection, _role);
+        if (!_replaying) Moved?.Invoke();
 
         OnPropertyChanged(nameof(Selection));
         OnPropertyChanged(nameof(Grid));
@@ -191,3 +261,9 @@ public sealed class AnalysisViewModel : ObservableObject
         OnPropertyChanged(nameof(PeopleText));
     }
 }
+
+/// <summary>
+/// One piece of the trail. <see cref="Climbable"/> is false for the last one, because the place you
+/// are already standing is not somewhere to go.
+/// </summary>
+public sealed record Crumb(string Text, int Depth, bool Climbable);

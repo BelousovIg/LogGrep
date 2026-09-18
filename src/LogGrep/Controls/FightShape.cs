@@ -1,50 +1,60 @@
+using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
+using LogGrep.ViewModels;
 
 namespace LogGrep.Controls;
 
 /// <summary>
-/// The shape of an attempt: how far down the enemy went, and how many of the group were still up.
+/// The shape of an attempt: the enemy going down, the group thinning out, and what the group was
+/// putting out while both happened.
 ///
-/// Two lines on one clock, and between them they tell the story a table cannot. A boss line that
-/// falls steadily and stops at forty per cent while the group line drops off a cliff is a raid that
-/// melted; one where both fall together is a fight that was close. Nothing about either line is a
-/// judgement - they are what happened, and they are the first thing a person wants to see.
+/// Four lines on one clock, and between them they tell the story a table cannot. An enemy line that
+/// stops at forty per cent while the group line falls off a cliff is a raid that melted; a damage
+/// line that drops away before either of them is a raid that lost the people doing the damage. A
+/// cross marks where somebody died, because that is the moment the other three lines bend around.
 ///
-/// It is drawn rather than charted on purpose: a hundred points on three hundred pixels needs no
-/// axes, no legend and no library, and adding them would only take room from the lanes underneath.
+/// They have no common unit, so each is drawn against its own high point and the axis carries only
+/// the clock and a quarter scale. That is the trade: the picture says when and what shape, and the
+/// hover says how much - for every line at once, at the second under the pointer.
 /// </summary>
 public sealed class FightShape : FrameworkElement
 {
-    private static readonly Pen EnemyLine =
-        Frozen(new Pen(new SolidColorBrush(Color.FromRgb(0xE0, 0x70, 0x6D)), 1.5));
-
-    private static readonly Pen GroupLine =
-        Frozen(new Pen(new SolidColorBrush(Color.FromRgb(0x69, 0xC0, 0x7A)), 1.5));
-
     private static readonly Pen Grid =
         Frozen(new Pen(new SolidColorBrush(Color.FromRgb(0x2A, 0x2C, 0x32)), 1));
 
-    public static readonly DependencyProperty EnemyProperty = DependencyProperty.Register(
-        nameof(Enemy), typeof(IReadOnlyList<double>), typeof(FightShape),
+    private static readonly Brush Label = Frozen(new SolidColorBrush(Color.FromRgb(0x62, 0x66, 0x70)));
+
+    private static readonly Pen DeathMark =
+        Frozen(new Pen(new SolidColorBrush(Color.FromRgb(0xE0, 0x70, 0x6D)), 1.5));
+
+    public static readonly DependencyProperty TracesProperty = DependencyProperty.Register(
+        nameof(Traces), typeof(IReadOnlyList<Trace>), typeof(FightShape),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnTracesChanged));
+
+    public static readonly DependencyProperty DeathsProperty = DependencyProperty.Register(
+        nameof(Deaths), typeof(IReadOnlyList<int>), typeof(FightShape),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
-    public static readonly DependencyProperty GroupProperty = DependencyProperty.Register(
-        nameof(Group), typeof(IReadOnlyList<int>), typeof(FightShape),
-        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
-
-    /// <summary>The enemy's health as a share of its pool, one point a second.</summary>
-    public IReadOnlyList<double>? Enemy
+    public FightShape()
     {
-        get => (IReadOnlyList<double>?)GetValue(EnemyProperty);
-        set => SetValue(EnemyProperty, value);
+        ToolTipService.SetInitialShowDelay(this, 120);
+        ToolTipService.SetShowDuration(this, 30000);
     }
 
-    /// <summary>How many of the group were standing, one point a second.</summary>
-    public IReadOnlyList<int>? Group
+    /// <summary>The lines, each with its own unit and its own switch.</summary>
+    public IReadOnlyList<Trace>? Traces
     {
-        get => (IReadOnlyList<int>?)GetValue(GroupProperty);
-        set => SetValue(GroupProperty, value);
+        get => (IReadOnlyList<Trace>?)GetValue(TracesProperty);
+        set => SetValue(TracesProperty, value);
+    }
+
+    /// <summary>The seconds somebody went down, marked with a cross.</summary>
+    public IReadOnlyList<int>? Deaths
+    {
+        get => (IReadOnlyList<int>?)GetValue(DeathsProperty);
+        set => SetValue(DeathsProperty, value);
     }
 
     protected override void OnRender(DrawingContext dc)
@@ -55,34 +65,82 @@ public sealed class FightShape : FrameworkElement
 
         dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, width, height));
 
-        // Quarters, so a glance can tell forty per cent from ten without anybody labelling it.
+        // Quarters across and minutes along, both labelled. A line with no numbers anywhere near it
+        // is a mood rather than a measurement.
         for (int i = 1; i < 4; i++)
         {
             double y = Math.Round(height * i / 4.0) + 0.5;
             dc.DrawLine(Grid, new Point(0, y), new Point(width, y));
+            dc.DrawText(Small(Display.Percent(1 - i / 4.0) + " of peak"), new Point(2, y - 7));
         }
 
-        Draw(dc, EnemyLine, Enemy, 1.0);
-
-        var group = Group;
-        if (group is { Count: > 0 })
+        double seconds = Longest();
+        for (double t = 60; t < seconds; t += 60)
         {
-            double most = group.Max();
-            if (most > 0) Draw(dc, GroupLine, group.Select(v => v / most).ToArray(), 1.0);
+            double x = Math.Round(t / seconds * width) + 0.5;
+            dc.DrawLine(Grid, new Point(x, 0), new Point(x, height));
+            dc.DrawText(Small(Display.Clock(TimeSpan.FromSeconds(t))), new Point(x + 3, height - 14));
+        }
+
+        var deaths = Deaths;
+        if (deaths != null && seconds > 0)
+        {
+            foreach (int at in deaths)
+            {
+                double x = Math.Clamp(at / seconds, 0, 1) * width;
+                dc.DrawLine(DeathMark, new Point(x - 3, height - 9), new Point(x + 3, height - 3));
+                dc.DrawLine(DeathMark, new Point(x - 3, height - 3), new Point(x + 3, height - 9));
+            }
+        }
+
+        foreach (var trace in Traces ?? Array.Empty<Trace>())
+        {
+            if (trace.IsOn) Draw(dc, trace, width, height, seconds);
         }
     }
 
-    private void Draw(DrawingContext dc, Pen pen, IReadOnlyList<double>? line, double top)
+    /// <summary>
+    /// Every line at the second under the pointer. A chart somebody can read the shape of but not
+    /// the value at is one they end up guessing from, and four lines against four different scales
+    /// leave no honest way to put the numbers on an axis.
+    /// </summary>
+    protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
     {
-        if (line == null || line.Count < 2) return;
+        base.OnMouseMove(e);
 
-        double width = ActualWidth;
-        double height = ActualHeight;
+        var traces = Traces;
+        double seconds = Longest();
 
-        var figure = new PathFigure { StartPoint = At(line, 0, width, height, top) };
+        if (traces == null || traces.Count == 0 || seconds <= 0 || ActualWidth <= 2)
+        {
+            ToolTip = null;
+            return;
+        }
+
+        int at = (int)Math.Round(Math.Clamp(e.GetPosition(this).X / ActualWidth, 0, 1) * seconds);
+        var said = new List<string> { "at " + Display.Clock(TimeSpan.FromSeconds(at)) };
+
+        said.AddRange(traces.Where(t => t.Values.Count > 0).Select(t => t.At(at)));
+
+        var deaths = Deaths?.Where(d => Math.Abs(d - at) <= 1).ToList();
+        if (deaths is { Count: > 0 }) said.Add(deaths.Count == 1 ? "somebody died here" : deaths.Count + " died here");
+
+        ToolTip = string.Join(Environment.NewLine, said);
+    }
+
+    private static void Draw(DrawingContext dc, Trace trace, double width, double height, double seconds)
+    {
+        var line = trace.Values;
+        if (line.Count < 2) return;
+
+        double peak = trace.Peak;
+        var pen = new Pen(trace.Paint, 1.5);
+        pen.Freeze();
+
+        var figure = new PathFigure { StartPoint = At(line, 0, width, height, peak, seconds) };
         for (int i = 1; i < line.Count; i++)
         {
-            figure.Segments.Add(new LineSegment(At(line, i, width, height, top), true));
+            figure.Segments.Add(new LineSegment(At(line, i, width, height, peak, seconds), true));
         }
 
         var path = new PathGeometry();
@@ -92,9 +150,34 @@ public sealed class FightShape : FrameworkElement
         dc.DrawGeometry(null, pen, path);
     }
 
-    private static Point At(IReadOnlyList<double> line, int i, double width, double height, double top)
-        => new(i / (double)(line.Count - 1) * width,
-            height - Math.Clamp(line[i] / top, 0, 1) * (height - 2) - 1);
+    private static Point At(IReadOnlyList<double> line, int i, double width, double height,
+        double peak, double seconds)
+        => new(seconds <= 0 ? 0 : Math.Clamp(i / seconds, 0, 1) * width,
+            height - Math.Clamp(line[i] / peak, 0, 1) * (height - 18) - 16);
+
+    /// <summary>The longest line there is, which is what the clock along the bottom counts off.</summary>
+    private double Longest()
+    {
+        var traces = Traces;
+        if (traces == null || traces.Count == 0) return 0;
+
+        return traces.Max(t => t.Values.Count) - 1;
+    }
+
+    private static FormattedText Small(string text)
+        => new(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+            new Typeface("Segoe UI"), 10, Label, 96);
+
+    /// <summary>Redraws when a line is switched on or off, which is the whole point of the switches.</summary>
+    private static void OnTracesChanged(DependencyObject where, DependencyPropertyChangedEventArgs e)
+    {
+        if (where is not FightShape shape) return;
+
+        foreach (var trace in (IReadOnlyList<Trace>?)e.NewValue ?? Array.Empty<Trace>())
+        {
+            trace.PropertyChanged += (_, _) => shape.InvalidateVisual();
+        }
+    }
 
     private static T Frozen<T>(T freezable) where T : Freezable
     {

@@ -524,6 +524,8 @@ public sealed class CombatLogScanner
             ThreatSeconds = threat,
             EnemyHealth = Curve(segment.Left, (int)duration.TotalSeconds),
             Standing = Alive(roster, (int)duration.TotalSeconds),
+            DamageLine = PerSecond(segment.Dealt, (int)duration.TotalSeconds),
+            HealingLine = PerSecond(segment.Healed, (int)duration.TotalSeconds),
             Casts = segment.Casts.ToArray(),
             Damage = segment.Damage,
             Healing = segment.Healing,
@@ -832,6 +834,12 @@ public sealed class CombatLogScanner
             // exactly what a spell nobody has a reason to press looks like.
             if (actor != null && prefixParams >= 3) actor.Did(_fields.Int(line, 9), amount);
 
+            // What the group put out, second by second. Two more lines for the shape of an attempt,
+            // and they cost one addition each: a damage line that falls away while the enemy's does
+            // not is a raid losing people, and one that never rises is a raid that never got going.
+            _open!.Output((int)Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds,
+                kind == EventKind.Heal ? 0 : amount, kind == EventKind.Heal ? amount : 0);
+
             // Who opened on the boss. A pull belongs to the tank: whoever lands the first blow takes
             // the threat with it, and on the first seconds of a fight that is the whole story.
             if (actor != null && kind == EventKind.Damage)
@@ -872,32 +880,29 @@ public sealed class CombatLogScanner
             // line in it for free: how far down the thing was, second by second. It is the one
             // measurement that tells the story of an attempt without a table - whether the group
             // pushed it and lost, or never moved it at all.
-            if (advancedAt >= 0 && string.Equals(Label(line, 2), _open!.Name, StringComparison.Ordinal))
-            {
-                // By pool rather than by name. A fight often has several creatures under the boss's
-                // own name - copies, adds, whatever the encounter is built out of - and sampling all
-                // of them gave a line that bounced between full and empty every few seconds and
-                // reported nought per cent on every attempt. The one with the largest pool is the
-                // thing the fight is about; anything smaller sharing its name is scenery.
-                _open.Health((int)Elapsed(at).TotalSeconds,
-                    _fields.Long(line, advancedAt + 2), _fields.Long(line, advancedAt + 3));
-            }
+            // The enemy states its own health on everything it does, and whichever enemy has the
+            // largest pool is the one the fight is about - whatever the encounter or the creature
+            // happens to be called. Matching on the name instead left every council fight, and any
+            // boss acting under a name of its own, with no progress line and no tank measure.
+            bool principal = advancedAt >= 0 && _open!.Health(
+                Hash(_fields.Field(line, 1)), (int)Elapsed(at).TotalSeconds,
+                _fields.Long(line, advancedAt + 2), _fields.Long(line, advancedAt + 3));
 
             // A swing carries no spell id, which is exactly what makes it worth counting on its
             // own: it is the enemy hitting whoever it is looking at, and where it lands is the only
             // reading the log gives of who is holding its attention.
             //
-            // Only the thing the fight is named after, and noted second by second rather than
-            // added up. A raid boss comes with adds, and in a late phase it swings at the whole
-            // group at once - on the real evening that put two thirds of the melee on people who
-            // were never meant to hold anything, and read as though the tanks had lost the boss for
-            // most of the fight. A second in which it hit one or two people is the boss looking at
+            // Only the principal's swings, and noted second by second rather than added up. A raid
+            // boss comes with adds, and in a late phase it swings at the whole group at once - on
+            // the real evening, counting every enemy put two thirds of the melee on people who were
+            // never meant to hold anything, and read as though the tanks had lost the boss for most
+            // of the fight. A second in which it hit one or two people is the boss looking at
             // somebody; a second in which it hit half the raid is a mechanic, and says nothing
             // about who was holding it.
-            if (prefixParams < 3 && string.Equals(Label(line, 2), _open!.Name, StringComparison.Ordinal))
+            if (principal && prefixParams < 3)
             {
                 victim.Swung(amount);
-                _open.Swing((int)Elapsed(at).TotalSeconds, victim.Name);
+                _open!.Swing((int)Elapsed(at).TotalSeconds, victim.Name);
             }
         }
 
@@ -1052,6 +1057,20 @@ public sealed class CombatLogScanner
         {
             if (stated.TryGetValue(i, out double share)) last = share;
             line[i] = last;
+        }
+
+        return line;
+    }
+
+    /// <summary>One point a second, with the seconds nothing happened in left at nothing.</summary>
+    private static IReadOnlyList<long> PerSecond(Dictionary<int, long> stated, int seconds)
+    {
+        if (stated.Count == 0 || seconds <= 0) return Array.Empty<long>();
+
+        var line = new long[seconds + 1];
+        foreach (var entry in stated)
+        {
+            if (entry.Key >= 0 && entry.Key <= seconds) line[entry.Key] = entry.Value;
         }
 
         return line;
@@ -1510,29 +1529,66 @@ public sealed class CombatLogScanner
         /// </summary>
         public Dictionary<int, HashSet<string>> Swings { get; } = new();
 
-        /// <summary>How far down the thing the fight is named after was, second by second.</summary>
+        /// <summary>What the group dealt and healed, second by second.</summary>
+        public Dictionary<int, long> Dealt { get; } = new();
+
+        public Dictionary<int, long> Healed { get; } = new();
+
+        public void Output(int second, long damage, long healing)
+        {
+            if (damage > 0)
+            {
+                Dealt.TryGetValue(second, out long was);
+                Dealt[second] = was + damage;
+            }
+
+            if (healing > 0)
+            {
+                Healed.TryGetValue(second, out long was);
+                Healed[second] = was + healing;
+            }
+        }
+
+        /// <summary>How far down the thing the fight is really about was, second by second.</summary>
         public Dictionary<int, double> Left { get; } = new();
 
-        /// <summary>The largest pool seen under that name, which is what says which thing it is.</summary>
+        /// <summary>
+        /// Which enemy that is, and how big it is.
+        ///
+        /// By pool rather than by name. The encounter's name is not the name of a creature on half
+        /// the fights in a tier - a council is named after the council, and a boss can act under a
+        /// name of its own - so matching on it left those attempts with no progress line at all and
+        /// no tank measure either. The biggest thing the group fought is the thing the fight is
+        /// about, whatever either of them is called.
+        /// </summary>
+        public ulong Principal { get; private set; }
+
         private long _biggest;
 
-        public void Health(int second, long current, long max)
+        /// <summary>
+        /// Notes an enemy's health. Returns whether this is the one the fight is about, which is
+        /// also what decides whether its swings are worth counting as threat.
+        /// </summary>
+        public bool Health(ulong who, int second, long current, long max)
         {
-            if (max <= 0) return;
+            if (max <= 0) return false;
 
             // A bigger pool than anything so far means the real thing has finally acted, and
-            // whatever was being sampled until now was something else wearing its name.
+            // everything gathered until now was about something smaller standing in front of it.
             if (max > _biggest)
             {
                 _biggest = max;
+                Principal = who;
                 Left.Clear();
+                Swings.Clear();
             }
-            else if (max < _biggest)
+            else if (who != Principal)
             {
-                return;
+                return false;
             }
 
             Left[second] = Math.Clamp(current / (double)max, 0, 1);
+            return true;
         }
 
         public void Swing(int second, string victim)

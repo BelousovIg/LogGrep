@@ -66,6 +66,15 @@ public sealed class MainViewModel : ObservableObject
         ExportFindingsCommand = new RelayCommand(ExportFindings, () => !IsBusy && Findings.Count > 0);
         AllOursCommand = new RelayCommand(() => SetAllOurs(true), () => People.Count > 0);
         NoneOursCommand = new RelayCommand(() => SetAllOurs(false), () => People.Count > 0);
+        BackCommand = new RelayCommand(() => Walk(Trail.Back()), () => Trail.CanGoBack);
+        ForwardCommand = new RelayCommand(() => Walk(Trail.Forward()), () => Trail.CanGoForward);
+
+        Analysis.Moved += Note;
+        Trail.PropertyChanged += (_, _) =>
+        {
+            BackCommand.RaiseCanExecuteChanged();
+            ForwardCommand.RaiseCanExecuteChanged();
+        };
 
         _encountersView = new ListCollectionView(Encounters);
         Sorting.Encounters.Changed += (_, _) => _encountersView.CustomSort = Sorting.Encounters.Comparer;
@@ -150,6 +159,35 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand ExportFindingsCommand { get; }
     public RelayCommand AllOursCommand { get; }
     public RelayCommand NoneOursCommand { get; }
+    public RelayCommand BackCommand { get; }
+    public RelayCommand ForwardCommand { get; }
+
+    /// <summary>Where the window has been, so it can go back.</summary>
+    public History Trail { get; } = new();
+
+    /// <summary>
+    /// Notes where the window is now. Called after anything that changes what is on screen - the
+    /// screen itself, what the report is pointed at, how the sample is narrowed - because a back
+    /// button that handles some of those and not the others is one people stop trusting.
+    /// </summary>
+    private void Note() => Trail.Went(Analysis.Here(_screen));
+
+    /// <summary>Puts the window back somewhere it has been, without noting the move as a new one.</summary>
+    private void Walk(Place? place)
+    {
+        if (place == null) return;
+
+        if (_screen != place.Screen)
+        {
+            _screen = place.Screen;
+            OnPropertyChanged(nameof(Screen));
+            OnPropertyChanged(nameof(OnLogs));
+            OnPropertyChanged(nameof(OnAnalysis));
+            OnPropertyChanged(nameof(OnPeople));
+        }
+
+        Analysis.Restore(place.Selection, place.Pull, place.Player, place.Role);
+    }
 
     /// <summary>
     /// Which screen is open. The bar along the bottom belongs to whatever is above it - "select all"
@@ -165,6 +203,7 @@ public sealed class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(OnLogs));
             OnPropertyChanged(nameof(OnAnalysis));
             OnPropertyChanged(nameof(OnPeople));
+            Note();
         }
     }
 
@@ -300,6 +339,7 @@ public sealed class MainViewModel : ObservableObject
             _wasOn = Analysis.Encounter?.Key ?? string.Empty;
         RebuildPeople(Array.Empty<PullRecord>());
         Analysis.Forget();
+        Trail.Forget();
             Status = "Open a log to start.";
             RaiseSelectionChanged();
             return Task.CompletedTask;
@@ -355,6 +395,7 @@ public sealed class MainViewModel : ObservableObject
         _wasOn = Analysis.Encounter?.Key ?? string.Empty;
         RebuildPeople(Array.Empty<PullRecord>());
         Analysis.Forget();
+        Trail.Forget();
 
         // A file that has gone since it was added keeps its row and says so. Removing it is then
         // somebody's decision rather than something the app did quietly on their behalf.

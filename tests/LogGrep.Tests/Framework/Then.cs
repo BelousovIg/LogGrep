@@ -602,6 +602,42 @@ public sealed class Then
         return this;
     }
 
+    public Then TheTrailReads(params string[] expected)
+    {
+        _check.TheTrailReads(expected);
+        return this;
+    }
+
+    public Then TheTrailCanGoBack(bool expected)
+    {
+        _check.TheTrailCanGoBack(expected);
+        return this;
+    }
+
+    public Then TheTrailCanGoForward(bool expected)
+    {
+        _check.TheTrailCanGoForward(expected);
+        return this;
+    }
+
+    public Then TheShapeDraws(params string[] expected)
+    {
+        _check.TheShapeDraws(expected);
+        return this;
+    }
+
+    public Then TheShapeOffers(params string[] expected)
+    {
+        _check.TheShapeOffers(expected);
+        return this;
+    }
+
+    public Then TheShapeMarksDeathsAt(params int[] expected)
+    {
+        _check.TheShapeMarksDeathsAt(expected);
+        return this;
+    }
+
     public Then TheScreenShowing(int expected)
     {
         _check.TheScreenShowing(expected);

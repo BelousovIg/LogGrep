@@ -1,3 +1,4 @@
+using System.Windows.Media;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Data;
@@ -16,6 +17,7 @@ public sealed class PullViewModel : ObservableObject
     private Scorecards? _cards;
     private IReadOnlyList<TimeSpan> _collective = Array.Empty<TimeSpan>();
     private Role? _role;
+    private IReadOnlyList<Trace>? _traces;
 
     public PullViewModel(PullRecord record, EncounterViewModel owner)
     {
@@ -118,6 +120,50 @@ public sealed class PullViewModel : ObservableObject
                     e.Card.Worst?.Headline ?? string.Empty))
                 .ToArray();
         }
+    }
+
+    /// <summary>
+    /// The lines that make up the shape of this attempt. Built once and kept, because each carries
+    /// its own switch and rebuilding the list would turn every switch back on behind somebody.
+    /// </summary>
+    public IReadOnlyList<Trace> Traces => _traces ??= BuildTraces();
+
+    /// <summary>The seconds somebody went down, which is where the other lines bend.</summary>
+    public IReadOnlyList<int> Deaths
+        => Record.Roster.SelectMany(p => p.Deaths).Select(d => (int)d.At.TotalSeconds).OrderBy(s => s).ToArray();
+
+    private IReadOnlyList<Trace> BuildTraces()
+    {
+        var traces = new List<Trace>();
+
+        if (Record.EnemyHealth.Count > 0)
+        {
+            traces.Add(new Trace("enemy", Color.FromRgb(0xE0, 0x70, 0x6D),
+                Record.EnemyHealth.ToArray(), v => Display.Percent(v), on: true));
+        }
+
+        if (Record.Standing.Count > 0)
+        {
+            traces.Add(new Trace("standing", Color.FromRgb(0x69, 0xC0, 0x7A),
+                Record.Standing.Select(v => (double)v).ToArray(),
+                v => Display.Count((int)v) + " up", on: true));
+        }
+
+        if (Record.DamageLine.Count > 0)
+        {
+            traces.Add(new Trace("damage", Color.FromRgb(0xE0, 0xA5, 0x54),
+                Record.DamageLine.Select(v => (double)v).ToArray(),
+                v => Display.Rate(v) + "/s", on: false));
+        }
+
+        if (Record.HealingLine.Count > 0)
+        {
+            traces.Add(new Trace("healing", Color.FromRgb(0x8E, 0x9B, 0xE8),
+                Record.HealingLine.Select(v => (double)v).ToArray(),
+                v => Display.Rate(v) + "/s", on: false));
+        }
+
+        return traces;
     }
 
     /// <summary>The moments one thing caught much of the group, drawn as a band on the enemy's lane.</summary>

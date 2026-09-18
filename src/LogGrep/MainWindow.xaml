@@ -43,10 +43,21 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0"
-                        Content="Open log"
-                        Style="{StaticResource PrimaryButton}"
-                        Command="{Binding OpenCommand}" />
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <!-- Back and forward over everything the window does, not just the report:
+                         a trail that handles some moves and not others is one people stop trusting.
+                         The side buttons of a mouse do the same thing. -->
+                    <Button Content="&#x2190;" MinWidth="34" Height="32" Margin="0,0,4,0"
+                            Command="{Binding BackCommand}"
+                            ToolTip="Back (mouse button 4)" />
+                    <Button Content="&#x2192;" MinWidth="34" Height="32" Margin="0,0,12,0"
+                            Command="{Binding ForwardCommand}"
+                            ToolTip="Forward (mouse button 5)" />
+
+                    <Button Content="Open log"
+                            Style="{StaticResource PrimaryButton}"
+                            Command="{Binding OpenCommand}" />
+                </StackPanel>
 
                 <!-- The list of open logs, not a path: the app reads a set of files, and a box with
                      one path in it could only ever describe the first of them. -->
@@ -518,7 +529,39 @@
                             BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1"
                             Padding="16,10,16,10">
                         <StackPanel>
-                            <TextBlock Text="{Binding Analysis.Breadcrumb}" Foreground="{StaticResource FgBrush}" />
+                            <!-- The trail, as pieces to click. A report that can be drilled into and
+                                 not climbed out of has a dead end in it, and the way back was already
+                                 written here - it just was not doing anything. -->
+                            <ItemsControl ItemsSource="{Binding Analysis.Crumbs}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button x:Name="Step" Style="{StaticResource LinkButton}"
+                                                    Content="{Binding Text}" Click="OnClimbTo"
+                                                    ToolTip="Back to this" />
+                                            <TextBlock x:Name="Arrow" Style="{StaticResource MutedText}"
+                                                       Text="  &#x203A;  " VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Climbable}" Value="False">
+                                                <Setter TargetName="Step" Property="IsEnabled" Value="False" />
+                                                <Setter TargetName="Step" Property="Foreground"
+                                                        Value="{StaticResource FgBrush}" />
+                                                <Setter TargetName="Step" Property="ToolTip" Value="{x:Null}" />
+                                                <Setter TargetName="Arrow" Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="{Binding Analysis.Breadcrumb}" Foreground="{StaticResource FgBrush}"
+                                       Visibility="{Binding Analysis.HasNothing, Converter={StaticResource BoolToVis}}" />
 
                             <!-- What is being measured, and who it is about, kept on screen the whole
                                  time. Every figure below is a share of something, and two selections
@@ -647,11 +690,31 @@
                                  of the group were still up. Two lines on one clock, and between them
                                  they tell the story a table cannot. -->
                             <Border Background="{StaticResource InputBrush}" CornerRadius="3"
-                                    Padding="8" Margin="0,0,0,8"
-                                    ToolTip="Red is the enemy's health, green is how many of the group were standing">
-                                <ctl:FightShape Height="64"
-                                                Enemy="{Binding Record.EnemyHealth}"
-                                                Group="{Binding Record.Standing}" />
+                                    Padding="8" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <ctl:FightShape Height="96"
+                                                    Traces="{Binding Traces}"
+                                                    Deaths="{Binding Deaths}" />
+
+                                    <!-- One switch per line. They share a clock and nothing else,
+                                         so being able to take three of them away is what makes the
+                                         fourth readable. -->
+                                    <ItemsControl ItemsSource="{Binding Traces}" Margin="0,6,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsOn, Mode=TwoWay}"
+                                                          Margin="0,0,16,0"
+                                                          Foreground="{Binding Paint}"
+                                                          Content="{Binding Name}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                             </Border>
 
                             <!-- The attempt's own card. Not an average of the players below it: an

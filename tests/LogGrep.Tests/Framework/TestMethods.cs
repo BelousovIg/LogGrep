@@ -42,6 +42,12 @@ public sealed class TestMethods
 
     public void NarrowTo(Outcome which) => _page.NarrowTo(which);
 
+    public void ClimbTo(int depth) => _page.ViewModel.Analysis.GoTo(depth);
+
+    public void GoBack() => _page.ViewModel.BackCommand.Execute(null);
+
+    public void GoForward() => _page.ViewModel.ForwardCommand.Execute(null);
+
     public void LookAtPullInTheReport(int number) => _page.LookAtPullInTheReport(number);
 
     public void NarrowTo(Role role) => _page.NarrowTo(role);

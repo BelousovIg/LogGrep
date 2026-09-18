@@ -144,6 +144,24 @@ public sealed class When
         return this;
     }
 
+    public When IClimbTheTrailTo(int depth)
+    {
+        _act.ClimbTo(depth);
+        return this;
+    }
+
+    public When IGoBack()
+    {
+        _act.GoBack();
+        return this;
+    }
+
+    public When IGoForward()
+    {
+        _act.GoForward();
+        return this;
+    }
+
     public When INarrowTo(Outcome which)
     {
         _act.NarrowTo(which);

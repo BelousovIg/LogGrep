@@ -580,6 +580,29 @@ public sealed class Verification
             (line.Count == 0 ? "there is no line" : line[at] + " were"));
     }
 
+    // Getting around.
+
+    public void TheTrailReads(params string[] expected)
+        => Assert.Equal(expected, _page.ViewModel.Analysis.Crumbs.Select(c => c.Text).ToArray());
+
+    public void TheTrailCanGoBack(bool expected)
+        => Assert.True(expected == _page.ViewModel.Trail.CanGoBack,
+            "Back should " + (expected ? "" : "not ") + "be available.");
+
+    public void TheTrailCanGoForward(bool expected)
+        => Assert.True(expected == _page.ViewModel.Trail.CanGoForward,
+            "Forward should " + (expected ? "" : "not ") + "be available.");
+
+    /// <summary>The lines on the shape of the attempt, and which are drawn.</summary>
+    public void TheShapeDraws(params string[] expected)
+        => Assert.Equal(expected, _page.Pull.Traces.Where(t => t.IsOn).Select(t => t.Name).ToArray());
+
+    public void TheShapeOffers(params string[] expected)
+        => Assert.Equal(expected, _page.Pull.Traces.Select(t => t.Name).ToArray());
+
+    public void TheShapeMarksDeathsAt(params int[] expected)
+        => Assert.Equal(expected, _page.Pull.Deaths.ToArray());
+
     public void TheScreenShowing(int expected)
         => Assert.True(expected == _page.ViewModel.Screen,
             "The window should be showing screen " + expected + " and shows " + _page.ViewModel.Screen + ".");

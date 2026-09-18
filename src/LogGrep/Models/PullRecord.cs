@@ -68,6 +68,11 @@ public sealed class PullRecord
     /// </summary>
     public IReadOnlyList<int> Standing { get; set; } = Array.Empty<int>();
 
+    /// <summary>What the group dealt and healed, second by second.</summary>
+    public IReadOnlyList<long> DamageLine { get; set; } = Array.Empty<long>();
+
+    public IReadOnlyList<long> HealingLine { get; set; } = Array.Empty<long>();
+
     /// <summary>
     /// Seconds in which the enemy was swinging at one or two people rather than at the room. This is
     /// the only stretch of a fight that says anything about threat: in a phase where a boss hits
