@@ -524,6 +524,14 @@ public sealed class Verification
     public void TheReportMeasuresOver(string expected)
         => Assert.Equal(expected, _page.ViewModel.Analysis.SampleText);
 
+    /// <summary>Who the report is about, which is the other half of what makes a number mean something.</summary>
+    public void TheReportSaysWhoItIsAbout(string expected)
+        => Assert.Equal(expected, _page.ViewModel.Analysis.PeopleText);
+
+    /// <summary>The rows the report is showing, in order.</summary>
+    public void TheReportShowsPlayers(params string[] expected)
+        => Assert.Equal(expected, _page.ReportPlayers().Select(p => p.Name).ToArray());
+
     public void TheScreenShowing(int expected)
         => Assert.True(expected == _page.ViewModel.Screen,
             "The window should be showing screen " + expected + " and shows " + _page.ViewModel.Screen + ".");

@@ -1,3 +1,5 @@
+using LogGrep.Models;
+using LogGrep.ViewModels;
 using LogGrep.Tests.Logs;
 
 namespace LogGrep.Tests.Framework;
@@ -33,6 +35,14 @@ public sealed class TestMethods
     public void MarkAsOurs(string name, bool ours) => _page.MarkAsOurs(name, ours);
 
     public void AnalyseEncounter(Boss boss) => _page.AnalyseEncounter(boss);
+
+    public void AnalyseChosen(Boss boss, int[] numbers) => _page.AnalyseChosen(boss, numbers);
+
+    public void NarrowTo(Outcome which) => _page.NarrowTo(which);
+
+    public void LookAtPullInTheReport(int number) => _page.LookAtPullInTheReport(number);
+
+    public void NarrowTo(Role role) => _page.NarrowTo(role);
 
     public void AnalysePull(Boss boss, int number) => _page.AnalysePull(boss, number);
 

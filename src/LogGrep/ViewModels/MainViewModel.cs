@@ -53,6 +53,7 @@ public sealed class MainViewModel : ObservableObject
         _outsiders = new Outsiders(fileSystem, data);
         _cache = new ScanCache(fileSystem, data);
         _setAside = _outsiders.Load().ToHashSet(StringComparer.Ordinal);
+        Analysis = new AnalysisViewModel(() => Ours, Judge);
 
         OpenCommand = new RelayCommand(Open, () => !IsBusy);
         ExportCommand = new RelayCommand(Export, () => !IsBusy && SelectedPullCount > 0);
@@ -77,7 +78,7 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<PersonRowViewModel> People { get; } = new();
 
     /// <summary>What the report is about, and what of it is on screen.</summary>
-    public AnalysisViewModel Analysis { get; } = new();
+    public AnalysisViewModel Analysis { get; }
 
     public bool HasPeople => People.Count > 0;
 
@@ -628,8 +629,47 @@ public sealed class MainViewModel : ObservableObject
     /// </summary>
     public void Analyse(EncounterViewModel encounter, PullViewModel? pull = null, string player = "")
     {
-        Analysis.Show(encounter, pull, player);
+        Analysis.Show(Selection.Of(encounter), pull, player);
         Screen = 1;
+    }
+
+    /// <summary>
+    /// The report on exactly the attempts that are ticked, which is how somebody says "these ten of
+    /// the thirty-one". A set picked by hand does not grow when the log does, and the bar says so.
+    /// </summary>
+    public void AnalyseSelected()
+    {
+        var chosen = Encounters.SelectMany(e => e.Pulls).Where(p => p.IsSelected).ToList();
+        if (chosen.Count == 0) return;
+
+        Analysis.Show(Selection.Of(chosen), pull: null, player: string.Empty);
+        Screen = 1;
+    }
+
+    /// <summary>
+    /// Runs the rules over exactly what is selected, and hands the answers to the attempts in it.
+    ///
+    /// Not over the whole reading: a selection is a claim about which attempts count, and a baseline
+    /// drawn from attempts somebody deliberately left out would not be the baseline they asked for.
+    /// Ten wipes of thirty-one is a different evening from the thirty-one, and the numbers have to
+    /// agree with the sentence at the top of the screen.
+    /// </summary>
+    private void Judge(Selection selection, Role? role)
+    {
+        var pulls = selection.Pulls;
+        if (pulls.Count == 0) return;
+
+        var records = pulls.Select(p => p.Record).ToList();
+        var written = new RuleFile(_fileSystem).Read(new SettingsService(_fileSystem).RulesPath);
+        var found = LogGrep.Analysis.Findings.In(records, written);
+        var cards = Scorecards.Of(new LogGrep.Analysis.Attempts(records), found);
+
+        var byPull = found.ToLookup(f => f.Pull);
+        foreach (var pull in pulls)
+        {
+            pull.SetLens(role);
+            pull.SetMistakes(byPull[pull.Record], cards);
+        }
     }
 
     private void OnOursChanged(PersonRowViewModel person)

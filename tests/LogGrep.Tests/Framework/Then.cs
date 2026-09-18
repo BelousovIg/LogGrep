@@ -554,6 +554,18 @@ public sealed class Then
         return this;
     }
 
+    public Then TheReportSaysWhoItIsAbout(string expected)
+    {
+        _check.TheReportSaysWhoItIsAbout(expected);
+        return this;
+    }
+
+    public Then TheReportShowsPlayers(params string[] expected)
+    {
+        _check.TheReportShowsPlayers(expected);
+        return this;
+    }
+
     public Then TheScreenShowing(int expected)
     {
         _check.TheScreenShowing(expected);

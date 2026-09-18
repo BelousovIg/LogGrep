@@ -1,3 +1,4 @@
+using LogGrep.Models;
 using System.IO.Abstractions.TestingHelpers;
 using System.Windows.Threading;
 using LogGrep.Analysis;
@@ -70,6 +71,31 @@ public sealed class LogGrepPage
     public void MarkAsOurs(string name, bool ours) => Person(name).IsOurs = ours;
 
     public void AnalyseEncounter(Boss boss) => ViewModel.Analyse(Of(boss));
+
+    public void AnalyseChosen(Boss boss, params int[] numbers)
+    {
+        foreach (var pull in Of(boss).Pulls) pull.IsSelected = false;
+        foreach (int number in numbers) Of(boss).Pulls[number - 1].IsSelected = true;
+
+        ViewModel.AnalyseSelected();
+    }
+
+    public void NarrowTo(Outcome which) => ViewModel.Analysis.Narrow(which);
+
+    /// <summary>The rows the report is showing, which the role chips narrow.</summary>
+    public IReadOnlyList<PlayerRowViewModel> ReportPlayers()
+        => ViewModel.Analysis.Pull?.PlayersView.Cast<PlayerRowViewModel>().ToList()
+           ?? (IReadOnlyList<PlayerRowViewModel>)Array.Empty<PlayerRowViewModel>();
+
+    /// <summary>Looks at one attempt inside whatever the report is already measuring.</summary>
+    public void LookAtPullInTheReport(int number)
+    {
+        var selection = ViewModel.Analysis.Selection;
+        ViewModel.Analysis.Show(selection, selection.Pulls[number - 1], string.Empty);
+        _pull = selection.Pulls[number - 1];
+    }
+
+    public void NarrowTo(Role role) => ViewModel.Analysis.Narrow(role);
 
     public void AnalysePull(Boss boss, int number) => ViewModel.Analyse(Of(boss), Of(boss).Pulls[number - 1]);
 

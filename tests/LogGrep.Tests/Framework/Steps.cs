@@ -1,4 +1,6 @@
 using LogGrep.Models;
+using LogGrep.ViewModels;
+using LogGrep.Models;
 using LogGrep.Tests.Logs;
 
 namespace LogGrep.Tests.Framework;
@@ -127,6 +129,30 @@ public sealed class When
     public When IAnalyseThePlayer(Boss boss, int number, string player)
     {
         _act.AnalysePlayer(boss, number, player);
+        return this;
+    }
+
+    public When IAnalyseTheChosenAttempts(Boss boss, params int[] numbers)
+    {
+        _act.AnalyseChosen(boss, numbers);
+        return this;
+    }
+
+    public When ILookAtPullInTheReport(int number)
+    {
+        _act.LookAtPullInTheReport(number);
+        return this;
+    }
+
+    public When INarrowTo(Outcome which)
+    {
+        _act.NarrowTo(which);
+        return this;
+    }
+
+    public When INarrowTo(Role role)
+    {
+        _act.NarrowTo(role);
         return this;
     }
 

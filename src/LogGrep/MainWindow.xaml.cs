@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using LogGrep.Controls;
 using LogGrep.Interop;
+using LogGrep.Models;
 using LogGrep.ViewModels;
 
 namespace LogGrep;
@@ -66,6 +67,24 @@ public partial class MainWindow : Window
                 break;
         }
     }
+
+    /// <summary>
+    /// The two selectors. Narrowing the sample is a claim about which attempts count, so it re-runs
+    /// the rules over exactly what is left - the numbers and the sentence above them always agree.
+    /// </summary>
+    private void OnAllAttempts(object sender, RoutedEventArgs e) => Model.Analysis.Narrow(Outcome.All);
+
+    private void OnKillsOnly(object sender, RoutedEventArgs e) => Model.Analysis.Narrow(Outcome.Kills);
+
+    private void OnWipesOnly(object sender, RoutedEventArgs e) => Model.Analysis.Narrow(Outcome.Wipes);
+
+    private void OnOnlyTanks(object sender, RoutedEventArgs e) => Model.Analysis.Narrow(Role.Tank);
+
+    private void OnOnlyHealers(object sender, RoutedEventArgs e) => Model.Analysis.Narrow(Role.Healer);
+
+    private void OnOnlyDamage(object sender, RoutedEventArgs e) => Model.Analysis.Narrow(Role.Damage);
+
+    private void OnAnalyseSelected(object sender, RoutedEventArgs e) => Model.AnalyseSelected();
 
     /// <summary>Takes one file out of the list, which re-reads whatever is left of it.</summary>
     private void OnRemoveLog(object sender, RoutedEventArgs e)

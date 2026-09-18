@@ -519,9 +519,34 @@
                             Padding="16,10,16,10">
                         <StackPanel>
                             <TextBlock Text="{Binding Analysis.Breadcrumb}" Foreground="{StaticResource FgBrush}" />
-                            <TextBlock Style="{StaticResource MutedText}" Margin="0,3,0,0"
-                                       Text="{Binding Analysis.SampleText}"
-                                       ToolTip="Every number below is a share of this. Change what is open and they change with it" />
+
+                            <!-- What is being measured, and who it is about, kept on screen the whole
+                                 time. Every figure below is a share of something, and two selections
+                                 give the same person two different scores - which must never be able
+                                 to look like a bug. -->
+                            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                <TextBlock Style="{StaticResource MutedText}" Text="WHAT" Width="46" />
+                                <TextBlock Style="{StaticResource MutedText}" Text="{Binding Analysis.SampleText}"
+                                           ToolTip="A selection made by a rule grows when the log does; one picked by hand does not" />
+                                <Button Style="{StaticResource LinkButton}" Content="all" Margin="12,0,0,0"
+                                        Click="OnAllAttempts" ToolTip="Every attempt in the selection" />
+                                <Button Style="{StaticResource LinkButton}" Content="kills"
+                                        Click="OnKillsOnly" ToolTip="Only the attempts that ended in a kill" />
+                                <Button Style="{StaticResource LinkButton}" Content="wipes"
+                                        Click="OnWipesOnly" ToolTip="Only the attempts that did not" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                <TextBlock Style="{StaticResource MutedText}" Text="WHO" Width="46" />
+                                <TextBlock Style="{StaticResource MutedText}" Text="{Binding Analysis.PeopleText}"
+                                           ToolTip="Who counts as ours is set on the People tab" />
+                                <Button Style="{StaticResource LinkButton}" Content="tanks" Margin="12,0,0,0"
+                                        Click="OnOnlyTanks" ToolTip="Only the attempts somebody tanked" />
+                                <Button Style="{StaticResource LinkButton}" Content="healers"
+                                        Click="OnOnlyHealers" ToolTip="Only the attempts somebody healed" />
+                                <Button Style="{StaticResource LinkButton}" Content="damage"
+                                        Click="OnOnlyDamage" ToolTip="Only the attempts somebody spent on damage" />
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
@@ -862,6 +887,12 @@
                          reads it: nobody wants the whole night, they want their own part of it. -->
                     <Button Style="{StaticResource LinkButton}" Content="Save report"
                             Command="{Binding ExportFindingsCommand}" ToolTip="{Binding FindingsSummary}" />
+
+                    <!-- Exactly the attempts that are ticked, which is how somebody says "these ten
+                         of the thirty-one". A set picked by hand does not grow when the log does. -->
+                    <Button Style="{StaticResource LinkButton}" Content="Analyse selected"
+                            Click="OnAnalyseSelected"
+                            ToolTip="Open the report on the attempts that are ticked, and only those" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal"

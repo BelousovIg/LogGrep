@@ -15,6 +15,7 @@ public sealed class PullViewModel : ObservableObject
     private IReadOnlyList<Finding> _mistakes = Array.Empty<Finding>();
     private Scorecards? _cards;
     private IReadOnlyList<TimeSpan> _collective = Array.Empty<TimeSpan>();
+    private Role? _role;
 
     public PullViewModel(PullRecord record, EncounterViewModel owner)
     {
@@ -33,6 +34,20 @@ public sealed class PullViewModel : ObservableObject
     public bool HasMistakes => _mistakes.Count > 0;
 
     public string MistakesText => _mistakes.Count == 0 ? "—" : Display.Count(_mistakes.Count);
+
+    /// <summary>
+    /// Narrows the roster to one role, or back to all of it. A role belongs to an attempt rather
+    /// than to a person, so this picks rows out of this attempt and says nothing about anybody's
+    /// evening.
+    /// </summary>
+    internal void SetLens(Role? role)
+    {
+        if (_role == role) return;
+
+        _role = role;
+        _playersView = null;
+        OnPropertyChanged(nameof(PlayersView));
+    }
 
     /// <summary>
     /// Hands the attempt what the analysis found. The player rows are dropped rather than patched:
@@ -165,6 +180,7 @@ public sealed class PullViewModel : ObservableObject
     {
         var mistakes = _mistakes.ToLookup(m => m.Player, StringComparer.Ordinal);
         var rows = Record.Roster
+            .Where(stats => _role == null || Specs.RoleOf(stats.SpecId) == _role)
             .Select(stats => new PlayerRowViewModel(stats, Record.Duration, Owner.Report,
                 mistakes[stats.Name].ToArray(), _cards?.For(Record, stats), _collective))
             .OrderBy(Group)
