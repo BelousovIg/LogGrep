@@ -120,9 +120,10 @@ different problems, and the `2/3` column already hints at the distinction.
 
 Each ends with something usable. None is a rewrite of what exists.
 
-All eleven are closed. Nine were built, one (10) was decided against with its condition for reopening
-written down, and one (9) is built but still needs a generated rules file committed and an installer
-to place it - the only step left that needs a Blizzard key, which belongs to whoever holds one.
+The first eleven are closed. Nine were built, one (10) was decided against with its condition for
+reopening written down, and one (9) is built but still needs a generated rules file committed and an
+installer to place it - the only step left that needs a Blizzard key, which belongs to whoever holds
+one. The second run, twelve to twenty, is closed as well; what it came out as is recorded after it.
 
 ### 1. A finding worth reading — done
 
@@ -714,7 +715,7 @@ numbers already on screen, then what makes the data cheap, then the frame, and o
 and how they are shown - because the first attempt built an interface on top of wrong numbers and
 both halves had to be done twice.
 
-### 12. Who the people are
+### 12. Who the people are — done
 
 A character's identity comes from the log's own GUID rather than from a name that a transfer or a
 rename can change. A **People** tab lists every character seen across every loaded log - roles
@@ -722,7 +723,7 @@ played, attempts, when they were last seen - and carries the flag that says whic
 The flag outlives the session. An empty registry means everybody is ours, said out loud rather than
 shown as an empty screen. Grouping a person's alts under one human is deliberately out of scope.
 
-### 13. A specialization is the unit of comparison
+### 13. A specialization is the unit of comparison — done
 
 Somebody who respecs mid-evening is doing a different job, and the baselines do not know it: they
 are kept per player, so a night of tanking and three pulls of healing average into one nonsense.
@@ -730,7 +731,7 @@ The unit becomes the pair of person and spec. A player's card over many attempts
 rather than averaging across a respec, the role filters select attempts rather than people, and no
 conclusion about improvement crosses one.
 
-### 14. A death read against the right health
+### 14. A death read against the right health — done
 
 The walk back to the last moment somebody was whole still reads the attacker's health, because a
 combat log's advanced block describes whoever caused the event. It survived because the generated
@@ -738,7 +739,7 @@ log writes that block as the target's - not the format the game produces - so no
 it. Both halves are one piece of work: the generator writes what the game writes, the victim's
 health is modelled from what landed on them, and the walk back is re-measured on the real log.
 
-### 15. Read once, resume from where it stopped
+### 15. Read once, resume from where it stopped — done
 
 A log is identified by its name and the first timestamp inside it - both immutable for a file that
 is only ever appended to - and its whole parse is cached beside the app. Twelve seconds are paid
@@ -749,7 +750,7 @@ absent from the analysis, and resolved by the next refresh. The analysis itself 
 whole - at 150ms for the detectors and 74ms for every scorecard in an evening, nothing else is worth
 the risk of an answer built half from old numbers.
 
-### 16. Four screens instead of one
+### 16. Four screens instead of one — done, less a fifth for settings
 
 **Logs** goes back to being what it was: encounters, attempts, who was in them, and the file the
 export cuts. Not one conclusion on it. **Analysis** is the report. **People** is the registry.
@@ -759,7 +760,7 @@ follows one rule: **the sample is the whole encounter, the focus is what was cli
 into one attempt must not shrink the sample to it, or every baseline disappears at the moment
 somebody looks closer.
 
-### 17. Saying what is being analysed
+### 17. Saying what is being analysed — done
 
 Two selectors across the top, always visible, always a sentence with numbers in it: who, and which
 attempts. Picking attempts is a tree plus the filters that actually produce a subset - difficulty,
@@ -768,7 +769,7 @@ a rule grows when a log does and a hand-picked list does not change behind someb
 selection is what the baselines are drawn from, which the screen has to say, because the same person
 scores differently under two different selections and that must never look like a bug.
 
-### 18. Numbers taken from the data
+### 18. Numbers taken from the data — done
 
 The two axes built on findings are rebuilt on baselines, and the finding becomes the explanation of
 a number rather than its source.
@@ -783,7 +784,7 @@ Mechanics is rebuilt against the rest of the group in the same attempt. And the 
 settling: after restricting it to the boss's own swings it still reads 28%, which is either a boss
 that hits everybody - the likely answer - or a measure still catching the wrong thing.
 
-### 19. The analysis screen
+### 19. The analysis screen — done, less the comparison view
 
 Four slots: where you are and the headline, a picture at the current scale, a grid whose rows are
 who and whose columns are when, and the detail of whatever was opened. The four views are zoom
@@ -792,13 +793,49 @@ when. A cell where somebody was not present must never look like a cell where no
 Comparing people transposes the grid, rows open down to the particulars, and there is no overall
 place in a ranking, because a ranking drawn from a combat log sets a raid against itself.
 
-### 20. The lane, and the pictures
+### 20. The lane, and the pictures — done
 
 The lane takes the full width, because a time axis needs it, and gains the legend, the ticks and the
 height it never had. Marks that fall on each other are merged and come apart under a zoom; the
 enemy's lane needs the opposite treatment, since five hundred casts is a solid bar. And the one new
 measurement in the whole plan is also the cheapest: the boss's health through the fight and the
 number of people still standing, which together tell the story of an attempt better than any table.
+
+### What the second run came out as
+
+All nine are closed. Two of them are smaller than they were written, and the record of why is the
+point of writing them down at all.
+
+**Three things the real evening said were wrong, that no scenario could see.** The health pool on a
+combat log line belongs to whoever caused the event, and the app read it as the victim's - so every
+damage dealer in the raid carried the boss's seven hundred million and every score built on a pool
+was nonsense. The generated log was writing that block the wrong way round, which is precisely why
+the tests were green: the app and its own fixture were wrong together. The tank's number was summed
+damage, and a boss that spends a late phase swinging at the whole raid piles three quarters of its
+melee onto people who were never holding it - both tanks scored twenty-eight per cent for a fight
+they had tanked all the way through. And the enemy's health line, taken by name, bounced between
+full and empty every few seconds, because a fight has several creatures under the boss's own name.
+
+**Two axes were built on silence.** Survival and mechanics were computed from findings, and a
+finding takes ten attempts and a share of a group before a rule will say anything - so both read
+100% for almost everybody, and the report could not tell the person who dodged everything from the
+person nothing had been said about yet. Survival is now a verdict rather than a percentage, which is
+what the question about a death actually is, and mechanics is read off the log against the rest of
+the group in the same attempt. On the real evening mechanics now runs from 56% to 94% and the tanks
+from 88% to 100%.
+
+**The numbers measured, at the end of it.** A 1415 MB log reads cold in thirteen seconds and warm in
+two tenths of one, leaving a 4.7 MB cache. Every rule over an evening costs 150ms and every
+scorecard 74ms, which is why a selection can re-run the whole analysis on every click rather than
+filtering a stale answer. The walk back to the last moment somebody was whole stopped returning the
+size of its own window: at ninety-five per cent it saturated for thirty-seven per cent of three
+hundred and fifteen deaths, at eighty for six.
+
+**What is not built.** Sixteen has four screens rather than five - settings is still a window,
+because it is a thing you go and do rather than a thing you read. Nineteen has the grid and the zoom
+but not the transposed comparison of two to five people; the grid shows every player against every
+attempt already, which covers most of what that view was for, and the rest is a milestone of its own
+rather than a corner of this one.
 
 ## What this means for the window
 
