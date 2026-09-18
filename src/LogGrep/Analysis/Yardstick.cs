@@ -40,7 +40,13 @@ public sealed class Yardstick
     /// </summary>
     private const int Borrowed = 3;
 
-    private readonly Dictionary<string, List<double>> _mine = new(StringComparer.Ordinal);
+    /// <summary>
+    /// Keyed by the person and what they were playing, not by the person. Somebody who tanks a night
+    /// and heals three pulls of it is doing two jobs, and a baseline that averages across the respec
+    /// is a number about nobody: it would tell a tank their healing was down and a healer their
+    /// damage was up, in the same sentence, about the same evening.
+    /// </summary>
+    private readonly Dictionary<(string Player, int Spec), List<double>> _mine = new();
     private readonly Dictionary<int, List<(string Player, double Value)>> _spec = new();
     private readonly int _minimum;
 
@@ -56,9 +62,9 @@ public sealed class Yardstick
 
         foreach (var measured in measurements)
         {
-            if (!stick._mine.TryGetValue(measured.Player, out var mine))
+            if (!stick._mine.TryGetValue((measured.Player, measured.SpecId), out var mine))
             {
-                stick._mine[measured.Player] = mine = new List<double>();
+                stick._mine[(measured.Player, measured.SpecId)] = mine = new List<double>();
             }
 
             mine.Add(measured.Value);
@@ -82,7 +88,7 @@ public sealed class Yardstick
     /// </summary>
     public Normal For(string player, int specId)
     {
-        if (_mine.TryGetValue(player, out var mine) && mine.Count >= _minimum)
+        if (_mine.TryGetValue((player, specId), out var mine) && mine.Count >= _minimum)
         {
             return new Normal(Median(mine), "you average");
         }
@@ -111,7 +117,7 @@ public sealed class Yardstick
     /// </summary>
     public Normal Best(string player, int specId)
     {
-        if (_mine.TryGetValue(player, out var mine) && mine.Count >= _minimum)
+        if (_mine.TryGetValue((player, specId), out var mine) && mine.Count >= _minimum)
         {
             return new Normal(mine.Max(), "your best of " + mine.Count + " attempts");
         }

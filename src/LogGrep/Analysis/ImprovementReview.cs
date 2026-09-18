@@ -33,17 +33,42 @@ public sealed class ImprovementReview : IReview
         // where the middle falls does not depend on who was making them.
         int middle = attempts.Pulls.Count / 2;
 
+        // Grouped by what they were playing as well as by who they are. Somebody who tanked the
+        // first half and healed the second stopped making a tank's mistakes because they stopped
+        // tanking, and telling them they fixed something would be congratulating the wrong person
+        // for the wrong thing.
         foreach (var player in found
             .Where(f => f.Player.Length > 0 && f.Category != "the night")
-            .GroupBy(f => f.Player, StringComparer.Ordinal))
+            .GroupBy(f => (f.Player, f.SpecId)))
         {
             int before = player.Count(f => f.PullNumber <= middle);
             int after = player.Count(f => f.PullNumber > middle);
 
             if (before < Enough || after > before * Stopped) continue;
 
-            yield return Report(attempts, player.Key, player.First().SpecId, before, after, middle);
+            // And they have to have been there all evening as that spec. Half a night of tanking
+            // looks exactly like a habit given up if only the mistakes are counted.
+            if (!Throughout(attempts, player.Key.Player, player.Key.SpecId, middle)) continue;
+
+            yield return Report(attempts, player.Key.Player, player.Key.SpecId, before, after, middle);
         }
+    }
+
+    /// <summary>Whether they played that specialization on both sides of the evening's middle.</summary>
+    private static bool Throughout(Attempts attempts, string player, int specId, int middle)
+    {
+        bool early = false;
+        bool late = false;
+
+        for (int i = 0; i < attempts.Pulls.Count; i++)
+        {
+            if (attempts.SpecOf(attempts.Pulls[i], player) != specId) continue;
+
+            if (i < middle) early = true;
+            else late = true;
+        }
+
+        return early && late;
     }
 
     private static Finding Report(Attempts attempts, string player, int specId,
