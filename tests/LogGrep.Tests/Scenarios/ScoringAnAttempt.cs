@@ -85,8 +85,8 @@ public sealed class ScoringAnAttempt : Scenario
 
         When.ILookAtPlayer("Nightblade");
 
-        Then.PlayerScores(Axis.Survival, "100%")
-            .PlayerScoreSays(Axis.Survival, "nothing landed on them");
+        Then.PlayerScores(Axis.Survival, "lived")
+            .PlayerScoreSays(Axis.Survival, "took 0 health pools and stayed up");
     }
 
     [Fact]
@@ -100,23 +100,26 @@ public sealed class ScoringAnAttempt : Scenario
 
         When.ILookAtPlayer("Nightblade");
 
-        Then.PlayerScores(Axis.Survival, "100%")
-            .PlayerScoreSays(Axis.Survival, "0 of 0.2 health pools was avoidable");
+        Then.PlayerScores(Axis.Survival, "lived")
+            .PlayerScoreSays(Axis.Survival, "took 0.2 health pools and stayed up");
     }
 
     [Fact]
-    public void Damage_that_was_theirs_to_avoid_comes_off_what_landed_on_them()
+    public void A_death_is_answered_with_whether_it_could_have_gone_otherwise()
     {
-        // Three tenths of a pool hit Emberfall and all three tenths of it was avoidable, so none of
-        // what landed on them was the fight's doing. The denominator is real damage rather than an
-        // allowance invented for the purpose, which is why this needs no threshold to stay fair.
-        Given.IOpenedLog(AMessyNight()).IOpenedPull(Soulcoiler, number: 1);
+        // Survival is not a percentage. What somebody wants to know about a death is whether they
+        // could have lived - whether the healing was there, whether a defensive would have covered
+        // it, or whether nothing this group has ever done would have - and that is a verdict.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => Clean(p)
+            .At(50.Seconds()).BossHits("Emberfall", 600_000, with: Ability.HollowingStrikes)
+            .At(1.Minutes()).Kills("Emberfall", with: Ability.HollowingStrikes, amount: 400_000)
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
 
         When.ILookAtPlayer("Emberfall");
 
-        Then.PlayerScores(Axis.Survival, "0%")
-            .PlayerScoreSays(Axis.Survival, "0.3 of 0.3 health pools was avoidable")
-            .PlayerScoreSays(Axis.Survival, "of everything that hit them");
+        Then.PlayerScores(Axis.Survival, "Hollowing Strikes took 60% in one hit");
     }
 
     [Fact]
@@ -129,7 +132,7 @@ public sealed class ScoringAnAttempt : Scenario
         When.ILookAtPlayer("Emberfall");
 
         Then.PlayerScores(Axis.Mechanics, "83%")
-            .PlayerScoreSays(Axis.Mechanics, "caught 1 of the 6 times it went out");
+            .PlayerScoreSays(Axis.Mechanics, "caught them once where the group typically takes none of it");
     }
 
     [Fact]

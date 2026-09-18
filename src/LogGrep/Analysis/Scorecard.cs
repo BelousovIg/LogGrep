@@ -38,11 +38,27 @@ public enum Axis
 /// </summary>
 public sealed record Score(Axis Axis, double? Value, string Facts, string Against)
 {
-    public bool Known => Value != null;
+    /// <summary>
+    /// A word where a percentage would be the wrong shape of answer.
+    ///
+    /// Survival is the one that needs it. What a person wants to know about a death is not what
+    /// share of the damage was avoidable - it is whether they could have lived: whether the healing
+    /// was there to give, whether a defensive would have covered it, or whether nothing this group
+    /// has ever done would have. That is a verdict, and dressing a verdict as a percentage only
+    /// makes it harder to argue with.
+    /// </summary>
+    public string Verdict { get; init; } = string.Empty;
 
-    public string Text => Value == null ? "—" : Display.Percent(Value.Value);
+    public bool Known => Value != null || Verdict.Length > 0;
+
+    public string Text => Verdict.Length > 0
+        ? Verdict
+        : Value == null ? "—" : Display.Percent(Value.Value);
 
     public static Score Missing(Axis axis, string why) => new(axis, null, why, string.Empty);
+
+    public static Score Says(Axis axis, string verdict, string facts, string against)
+        => new(axis, null, facts, against) { Verdict = verdict };
 }
 
 /// <summary>
@@ -131,8 +147,8 @@ public sealed class Scorecards
         var axes = new[]
         {
             Output(pull, player, role),
-            Survival(player, mine, alone),
-            Mechanics(pull, player, mine),
+            Survival(player, mine),
+            Mechanics(pull, player),
             Duty(pull, player, role),
         };
 
@@ -224,35 +240,35 @@ public sealed class Scorecards
     /// real damage rather than an allowance invented for the purpose, which is why this needs no
     /// threshold and cannot drift: a fight that hits harder moves both halves of it at once.
     /// </summary>
-    private static Score Survival(PlayerStats player, IReadOnlyList<Finding> mine, int deaths)
+    private static Score Survival(PlayerStats player, IReadOnlyList<Finding> mine)
     {
-        if (player.MaxHealth <= 0)
+        if (player.Deaths.Count == 0)
         {
-            return Score.Missing(Axis.Survival, "the log never reported a health pool for them");
+            return Score.Says(Axis.Survival, "lived",
+                player.MaxHealth > 0
+                    ? "took " + Display.Decimal(player.DamageTaken / (double)player.MaxHealth) +
+                      " health pools and stayed up"
+                    : "nothing took them down",
+                "of everything that hit them");
         }
 
-        double taken = player.DamageTaken / (double)player.MaxHealth;
+        // The verdict is the one the death rule already reached, with its evidence and its advice
+        // behind it. It was measured and tuned against a real evening; restating the same question
+        // here in a second arithmetic would be two answers about one death, and the app would have
+        // no way of saying which it meant.
+        var worst = mine
+            .Where(f => f.Category == "deaths")
+            .OrderByDescending(f => f.Cost.Weight)
+            .FirstOrDefault();
 
-        if (taken <= 0)
+        if (worst == null)
         {
-            return new Score(Axis.Survival, 1, "nothing landed on them", "of everything that hit them");
+            return Score.Says(Axis.Survival, "died",
+                "nothing here can say what took them down",
+                "the rules found no pattern behind it");
         }
 
-        double avoidable = mine
-            .Where(f => AxisOf(f.Category) == Axis.Survival && f.Cost.Toll == Toll.Damage)
-            .Sum(f => f.Cost.Amount) / (double)player.MaxHealth;
-
-        // Deaths are named here and deliberately left out of the number. A ten-minute fight puts
-        // forty health pools through somebody, so adding a death to that denominator moved the
-        // score by three points and every person in the raid scored ninety-seven - which is not a
-        // measurement, it is a formula saturating. What a death cost is carried by the pools, the
-        // worst line and the lane, all three of which say it louder than a percentage would.
-        string facts = Display.Decimal(avoidable) + " of " + Display.Decimal(taken) +
-            " health pools was avoidable";
-        if (deaths > 0) facts += ", and they took " + Deaths(deaths);
-
-        return new Score(Axis.Survival, Math.Clamp(1 - avoidable / taken, 0, 1),
-            facts, "of everything that hit them");
+        return Score.Says(Axis.Survival, worst.Headline, worst.Evidence, worst.Advice);
     }
 
     /// <summary>
@@ -260,35 +276,73 @@ public sealed class Scorecards
     /// them at all are counted: a player nothing landed on is not being credited against a list of
     /// things that were never aimed their way, they simply have nothing to answer for.
     /// </summary>
-    private Score Mechanics(PullRecord pull, PlayerStats player, IReadOnlyList<Finding> mine)
+    private static Score Mechanics(PullRecord pull, PlayerStats player)
     {
-        var spells = mine
-            .Where(f => AxisOf(f.Category) == Axis.Mechanics && f.SpellId > 0)
-            .Select(f => f.SpellId)
-            .Distinct()
-            .ToList();
-
-        if (spells.Count == 0)
-        {
-            return new Score(Axis.Mechanics, 1, "nothing that was judged avoidable caught them",
-                "of the mechanics this fight throws");
-        }
-
+        // Read off the log rather than off the findings. Built on findings this was 100% for almost
+        // everybody, because a finding takes ten attempts and a share of a group before a rule will
+        // say anything - so an index made of them is an index made of silence, and silence is the
+        // same for the person who dodged everything and the person nothing was said about yet.
+        //
+        // The comparison is the group in this same attempt, which is the app's third baseline and
+        // the only one that needs no run of nights: the same mechanic, the same seconds, twenty
+        // people, and one of them taking six of it where the rest take one.
         long caught = 0;
-        long went = 0;
+        long chances = 0;
+        int spells = 0;
+        long worst = 0;
+        long typical = 0;
 
-        foreach (int spell in spells)
+        foreach (int spell in Enemy(pull))
         {
             long times = Times(pull, player.Name, spell);
-            if (times == 0) times = mine.Count(f => f.SpellId == spell);
+            if (times == 0) continue;
 
-            caught += times;
-            went += Occasions(pull, spell, times);
+            long usual = Typical(pull, spell);
+            if (times <= usual) continue;
+
+            // Only the excess is theirs. Taking as much of something as everybody else takes of it
+            // is what the fight does to a group, not what somebody did wrong in it.
+            long went = Occasions(pull, spell, times);
+
+            caught += times - usual;
+            chances += went;
+            spells++;
+
+            if (times > worst)
+            {
+                worst = times;
+                typical = usual;
+            }
         }
 
-        return new Score(Axis.Mechanics, Math.Clamp(1 - caught / (double)went, 0, 1),
-            "caught " + caught + " of the " + went + " times it went out",
-            "of the times those mechanics went out");
+        if (spells == 0)
+        {
+            return new Score(Axis.Mechanics, 1, "nothing caught them more than it caught the group",
+                "the rest of the group, in this same attempt");
+        }
+
+        return new Score(Axis.Mechanics, Math.Clamp(1 - caught / (double)chances, 0, 1),
+            "caught them " + Often(worst) + " where the group typically takes " + Often(typical),
+            "the rest of the group, in this same attempt");
+    }
+
+    /// <summary>Every enemy ability that touched anybody in this attempt.</summary>
+    private static IEnumerable<int> Enemy(PullRecord pull)
+        => pull.Blows.Select(b => b.SpellId)
+            .Concat(pull.Debuffs.Select(d => d.SpellId))
+            .Where(id => id > 0)
+            .Distinct();
+
+    /// <summary>
+    /// How often this ability catches somebody, typically. The median across everyone who was there,
+    /// including the people it never touched - a mechanic that lands on two of twenty is one the
+    /// other eighteen are getting out of, and leaving them out would make taking it look normal.
+    /// </summary>
+    private static long Typical(PullRecord pull, int spell)
+    {
+        var times = pull.Roster.Select(p => Times(pull, p.Name, spell)).OrderBy(t => t).ToList();
+
+        return times.Count == 0 ? 0 : times[times.Count / 2];
     }
 
     /// <summary>
@@ -466,6 +520,14 @@ public sealed class Scorecards
         => all.Where(f => string.Equals(f.Player, player, StringComparison.Ordinal)).ToArray();
 
     private static string Deaths(int count) => count == 1 ? "one death" : count + " deaths";
+
+    private static string Often(long count) => count switch
+    {
+        0 => "none of it",
+        1 => "once",
+        2 => "twice",
+        _ => count + " times",
+    };
 
     /// <summary>
     /// Which index a finding belongs under, and which belong under none.
