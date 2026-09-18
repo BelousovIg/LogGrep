@@ -43,6 +43,10 @@ public readonly record struct LaneMark(
 
         foreach (var finding in mine)
         {
+            // One that happened at no particular moment would be drawn at the start of the fight,
+            // where it would read as something that happened there.
+            if (finding.Timeless) continue;
+
             marks.Add(new LaneMark(
                 finding.At.TotalSeconds,
                 Pools(finding.Cost, player.MaxHealth),

@@ -76,5 +76,5 @@ public sealed class SpreadDetector : IDetector
             pull,
             player.Name,
             player.SpecId,
-            TimeSpan.Zero);
+            TimeSpan.Zero) { Timeless = true };
 }

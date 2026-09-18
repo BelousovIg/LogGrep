@@ -79,7 +79,7 @@ public sealed class BuildDetector : IDetector
             showing.Pull,
             showing.Player,
             showing.SpecId,
-            TimeSpan.Zero);
+            TimeSpan.Zero) { Timeless = true };
 
     /// <summary>
     /// One player on one attempt, measured by whichever number their role is actually judged on.

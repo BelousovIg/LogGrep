@@ -106,7 +106,7 @@ public sealed class MechanicDetector : IDetector
             last.Pull,
             string.Empty,
             0,
-            TimeSpan.Zero);
+            TimeSpan.Zero) { Timeless = true };
 
     private Finding Report(Attempts attempts, MechanicRule rule, Application off)
     {

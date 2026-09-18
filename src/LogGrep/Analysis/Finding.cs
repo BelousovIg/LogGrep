@@ -76,6 +76,16 @@ public sealed record Finding(
 {
     public Role Role => Specs.RoleOf(SpecId);
 
+    /// <summary>
+    /// Whether this one happened at a moment at all.
+    ///
+    /// Plenty of them do not. "Used Shadow Word: Death four fewer times than usual" is about a whole
+    /// attempt, and "four mistakes in the first six attempts" is about a whole evening; neither has
+    /// a second to point at. They were all carrying zero as a placeholder, which printed as "0:00"
+    /// and read as a time - the one thing a placeholder must never do.
+    /// </summary>
+    public bool Timeless { get; init; }
+
     /// <summary>"0:31 took a tank mechanic" - the line a row shows before anybody opens anything.</summary>
-    public string Line => Display.Clock(At) + " " + Headline;
+    public string Line => Timeless ? Headline : Display.Clock(At) + " " + Headline;
 }

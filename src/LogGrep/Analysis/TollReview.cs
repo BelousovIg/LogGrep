@@ -47,6 +47,6 @@ public sealed class TollReview : IReview
             attempts.Pulls[^1],
             string.Empty,
             0,
-            TimeSpan.Zero);
+            TimeSpan.Zero) { Timeless = true };
     }
 }

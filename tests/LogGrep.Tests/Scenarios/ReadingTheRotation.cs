@@ -70,6 +70,21 @@ public sealed class ReadingTheRotation : Scenario
     }
 
     [Fact]
+    public void A_finding_about_a_whole_attempt_shows_no_clock()
+    {
+        // Fewer uses than usual is about the attempt, not about a second of it. It was carrying zero
+        // as a placeholder, which printed "0:00" and read as the moment it happened.
+        var log = ANightOfCooldowns().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .Casting("Nightblade", Ability.Reckoning, from: 0.Seconds(), to: 2.Minutes(), every: 2.Minutes(), dealing: 500_000)
+            .Wipe());
+
+        Given.IOpenedLog(log);
+
+        Then.TheCooldownLineReads("Nightblade", "used Reckoning twice where 5 times is usual");
+    }
+
+    [Fact]
     public void One_use_fewer_than_usual_is_not_worth_saying()
     {
         // Two an attempt, then one. That is the length of the pull or the phase it reached, and a

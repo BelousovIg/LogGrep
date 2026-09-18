@@ -87,7 +87,7 @@ public sealed class ImprovementReview : IReview
             attempts.Pulls[^1],
             player,
             specId,
-            TimeSpan.Zero);
+            TimeSpan.Zero) { Timeless = true };
     }
 
     private static string Say(int count) => count switch

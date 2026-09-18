@@ -63,7 +63,7 @@ public sealed class LedDetector : IDetector
             led.Pull,
             led.Player,
             led.SpecId,
-            TimeSpan.Zero);
+            TimeSpan.Zero) { Timeless = true };
 
     private readonly record struct Led(PullRecord Pull, string Player, int SpecId, string What, int Times = 0);
 }

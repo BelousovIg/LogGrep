@@ -63,6 +63,11 @@ public sealed class CooldownDetector : IDetector
         // somebody else of their spec - gets this particular spell out in a minute.
         foreach (var spell in Uses(attempts).GroupBy(u => u.SpellId))
         {
+            // Some of them are fillers that hit hard enough to pass every test below. Pressing one
+            // of those less often is what a better attempt looks like, and no rule drawn from a log
+            // can see the difference - so the list says which they are.
+            if (Fillers.NotWorthCounting(spell.Key)) continue;
+
             var seen = spell.ToList();
             var yardstick = Yardstick.Of(
                 seen.Select(u => new Measured(u.Pull, u.Player, u.SpecId, u.PerMinute)), MinimumAttempts);
@@ -105,7 +110,7 @@ public sealed class CooldownDetector : IDetector
             use.Pull,
             use.Player,
             use.SpecId,
-            TimeSpan.Zero);
+            TimeSpan.Zero) { Timeless = true };
 
     private static string Times(double count) => count switch
     {

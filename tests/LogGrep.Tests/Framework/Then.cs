@@ -211,6 +211,12 @@ public sealed class Then
         return this;
     }
 
+    public Then TheCooldownLineReads(string player, string expected)
+    {
+        _check.TheCooldownLineReads(player, expected);
+        return this;
+    }
+
     public Then PlayerHasNoMistakes()
     {
         _check.PlayerHasNoMistakes();

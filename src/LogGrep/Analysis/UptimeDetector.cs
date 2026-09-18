@@ -71,7 +71,7 @@ public sealed class UptimeDetector : IDetector
             holding.Pull,
             holding.Player,
             holding.SpecId,
-            TimeSpan.Zero);
+            TimeSpan.Zero) { Timeless = true };
 
     /// <summary>
     /// Every buff every player held, as a share of the attempt. Time after a death is left out of

@@ -177,6 +177,13 @@ public sealed class Verification
 
     public void PlayerHasNoMistakes() => Assert.Equal("—", _page.Player.MistakesText);
 
+    /// <summary>
+    /// The whole line a row shows for that finding, clock and all - which is where a finding with no
+    /// moment used to print "0:00" and read as having happened at the start of the fight.
+    /// </summary>
+    public void TheCooldownLineReads(string player, string expected)
+        => Assert.Equal(expected, Cooldowns(player).First().Line);
+
     /// <summary>Each mistake is a block of its own, separated by a blank line.</summary>
     public void PlayerMistakesTooltipReads(params AMistake[] expected)
         => Assert.Equal(
