@@ -196,11 +196,16 @@ public sealed class PlayerStats
     public int Casts { get; set; }
 
     /// <summary>
-    /// Seconds spent casting nothing, over and above what the casts themselves cost. Read against
-    /// this player's own other attempts rather than against anybody else's - the point of the
-    /// measure is that it needs to know nothing about their class.
+    /// Seconds spent casting nothing, over the stretches of the fight they were on their feet, and
+    /// over and above what the casts themselves cost.
+    ///
+    /// Time spent dead is not idleness - a corpse has no rotation to fall apart - so somebody who
+    /// died three times is measured over the three stretches they were up for.
     /// </summary>
-    public double DeadSeconds { get; set; }
+    public double IdleSeconds { get; set; }
+
+    /// <summary>How much of the attempt they were on their feet for, which the idle is out of.</summary>
+    public double AliveSeconds { get; set; }
 
     /// <summary>
     /// When they first landed damage on an enemy, and when an enemy first landed damage on them,

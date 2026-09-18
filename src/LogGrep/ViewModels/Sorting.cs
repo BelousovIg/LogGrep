@@ -52,7 +52,7 @@ public sealed class Sorting
         // sorts to the bottom of that column either way rather than pretending to be a zero.
         ["Output"] = new(row => ((PlayerRowViewModel)row).OutputValue, DescendingFirst: true),
         ["Survival"] = new(row => ((PlayerRowViewModel)row).SurvivalValue, DescendingFirst: true),
-        ["Mechanics"] = new(row => ((PlayerRowViewModel)row).MechanicsValue, DescendingFirst: true),
+        ["Idle"] = new(row => ((PlayerRowViewModel)row).IdleValue, DescendingFirst: true),
         ["Duty"] = new(row => ((PlayerRowViewModel)row).DutyValue, DescendingFirst: true),
 
         // The column shows the worst thing that happened, so it sorts on what the attempt cost

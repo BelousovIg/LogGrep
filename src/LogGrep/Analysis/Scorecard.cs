@@ -148,7 +148,6 @@ public sealed class Scorecards
         {
             Output(pull, player, role),
             Survival(player, mine, Wiped(pull)),
-            Mechanics(pull, player),
             Duty(pull, player, role),
         };
 
@@ -424,14 +423,16 @@ public sealed class Scorecards
     /// <summary>Time spent casting nothing, which is the one thing a damage dealer owes the fight.</summary>
     private static Score Uptime(PullRecord pull, PlayerStats player)
     {
-        double seconds = pull.Duration.TotalSeconds;
-        if (seconds <= 0) return Score.Missing(Axis.Duty, "the attempt has no length");
+        // Against the time they were up for rather than the length of the fight: somebody who died
+        // at the first minute of ten is not idle for the nine they spent dead.
+        double alive = player.AliveSeconds > 0 ? player.AliveSeconds : pull.Duration.TotalSeconds;
+        if (alive <= 0) return Score.Missing(Axis.Duty, "the attempt has no length");
 
-        var dead = TimeSpan.FromSeconds(Math.Min(player.DeadSeconds, seconds));
+        var idle = TimeSpan.FromSeconds(Math.Min(player.IdleSeconds, alive));
 
-        return new Score(Axis.Duty, Math.Clamp(1 - dead.TotalSeconds / seconds, 0, 1),
-            Display.Duration(dead) + " doing nothing in " + Display.Duration(pull.Duration),
-            "the length of the fight itself");
+        return new Score(Axis.Duty, Math.Clamp(1 - idle.TotalSeconds / alive, 0, 1),
+            Display.Duration(idle) + " doing nothing in " + Display.Duration(TimeSpan.FromSeconds(alive)) + " on their feet",
+            "the time they were up for");
     }
 
     private Score Group(PullRecord pull, Axis axis, double rate, double best)

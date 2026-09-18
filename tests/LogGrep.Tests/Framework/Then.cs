@@ -307,27 +307,9 @@ public sealed class Then
         return this;
     }
 
-    public Then WasIdle(string player)
+    public Then PlayerIdleIs(string expected)
     {
-        _check.WasIdle(player);
-        return this;
-    }
-
-    public Then WasNotIdle(string player)
-    {
-        _check.WasNotIdle(player);
-        return this;
-    }
-
-    public Then NobodyElseWasIdle(string player)
-    {
-        _check.NobodyElseWasIdle(player);
-        return this;
-    }
-
-    public Then IdleEvidenceMentions(string player, string expected)
-    {
-        _check.IdleEvidenceMentions(player, expected);
+        _check.PlayerIdleIs(expected);
         return this;
     }
 

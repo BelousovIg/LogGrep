@@ -13,12 +13,12 @@ namespace LogGrep.ViewModels;
 /// cleanest player in it.
 /// </summary>
 public sealed record GridCell(
-    bool Present, double Pools, string Text, string Tooltip, int Attempt, string Player, Brush Paint);
+    bool Present, int Mistakes, string Text, string Tooltip, int Attempt, string Player, Brush Paint);
 
 /// <summary>
 /// One person's row across the attempts of a selection.
 ///
-/// It carries the same columns an attempt''s roster does, in the same order, because somebody
+/// It carries the same columns an attempt's roster does, in the same order, because somebody
 /// reading down a night and somebody reading across one attempt are the same person and should not
 /// have to learn two tables. The rates are over the attempts they were actually in - a night's
 /// damage divided by a night's length would charge them for the pulls they sat out.
@@ -36,10 +36,10 @@ public sealed record GridRow(
     string DtpsText,
     IReadOnlyList<GridCell> Cells)
 {
-    /// <summary>What the whole selection cost them, which is what the rows sort on.</summary>
-    public double Pools => Cells.Where(c => c.Present).Sum(c => c.Pools);
+    /// <summary>How many mistakes the whole selection found against them.</summary>
+    public int Mistakes => Cells.Where(c => c.Present).Sum(c => c.Mistakes);
 
-    public string PoolsText => Display.Decimal(Pools);
+    public string MistakesText => Mistakes == 0 ? "—" : Display.Count(Mistakes);
 
     /// <summary>How many of the attempts they were actually in, for the hover.</summary>
     public string PresenceText
@@ -125,10 +125,14 @@ public sealed class AttemptGrid
                 latest = stats;
                 totals.Add(stats, pulls[i].Record.Duration.TotalSeconds);
 
+                // What a cell counts is mistakes, not what they cost. A cost is one number made of
+                // several judgements about what a thing was worth; a count is the app saying "these
+                // five things were found", so when the rule for what counts as a mistake changes,
+                // the cell changes with it and says so plainly.
                 var card = cards.For(pulls[i].Record, stats);
-                worst = Math.Max(worst, card.Pools);
+                worst = Math.Max(worst, card.Findings.Count);
 
-                cells.Add(new Raw(true, card.Pools,
+                cells.Add(new Raw(true, card.Findings.Count,
                     card.Worst?.Line ?? "Nothing was found for them in this attempt", i));
             }
 
@@ -198,8 +202,8 @@ public sealed class AttemptGrid
     }
 
     private static GridCell Finish(Raw raw, string player, double worst)
-        => new(raw.Present, raw.Pools,
-            !raw.Present ? "·" : raw.Pools <= 0.01 ? string.Empty : Display.Decimal(raw.Pools),
+        => new(raw.Present, raw.Mistakes,
+            !raw.Present ? "·" : raw.Mistakes == 0 ? string.Empty : Display.Count(raw.Mistakes),
             raw.Tooltip, raw.Attempt, player, Paint(raw, worst));
 
     /// <summary>
@@ -209,9 +213,9 @@ public sealed class AttemptGrid
     private static Brush Paint(Raw raw, double worst)
     {
         if (!raw.Present) return Missing;
-        if (raw.Pools <= 0.01) return Clean;
+        if (raw.Mistakes == 0) return Clean;
 
-        double share = worst <= 0 ? 0 : Math.Clamp(raw.Pools / worst, 0, 1);
+        double share = worst <= 0 ? 0 : Math.Clamp(raw.Mistakes / worst, 0, 1);
 
         return Frozen(Color.FromRgb(
             (byte)(0xE0 + (0xFF - 0xE0) * share),
@@ -226,5 +230,5 @@ public sealed class AttemptGrid
         return brush;
     }
 
-    private readonly record struct Raw(bool Present, double Pools, string Tooltip, int Attempt);
+    private readonly record struct Raw(bool Present, int Mistakes, string Tooltip, int Attempt);
 }

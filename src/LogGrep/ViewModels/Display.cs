@@ -28,6 +28,14 @@ public static class Display
         _ => "—",
     };
 
+    /// <summary>
+    /// A stretch of seconds, as seconds. Whole ones: a rotation measured to the tenth of a second is
+    /// a precision the measure does not have, and a column that reads "35s" is read at a glance
+    /// where "0:35" is read as a moment of the fight.
+    /// </summary>
+    public static string Seconds(double value)
+        => value < 0.5 ? "—" : Math.Round(value, MidpointRounding.AwayFromZero).ToString("0", Inv) + "s";
+
     /// <summary>A plain count of things. Invariant so that no locale puts a separator in it.</summary>
     public static string Count(int value) => value.ToString(Inv);
 

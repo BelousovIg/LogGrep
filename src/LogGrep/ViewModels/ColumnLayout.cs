@@ -42,7 +42,7 @@ public sealed class ColumnLayout : ObservableObject
     // a hover away.
     private GridLength _playerOutput = new(52);
     private GridLength _playerSurvival = new(52);
-    private GridLength _playerMechanics = new(52);
+    private GridLength _playerIdle = new(52);
     private GridLength _playerDuty = new(52);
 
     private GridLength _playerMistakes = new(230);
@@ -79,7 +79,7 @@ public sealed class ColumnLayout : ObservableObject
     public GridLength PlayerCauses { get => _playerCauses; set => Set(ref _playerCauses, value); }
     public GridLength PlayerOutput { get => _playerOutput; set => Set(ref _playerOutput, value); }
     public GridLength PlayerSurvival { get => _playerSurvival; set => Set(ref _playerSurvival, value); }
-    public GridLength PlayerMechanics { get => _playerMechanics; set => Set(ref _playerMechanics, value); }
+    public GridLength PlayerIdle { get => _playerIdle; set => Set(ref _playerIdle, value); }
     public GridLength PlayerDuty { get => _playerDuty; set => Set(ref _playerDuty, value); }
     public GridLength PlayerMistakes { get => _playerMistakes; set => Set(ref _playerMistakes, value); }
     public GridLength PlayerLane { get => _playerLane; set => Set(ref _playerLane, value); }

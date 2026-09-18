@@ -97,21 +97,34 @@ public sealed class ReadingTheGrid : Scenario
     }
 
     [Fact]
-    public void A_death_shows_up_as_what_it_cost_them()
+    public void A_cell_counts_what_was_found_against_them()
     {
-        // One health pool, which is what a death is worth in the only unit that compares a rogue
-        // with a tank.
-        var log = ARaid()
+        // A death of their own, a third of the way into an attempt the raid fought on past. One
+        // thing found, so the cell reads one - and when the rule for what counts as a mistake
+        // changes, this number changes with it, which is the point of counting rather than costing.
+        // Six of them, because one death out of three is a quarter of the group and reads as the
+        // attempt ending rather than as anybody's own.
+        var log = new CombatLogBuilder().Raid(
+                Tank("Rockjaw", Spec.ProtectionWarrior),
+                Healer("Sunwell", Spec.HolyPriest),
+                Damage("Nightblade", Spec.AssassinationRogue),
+                Damage("Emberwild", Spec.ArcaneMage),
+                Damage("Moonfire", Spec.BalanceDruid),
+                Damage("Stormvale", Spec.ArcaneMage))
             .Pulls(2, Soulcoiler, Difficulty.Mythic, APull)
-            .Pull(Soulcoiler, Difficulty.Mythic, p => Body(p)
-                .At(1.Minutes(30)).Kills("Nightblade")
+            .Pull(Soulcoiler, Difficulty.Mythic, p => p
+                .Lasting(3.Minutes())
+                .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
+                .At(2.Seconds()).BossSwingsAt("Rockjaw", 200_000)
+                .At(1.Minutes()).Kills("Nightblade")
                 .Wipe());
 
         Given.IOpenedLog(log);
 
         When.IAnalyseTheEncounter(Soulcoiler);
 
-        Then.TheGridCellReads("Nightblade", attempt: 3, expected: "1");
+        Then.TheGridCellReads("Nightblade", attempt: 3, expected: "1")
+            .TheGridCellReads("Nightblade", attempt: 1, expected: string.Empty);
     }
 
     [Fact]

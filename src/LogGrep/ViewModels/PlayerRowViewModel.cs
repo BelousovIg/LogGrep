@@ -44,7 +44,14 @@ public sealed class PlayerRowViewModel
 
     public string SurvivalText => Axis(Analysis.Axis.Survival).Text;
 
-    public string MechanicsText => Axis(Analysis.Axis.Mechanics).Text;
+    /// <summary>
+    /// How many seconds of the fight they cast nothing in, over the stretches they were up for.
+    ///
+    /// A plain count of seconds rather than a share, because a share of what is the question this
+    /// column keeps having to answer: dying at the first minute of ten is not nine minutes of
+    /// standing about, and dividing by the fight would say it was.
+    /// </summary>
+    public string IdleText => Display.Seconds(IdleValue);
 
     public string DutyText => Axis(Analysis.Axis.Duty).Text;
 
@@ -53,7 +60,7 @@ public sealed class PlayerRowViewModel
 
     public double? SurvivalValue => Axis(Analysis.Axis.Survival).Value;
 
-    public double? MechanicsValue => Axis(Analysis.Axis.Mechanics).Value;
+    public double IdleValue => _stats.IdleSeconds;
 
     public double? DutyValue => Axis(Analysis.Axis.Duty).Value;
 
@@ -64,7 +71,11 @@ public sealed class PlayerRowViewModel
 
     public string SurvivalTooltip => Explain(Analysis.Axis.Survival, "Survival");
 
-    public string MechanicsTooltip => Explain(Analysis.Axis.Mechanics, "Mechanics");
+    public string IdleTooltip => _stats.AliveSeconds <= 0
+        ? "Nothing to measure a rotation over"
+        : Display.Seconds(_stats.IdleSeconds) + " casting nothing, out of the " +
+          Display.Seconds(_stats.AliveSeconds) + " they were on their feet" + Environment.NewLine +
+          "One global cooldown is forgiven after every cast, and time spent dead is not counted.";
 
     public string DutyTooltip => Explain(Analysis.Axis.Duty, "Duty");
 

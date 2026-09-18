@@ -122,18 +122,6 @@ public sealed class ScoringAnAttempt : Scenario
         Then.PlayerScores(Axis.Survival, "Hollowing Strikes took 60% in one hit");
     }
 
-    [Fact]
-    public void A_mechanic_is_read_against_the_times_it_went_out()
-    {
-        // Soul Drain goes out six times at the tank and once at the mage. "You stood in it once" is
-        // a different sentence from "you stood in one of six", and only the second one is a score.
-        Given.IOpenedLog(ATankMechanic()).IOpenedPull(Soulcoiler, number: 1);
-
-        When.ILookAtPlayer("Emberfall");
-
-        Then.PlayerScores(Axis.Mechanics, "83%")
-            .PlayerScoreSays(Axis.Mechanics, "caught them once where the group typically takes none of it");
-    }
 
     [Fact]
     public void A_score_nothing_stands_behind_is_a_dash_and_says_why()
@@ -289,7 +277,6 @@ public sealed class ScoringAnAttempt : Scenario
         When.ILookAtPlayer("Nightblade");
 
         Then.ThePullSays("Nightblade", "opened the pull")
-            .PlayerScores(Axis.Mechanics, "100%")
             .PlayerLaneShows(0.Seconds(), "opened the pull");
     }
 }

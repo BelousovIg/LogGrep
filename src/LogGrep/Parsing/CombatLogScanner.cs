@@ -1,6 +1,7 @@
 using System.IO;
 using System.IO.Abstractions;
 using System.Text;
+using LogGrep.Analysis;
 using LogGrep.Models;
 
 namespace LogGrep.Parsing;
@@ -471,7 +472,11 @@ public sealed class CombatLogScanner
         segment.CloseFight((int)duration.TotalSeconds, success && !segment.IsKeystone);
 
         // Whatever anybody was still holding when the fight ended was held until then.
-        foreach (var player in segment.Players.Values) player.Settle(segment.StartSeconds + duration.TotalSeconds);
+        foreach (var player in segment.Players.Values)
+        {
+            player.Settle(segment.StartSeconds + duration.TotalSeconds);
+            player.SettleHeld(duration.TotalSeconds);
+        }
 
         // Who the enemy was looking at, second by second. Only the seconds where it was swinging
         // at one or two people count: a phase where it hits the whole group says nothing about who
@@ -505,7 +510,8 @@ public sealed class CombatLogScanner
                 DamageTaken = entry.Value.DamageTaken,
                 Deaths = entry.Value.Deaths.ToArray(),
                 Casts = entry.Value.Casts,
-                DeadSeconds = entry.Value.Dead,
+                IdleSeconds = Idle(entry.Value.CastAt, entry.Value.Flips, entry.Value.Held, duration.TotalSeconds),
+                AliveSeconds = Alive(entry.Value.Flips, duration.TotalSeconds).Sum(span => span.To - span.From),
                 MaxHealth = entry.Value.MaxHealth,
                 MeleeTaken = entry.Value.MeleeTaken,
                 HeldSeconds = held.TryGetValue(entry.Value.Name, out int seconds) ? seconds : 0,
@@ -647,10 +653,6 @@ public sealed class CombatLogScanner
         });
 
         victim.Hits.Clear();
-
-        // A corpse casts nothing, and counting that as idleness would make dying look like standing
-        // about. The next cast after this starts a fresh gap rather than closing the one across it.
-        victim.Died();
     }
 
     /// <summary>
@@ -679,7 +681,8 @@ public sealed class CombatLogScanner
         // of what rotation reads: when they cast, how often, and what they went without.
         if (affiliation != 0 && affiliation != AffiliationOutsider && (sourceFlags & ControlPlayer) != 0)
         {
-            PlayerAt(line, 1)?.Cast(LogTimestamp.SecondsOfDay(line, eventStart), spellId, Label(line, 10));
+            PlayerAt(line, 1)?.Cast(Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds,
+                spellId, Label(line, 10));
 
             // And the pool again, from the block a cast carries. This is the surest place to find
             // it: everybody casts all fight, including a healer who dealt no damage and stood out
@@ -729,11 +732,13 @@ public sealed class CombatLogScanner
         var victim = PlayerAt(line, 5);
         if (victim == null) return;
 
-        _open!.Debuffs.Add(new AuraHit(
-            _fields.Int(line, 9),
-            Label(line, 10),
-            victim.Name,
-            Elapsed(LogTimestamp.SecondsOfDay(line, eventStart))));
+        int spellId = _fields.Int(line, 9);
+        var when = Elapsed(LogTimestamp.SecondsOfDay(line, eventStart));
+
+        _open!.Debuffs.Add(new AuraHit(spellId, Label(line, 10), victim.Name, when));
+
+        // Some of what lands on somebody is the reason they cast nothing. The list says which.
+        if (Excused.StopsTheClock(spellId)) victim.Stopped(when.TotalSeconds);
     }
 
     /// <summary>
@@ -765,9 +770,17 @@ public sealed class CombatLogScanner
     {
         _fields.Split(line);
         if (_fields.Count < 13) return;
-        if (_fields.Field(line, 12).SequenceEqual("DEBUFF"u8)) return;
 
-        OnSelfBuff(line, eventStart, up: false);
+        if (!_fields.Field(line, 12).SequenceEqual("DEBUFF"u8))
+        {
+            OnSelfBuff(line, eventStart, up: false);
+            return;
+        }
+
+        // The other end of one of the things the clock stops for.
+        if (!Excused.StopsTheClock(_fields.Int(line, 9))) return;
+
+        PlayerAt(line, 5)?.Freed(Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds);
     }
 
     /// <summary>
@@ -911,29 +924,34 @@ public sealed class CombatLogScanner
         // Damage our players took, whoever dealt it - this is what the death breakdown is built from.
         if (kind != EventKind.Damage) return;
 
+        double at = LogTimestamp.SecondsOfDay(line, eventStart);
+
+        // How far down the enemy is, which the log gives away on every hit that lands on it.
+        //
+        // The advanced block names the unit it is about, and which unit that is depends on the
+        // event: a swing carries the attacker, a spell carries whoever it landed on. So the health
+        // belongs to whoever the block names, and nothing else. Reading it as the line's source
+        // instead filed the boss's pool under whichever player had just hit it, and left the
+        // progress line built out of the few lines the boss itself happened to act on - on a real
+        // fight that read as 16% when the raid had taken it to 64%.
+        //
+        // It is read here, before the line is narrowed to damage our own people took, because that
+        // is the direction almost all of it arrives in: the group hitting the boss.
+        bool principal = advancedAt >= 0
+            && !IsPlayer(_fields.Field(line, advancedAt))
+            && _open!.Health(
+                Hash(_fields.Field(line, advancedAt)), (int)Elapsed(at).TotalSeconds,
+                _fields.Long(line, advancedAt + 2), _fields.Long(line, advancedAt + 3));
+
         var victim = PlayerAt(line, 5);
         if (victim == null) return;
 
         victim.DamageTaken += amount;
 
-        double at = LogTimestamp.SecondsOfDay(line, eventStart);
-
         // And who the enemy hit first, which is the same question read from the other end.
         if (!fromTheGroup)
         {
             victim.Took(Elapsed(at));
-
-            // The enemy states its own health on everything it does, so the fight has a progress
-            // line in it for free: how far down the thing was, second by second. It is the one
-            // measurement that tells the story of an attempt without a table - whether the group
-            // pushed it and lost, or never moved it at all.
-            // The enemy states its own health on everything it does, and whichever enemy has the
-            // largest pool is the one the fight is about - whatever the encounter or the creature
-            // happens to be called. Matching on the name instead left every council fight, and any
-            // boss acting under a name of its own, with no progress line and no tank measure.
-            bool principal = advancedAt >= 0 && _open!.Health(
-                Hash(_fields.Field(line, 1)), (int)Elapsed(at).TotalSeconds,
-                _fields.Long(line, advancedAt + 2), _fields.Long(line, advancedAt + 3));
 
             // A swing carries no spell id, which is exactly what makes it worth counting on its
             // own: it is the enemy hitting whoever it is looking at, and where it lands is the only
@@ -1120,27 +1138,27 @@ public sealed class CombatLogScanner
 
         foreach (var fight in fights)
         {
-            var foes = fight.Foes.Values.Where(f => f.Max * 2 >= fight.Biggest).ToArray();
-            long pool = foes.Sum(f => f.Max);
+            var bars = Bars(fight.Foes.Values.Where(f => f.Max * 2 >= fight.Biggest));
+            long pool = bars.Sum(bar => bar.Max);
             if (pool <= 0) continue;
 
             int from = Math.Clamp(fight.From, 0, seconds);
             int to = Math.Clamp(fight.To, from, seconds);
 
-            // Each creature carried forward from the last second it stated its health, and taken as
-            // whole until it first says otherwise.
-            var stated = foes.Select(f => f.At.OrderBy(e => e.Key).ToArray()).ToArray();
-            var next = new int[foes.Length];
-            var now = foes.Select(f => f.Max).ToArray();
+            // Each bar carried forward from the last second anything on it stated a figure, and
+            // taken as whole until something first says otherwise.
+            var stated = bars.Select(bar => bar.Stated).ToArray();
+            var next = new int[bars.Count];
+            var now = bars.Select(bar => bar.Max).ToArray();
 
             for (int second = from; second <= to; second++)
             {
                 long left = 0;
-                for (int i = 0; i < foes.Length; i++)
+                for (int i = 0; i < bars.Count; i++)
                 {
-                    while (next[i] < stated[i].Length && stated[i][next[i]].Key <= second)
+                    while (next[i] < stated[i].Length && stated[i][next[i]].Second <= second)
                     {
-                        now[i] = stated[i][next[i]++].Value;
+                        now[i] = stated[i][next[i]++].Left;
                     }
 
                     left += now[i];
@@ -1194,6 +1212,175 @@ public sealed class CombatLogScanner
         return line;
     }
 
+    /// <summary>
+    /// Seconds spent casting nothing, over the stretches of the fight the player was on their feet.
+    ///
+    /// Time spent dead is not idleness - a corpse has no rotation to fall apart - so each stretch
+    /// between going down and getting back up is left out, and somebody who died three times is
+    /// measured over the three stretches they were up for.
+    ///
+    /// One global cooldown is forgiven after every cast, because that is the time a cast costs
+    /// before another can follow. Unhasted, so the figure under-counts, which is the direction to be
+    /// wrong in when the output is "you stood there doing nothing".
+    /// </summary>
+    private static double Idle(List<double> casts, List<(int Second, bool Up)> flips,
+        List<(double From, double To)> held, double seconds)
+    {
+        double idle = 0;
+        int next = 0;
+
+        foreach (var (from, to) in Alive(flips, seconds))
+        {
+            while (next < casts.Count && casts[next] < from) next++;
+
+            double last = from;
+            for (; next < casts.Count && casts[next] <= to; next++)
+            {
+                idle += Gap(last, casts[next], held);
+                last = casts[next];
+            }
+
+            idle += Gap(last, to, held);
+        }
+
+        return idle;
+    }
+
+    /// <summary>
+    /// One stretch with no cast in it, less the global cooldown the cast before it cost and less
+    /// whatever of it was spent under something on the excused list. A stun inside a gap is not
+    /// idleness, and a gap that is all stun is none at all.
+    /// </summary>
+    private static double Gap(double from, double to, List<(double From, double To)> held)
+    {
+        double gap = to - from - GlobalCooldown;
+        if (gap <= 0) return 0;
+
+        foreach (var (start, end) in held)
+        {
+            gap -= Math.Max(0, Math.Min(to, end) - Math.Max(from, start));
+        }
+
+        return Math.Max(0, gap);
+    }
+
+    /// <summary>
+    /// The health bars a fight is against, which is not the same as the creatures in it.
+    ///
+    /// A council is several creatures with a bar each, and how far down it is means how far down the
+    /// lot of them are - so they are summed. But a boss can also be several creatures sharing one
+    /// bar: a body that flies, a body that lands, a heart that surfaces at the end, each a unit of
+    /// its own with the same pool and the same figure on it at any moment. Summing those says the
+    /// raid got a boss to 74% when it had it at 64%, which is what the real fight measured.
+    ///
+    /// They are told apart by what the log already says: two units on the same bar state the same
+    /// figure at the same second, and two units on their own bars drift apart the moment either of
+    /// them takes a hit. Nothing here needs to know which fight it is looking at.
+    /// </summary>
+    private static List<Bar> Bars(IEnumerable<Foe> foes)
+    {
+        var bars = new List<Bar>();
+
+        // Biggest first, so a bar is named by whichever unit was on it longest rather than by the
+        // last add to turn up on it.
+        foreach (var foe in foes.OrderByDescending(f => f.At.Count))
+        {
+            var stated = foe.At.OrderBy(e => e.Key).Select(e => new Stated(e.Key, e.Value)).ToArray();
+            var same = bars.FirstOrDefault(bar => bar.Tracks(stated, foe.Max));
+
+            if (same == null) bars.Add(new Bar(foe.Max, stated));
+            else same.Also(stated);
+        }
+
+        return bars;
+    }
+
+    /// <summary>One health bar, and every figure anything on it ever stated.</summary>
+    private sealed class Bar
+    {
+        private readonly List<Stated> _stated;
+
+        public Bar(long max, IReadOnlyList<Stated> stated)
+        {
+            Max = max;
+            _stated = stated.ToList();
+        }
+
+        public long Max { get; }
+
+        public Stated[] Stated => _stated.OrderBy(s => s.Second).ToArray();
+
+        /// <summary>
+        /// Whether that unit is on this bar: same pool, and the same figure wherever both of them
+        /// spoke. Five agreeing seconds is enough - two creatures on separate bars do not hold the
+        /// same figure for five seconds once anybody is hitting either of them.
+        /// </summary>
+        public bool Tracks(IReadOnlyList<Stated> other, long max)
+        {
+            if (max != Max || other.Count == 0) return false;
+
+            int agreed = 0;
+            int checked_ = 0;
+
+            foreach (var point in other)
+            {
+                long mine = At(point.Second);
+                if (mine < 0) continue;
+
+                checked_++;
+                if (Math.Abs(mine - point.Left) <= Max / 50) agreed++;
+            }
+
+            return checked_ >= 5 && agreed >= checked_ * 0.9;
+        }
+
+        public void Also(IReadOnlyList<Stated> other) => _stated.AddRange(other);
+
+        /// <summary>What this bar was on at that second, or -1 before anything on it had spoken.</summary>
+        private long At(int second)
+        {
+            long left = -1;
+            int best = -1;
+
+            foreach (var point in _stated)
+            {
+                if (point.Second > second || point.Second < best) continue;
+
+                best = point.Second;
+                left = point.Left;
+            }
+
+            return left;
+        }
+    }
+
+    private readonly record struct Stated(int Second, long Left);
+
+    /// <summary>The stretches somebody was up for, from the pull opening or from getting back up.</summary>
+    private static IEnumerable<(double From, double To)> Alive(List<(int Second, bool Up)> flips, double seconds)
+    {
+        double from = 0;
+        bool up = true;
+
+        foreach (var flip in flips)
+        {
+            if (flip.Second > seconds) break;
+
+            if (up && !flip.Up)
+            {
+                yield return (from, flip.Second);
+                up = false;
+            }
+            else if (!up && flip.Up)
+            {
+                from = flip.Second;
+                up = true;
+            }
+        }
+
+        if (up && seconds > from) yield return (from, seconds);
+    }
+
     /// <summary>Whether they were up at that second: the state after the last thing that changed it.</summary>
     private static bool Standing(PlayerStats player, int second)
     {
@@ -1206,6 +1393,14 @@ public sealed class CombatLogScanner
 
         return up;
     }
+
+    /// <summary>
+    /// Whether a GUID names a player. A pet is a creature with an owner, and its pool is nothing
+    /// beside a boss's, so the only thing worth keeping out of the enemy's progress line is a
+    /// person - otherwise a fight where nothing hostile ever stated its health would draw one out
+    /// of whoever happened to be standing there.
+    /// </summary>
+    private static bool IsPlayer(ReadOnlySpan<byte> guid) => guid.StartsWith("Player-"u8);
 
     private static ulong Hash(ReadOnlySpan<byte> value)
     {
@@ -1505,13 +1700,46 @@ public sealed class CombatLogScanner
 
         public int Casts { get; private set; }
 
-        /// <summary>Seconds spent casting nothing at all, over and above the gaps a cast itself costs.</summary>
-        public double Dead { get; private set; }
+        /// <summary>
+        /// The stretches where something on the excused list was on them, in seconds from the start
+        /// of the attempt. A stun is not a rotation problem, so these come out of the idle.
+        /// </summary>
+        public List<(double From, double To)> Held { get; } = new();
 
-        private double _lastCast = -1;
+        private double _stoppedAt = -1;
 
-        /// <summary>Stops the gap being measured across a death.</summary>
-        public void Died() => _lastCast = -1;
+        public void Stopped(double at)
+        {
+            if (at < 0 || _stoppedAt >= 0) return;   // already under one; the longer of them wins
+            _stoppedAt = at;
+        }
+
+        public void Freed(double at)
+        {
+            if (_stoppedAt < 0 || at <= _stoppedAt) return;
+
+            Held.Add((_stoppedAt, at));
+            _stoppedAt = -1;
+        }
+
+        /// <summary>
+        /// One that never came off. A debuff the log never reports removed ran to the end of the
+        /// fight as far as anything here can tell, which is also how the game usually ends one.
+        /// </summary>
+        public void SettleHeld(double at)
+        {
+            if (_stoppedAt >= 0 && at > _stoppedAt) Held.Add((_stoppedAt, at));
+            _stoppedAt = -1;
+        }
+
+        /// <summary>
+        /// When each of them happened, in seconds from the start of the attempt.
+        ///
+        /// Kept one by one rather than rolled up, because the question is how much of the time
+        /// somebody was on their feet had nothing in it, and that cannot be answered without
+        /// knowing which side of a death each cast fell on.
+        /// </summary>
+        public List<double> CastAt { get; } = new();
 
         /// <summary>What each of this player's spells actually did, in damage or effective healing.</summary>
         public Dictionary<int, long> Output { get; } = new();
@@ -1578,14 +1806,7 @@ public sealed class CombatLogScanner
             if (at < 0) return;
 
             Casts++;
-
-            if (_lastCast >= 0)
-            {
-                double gap = at - _lastCast;
-                if (gap > GlobalCooldown) Dead += gap - GlobalCooldown;
-            }
-
-            _lastCast = at;
+            CastAt.Add(at);
 
             if (Spells.TryGetValue(spellId, out var casting))
             {

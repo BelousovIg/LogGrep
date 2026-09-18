@@ -256,29 +256,8 @@ public sealed class Verification
     private IEnumerable<Finding> Cooldowns(string player)
         => _page.Findings.Where(f => f.Category == "cooldowns" && PlayerName.Character(f.Player) == player);
 
-    /// <summary>An attempt where the app says this player stood about far more than they usually do.</summary>
-    public void WasIdle(string player)
-        => Assert.True(Idle(player).Any(),
-            $"'{player}' should have been reported as idle. " + What());
-
-    public void WasNotIdle(string player)
-        => Assert.True(!Idle(player).Any(),
-            $"'{player}' should not have been reported as idle, and was: " +
-            string.Join(", ", Idle(player).Select(f => f.Line)));
-
-    public void NobodyElseWasIdle(string player)
-        => Assert.Equal(
-            new[] { player },
-            _page.Findings.Where(f => f.Category == "idle")
-                .Select(f => PlayerName.Character(f.Player))
-                .Distinct()
-                .ToArray());
-
-    public void IdleEvidenceMentions(string player, string expected)
-        => Assert.Contains(expected, Idle(player).First().Evidence, StringComparison.Ordinal);
-
-    private IEnumerable<Finding> Idle(string player)
-        => _page.Findings.Where(f => f.Category == "idle" && PlayerName.Character(f.Player) == player);
+    /// <summary>How many seconds of the fight the player spent casting nothing, as the column shows it.</summary>
+    public void PlayerIdleIs(string expected) => Assert.Equal(expected, _page.Player.IdleText);
 
     /// <summary>A death the app decided was that player's own rather than the attempt ending.</summary>
     public void ADeathWasReported(string player, TimeSpan at)
@@ -740,7 +719,6 @@ public sealed class Verification
     {
         Axis.Output => _page.Player.OutputText,
         Axis.Survival => _page.Player.SurvivalText,
-        Axis.Mechanics => _page.Player.MechanicsText,
         _ => _page.Player.DutyText,
     };
 
@@ -748,7 +726,6 @@ public sealed class Verification
     {
         Axis.Output => _page.Player.OutputTooltip,
         Axis.Survival => _page.Player.SurvivalTooltip,
-        Axis.Mechanics => _page.Player.MechanicsTooltip,
         _ => _page.Player.DutyTooltip,
     };
 

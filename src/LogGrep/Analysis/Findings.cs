@@ -15,7 +15,7 @@ public static class Findings
     public static IReadOnlyList<Finding> In(IEnumerable<PullRecord> pulls,
         IReadOnlyList<WrittenRule>? written = null)
         => In(pulls, written, new MechanicDetector(), new AvoidableDamageDetector(), new InterruptDetector(),
-            new DeathDetector(), new IdleDetector(), new CooldownDetector(),
+            new DeathDetector(), new CooldownDetector(),
             new UptimeDetector(), new BuildDetector(), new StackDetector(),
             new FirstDeathDetector(), new LedDetector(), new SpreadDetector(),
             new OpeningDetector());
