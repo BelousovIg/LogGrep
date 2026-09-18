@@ -135,7 +135,13 @@ public sealed class AttemptGrid
             if (latest != null) gathered.Add((latest, totals, cells));
         }
 
+        // The same order every list of players in the window is in: the tanks, then the healers,
+        // then everyone else, each by what their role is there to do. Sorting these by what the
+        // night cost them read as a different table from the roster right underneath it.
         var rows = gathered
+            .OrderBy(entry => Group(entry.Latest))
+            .ThenByDescending(entry => Rank(entry.Latest, entry.Totals))
+            .ThenBy(entry => PlayerName.Character(entry.Latest.Name), StringComparer.CurrentCulture)
             .Select(entry => new GridRow(
                 PlayerName.Character(entry.Latest.Name),
                 PlayerName.Format(entry.Latest.Name),
@@ -148,12 +154,26 @@ public sealed class AttemptGrid
                 Display.Rate(entry.Totals.Per(entry.Totals.Healing)),
                 Display.Rate(entry.Totals.Per(entry.Totals.Taken)),
                 entry.Cells.Select(c => Finish(c, entry.Latest.Name, worst)).ToArray()))
-            .OrderByDescending(r => r.Pools)
-            .ThenBy(r => r.Name, StringComparer.CurrentCulture)
             .ToArray();
 
         return new AttemptGrid(columns, rows);
     }
+
+    /// <summary>The tanks, then the healers, then everyone else, the way a group is talked about.</summary>
+    private static int Group(PlayerStats player) => Specs.RoleOf(player.SpecId) switch
+    {
+        Role.Tank => 0,
+        Role.Healer => 1,
+        _ => 2,
+    };
+
+    /// <summary>Within a group, by what that group is there to do over the attempts they were in.</summary>
+    private static double Rank(PlayerStats player, Totals totals) => Specs.RoleOf(player.SpecId) switch
+    {
+        Role.Tank => totals.Per(totals.Taken),
+        Role.Healer => totals.Per(totals.Healing),
+        _ => totals.Per(totals.Damage),
+    };
 
     /// <summary>What somebody did across the attempts they were in, and over how long.</summary>
     private sealed class Totals

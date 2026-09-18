@@ -136,9 +136,12 @@ public sealed class ShowingTheLog : Scenario
                 Damage("Emberwild", Spec.ArcaneMage))
             .Pull(Soulcoiler, Difficulty.Mythic, p => p
                 .Lasting(1.Minutes(40))
-                // Tanks rank by damage, so the weaker one comes second despite out-healing nobody.
-                .At(10.Seconds()).Deals("Grimhide", to: Soulcoiler, amount: 3_000_000)
-                .At(11.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 2_000_000)
+                // Tanks rank by what they held, not by what they dealt: the one who took more of
+                // the boss comes first even though the other out-damaged them.
+                .At(10.Seconds()).BossSwingsAt("Rockjaw", 600_000)
+                .At(11.Seconds()).BossSwingsAt("Grimhide", 200_000)
+                .At(12.Seconds()).Deals("Grimhide", to: Soulcoiler, amount: 3_000_000)
+                .At(13.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 2_000_000)
                 // Healers rank by healing, and their damage is beside the point.
                 .At(20.Seconds()).Heals("Lightwell", target: "Rockjaw", amount: 2_000_000)
                 .At(21.Seconds()).Heals("Sunwell", target: "Rockjaw", amount: 1_000_000)
@@ -149,7 +152,7 @@ public sealed class ShowingTheLog : Scenario
 
         Given.IOpenedLog(log).And.IOpenedPull(Soulcoiler, 1);
 
-        Then.PlayersAreOrdered("Grimhide", "Rockjaw", "Lightwell", "Sunwell", "Nightblade", "Emberwild");
+        Then.PlayersAreOrdered("Rockjaw", "Grimhide", "Lightwell", "Sunwell", "Nightblade", "Emberwild");
     }
 
     [Fact]

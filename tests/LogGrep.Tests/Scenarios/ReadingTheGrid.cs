@@ -41,7 +41,7 @@ public sealed class ReadingTheGrid : Scenario
         When.IAnalyseTheEncounter(Soulcoiler);
 
         Then.TheGridHasColumns(5)
-            .TheGridLists("Nightblade", "Rockjaw", "Sunwell");
+            .TheGridLists("Rockjaw", "Sunwell", "Nightblade");
     }
 
     [Fact]
@@ -131,6 +131,6 @@ public sealed class ReadingTheGrid : Scenario
 
         When.IUnmarkAsOurs("Sunwell").IAnalyseTheEncounter(Soulcoiler);
 
-        Then.TheGridLists("Nightblade", "Rockjaw");
+        Then.TheGridLists("Rockjaw", "Nightblade");
     }
 }

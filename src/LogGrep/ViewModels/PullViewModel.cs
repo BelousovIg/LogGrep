@@ -410,8 +410,15 @@ public sealed class PullViewModel : ObservableObject
     /// </summary>
     private static int Group(PlayerRowViewModel player) => player.IsTank ? 0 : player.IsHealer ? 1 : 2;
 
-    /// <summary>Within a group, by what that group is there to do: healing for the healers, damage for the rest.</summary>
-    private static double Rank(PlayerRowViewModel player) => player.IsHealer ? player.HpsValue : player.DpsValue;
+    /// <summary>
+    /// Within a group, by what that group is there to do: damage taken for the tanks, healing for
+    /// the healers, damage for everyone else.
+    ///
+    /// A tank sorted by damage done is sorted by the half of their job nobody put them there for,
+    /// and on a two-tank fight it puts whichever of them held less of the boss on top.
+    /// </summary>
+    private static double Rank(PlayerRowViewModel player)
+        => player.IsTank ? player.DtpsValue : player.IsHealer ? player.HpsValue : player.DpsValue;
 
     private ListCollectionView CreatePlayersView()
     {
