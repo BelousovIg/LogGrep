@@ -212,17 +212,21 @@ public sealed class PullViewModel : ObservableObject
 
     /// <summary>What the chart says at one second, which is what its hover shows.</summary>
     public string Readout(int second)
-        => string.Join(Environment.NewLine, ChartReadout.At(Traces, Deaths, Kill, second));
+        => string.Join(Environment.NewLine, ChartReadout.At(Traces, Deaths, Kills, second));
 
     /// <summary>
-    /// The second the enemy went down, or nothing for an attempt that did not put it down.
+    /// Every boss that went down in this attempt, marked on the chart where it happened.
     ///
-    /// The end of the fight rather than a death event of its own: the game closes the encounter the
-    /// moment the last of it dies, and that is the one second a kill is certainly at. A council is
-    /// several corpses and one ending, so taking the ending is also the only answer that works for
-    /// every fight rather than for the ones with a single creature in them.
+    /// One for a boss pull, at the end of the fight - the game closes the encounter the moment the
+    /// last of it dies, and that is the one second a kill is certainly at. Several for a keystone
+    /// run, which is one row holding a whole dungeon and would otherwise be half an hour of line
+    /// with nothing on it.
+    ///
+    /// One per encounter rather than per creature: a council is several corpses and one ending, and
+    /// the log never says which of them fell last. So two bosses fought together carry one mark
+    /// under the name of the fight, which is also how somebody sees that they were one fight.
     /// </summary>
-    public int? Kill => Record.Success ? (int)Record.Duration.TotalSeconds : null;
+    public IReadOnlyList<BossKill> Kills => Record.Kills;
 
     private IReadOnlyList<Trace> BuildTraces()
     {

@@ -106,6 +106,9 @@ public readonly record struct CastRecord(int SpellId, string Spell, bool Stopped
 /// <summary>A moment somebody went down or got back up.</summary>
 public readonly record struct Flip(int Second, bool Up);
 
+/// <summary>A boss that went down, and the second of the attempt it happened in.</summary>
+public readonly record struct BossKill(int Second, string Name);
+
 /// <summary>What one group member did during a single pull.</summary>
 public sealed class PlayerStats
 {

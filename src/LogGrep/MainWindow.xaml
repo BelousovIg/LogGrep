@@ -695,7 +695,7 @@
                                     <ctl:FightShape Height="96"
                                                     Traces="{Binding Traces}"
                                                     Deaths="{Binding Deaths}"
-                                                    Kill="{Binding Kill}"
+                                                    Kills="{Binding Kills}"
                                                     From="{Binding From, Mode=TwoWay}"
                                                     To="{Binding To, Mode=TwoWay}" />
 

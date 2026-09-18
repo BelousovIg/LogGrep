@@ -1,4 +1,3 @@
-using LogGrep.Models;
 using LogGrep.ViewModels;
 using LogGrep.Models;
 using LogGrep.Tests.Logs;
@@ -47,6 +46,12 @@ public sealed class Given
     public Given IOpenedPull(Boss boss, int number)
     {
         _act.OpenPull(boss, number);
+        return this;
+    }
+
+    public Given IOpenedPull(Dungeon dungeon, int number)
+    {
+        _act.OpenPull(dungeon, number);
         return this;
     }
 }

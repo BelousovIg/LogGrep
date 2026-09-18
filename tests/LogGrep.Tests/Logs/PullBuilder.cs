@@ -58,6 +58,30 @@ public sealed class PullBuilder
         return this;
     }
 
+    /// <summary>
+    /// A boss going down inside a keystone run.
+    ///
+    /// The game writes a boss fight inside a key exactly as it writes one outside it - its own
+    /// encounter block - and the run swallows both, which is why a key is one row holding three
+    /// fights rather than three rows.
+    /// </summary>
+    public PullBuilder Downs(Boss boss, TimeSpan lasting)
+    {
+        _log.Line(_start + _at, $"ENCOUNTER_START,{(int)boss},\"{boss.NameOf()}\",8,5,1");
+        _log.Line(_start + _at + lasting,
+            $"ENCOUNTER_END,{(int)boss},\"{boss.NameOf()}\",8,5,1,{(long)lasting.TotalMilliseconds}");
+        return this;
+    }
+
+    /// <summary>A boss inside a keystone run that the group did not put down.</summary>
+    public PullBuilder Wiped(Boss boss, TimeSpan lasting)
+    {
+        _log.Line(_start + _at, $"ENCOUNTER_START,{(int)boss},\"{boss.NameOf()}\",8,5,1");
+        _log.Line(_start + _at + lasting,
+            $"ENCOUNTER_END,{(int)boss},\"{boss.NameOf()}\",8,5,0,{(long)lasting.TotalMilliseconds}");
+        return this;
+    }
+
     /// <summary>A debuff the boss puts on somebody. This is what says who took a mechanic.</summary>
     public PullBuilder BossDebuffs(string target, Ability with, int times = 1)
     {

@@ -1,4 +1,4 @@
-﻿using LogGrep.Models;
+using LogGrep.Models;
 using LogGrep.ViewModels;
 using LogGrep.Tests.Logs;
 
@@ -72,6 +72,12 @@ public sealed class TestMethods
     public void OpenPull(Boss boss, int number)
     {
         ToggleEncounter(boss);
+        TogglePull(number);
+    }
+
+    public void OpenPull(Dungeon dungeon, int number)
+    {
+        _page.ToggleEncounter(dungeon);
         TogglePull(number);
     }
 }

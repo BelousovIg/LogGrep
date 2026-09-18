@@ -1,4 +1,3 @@
-using LogGrep.Models;
 using System.IO.Abstractions.TestingHelpers;
 using System.Windows.Threading;
 using LogGrep.Analysis;
@@ -202,6 +201,18 @@ public sealed class LogGrepPage
         => _encounter = Encounters.FirstOrDefault(e => e.Name == boss.NameOf())
             ?? throw new InvalidOperationException(
                 $"No encounter called '{boss.NameOf()}'. The log has: {Names(Encounters.Select(e => e.Name))}");
+
+    /// <summary>A keystone run, which is listed under the dungeon rather than under a boss.</summary>
+    public void LookAtEncounter(Dungeon dungeon)
+        => _encounter = Encounters.FirstOrDefault(e => e.Name == dungeon.NameOf())
+            ?? throw new InvalidOperationException(
+                $"No encounter called '{dungeon.NameOf()}'. The log has: {Names(Encounters.Select(e => e.Name))}");
+
+    public void ToggleEncounter(Dungeon dungeon)
+    {
+        LookAtEncounter(dungeon);
+        Encounter.IsExpanded = !Encounter.IsExpanded;
+    }
 
     public void ToggleEncounter(Boss boss)
     {

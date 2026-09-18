@@ -596,9 +596,15 @@ public sealed class Then
         return this;
     }
 
-    public Then TheKillIsMarkedAt(TimeSpan? when)
+    public Then TheKillsAreMarkedAt(params TimeSpan[] when)
     {
-        _check.TheKillIsMarkedAt(when);
+        _check.TheKillsAreMarkedAt(when);
+        return this;
+    }
+
+    public Then TheKillsAreOf(params Boss[] bosses)
+    {
+        _check.TheKillsAreOf(bosses);
         return this;
     }
 

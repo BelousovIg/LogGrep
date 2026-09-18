@@ -68,6 +68,18 @@ public sealed class PullRecord
     /// </summary>
     public IReadOnlyList<int> Standing { get; set; } = Array.Empty<int>();
 
+    /// <summary>
+    /// Every boss that went down inside this attempt, and the second it did.
+    ///
+    /// A boss pull has one of these or none, and it is the end of the fight. A keystone run has one
+    /// per boss, which is the only place inside a half-hour record where anything is marked at all -
+    /// the run is one row by design, and without these its chart is thirty minutes of unbroken line.
+    ///
+    /// One entry per encounter rather than per creature: a council is several corpses and one
+    /// ending, and the log says nothing about which of them was the last to fall.
+    /// </summary>
+    public IReadOnlyList<BossKill> Kills { get; set; } = Array.Empty<BossKill>();
+
     /// <summary>What the group dealt and healed, second by second.</summary>
     public IReadOnlyList<long> DamageLine { get; set; } = Array.Empty<long>();
 

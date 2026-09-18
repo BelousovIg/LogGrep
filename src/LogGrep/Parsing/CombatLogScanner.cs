@@ -383,7 +383,21 @@ public sealed class CombatLogScanner
 
     private void OnEncounterEnd(ReadOnlySpan<byte> line, int eventStart, long end)
     {
-        if (_open == null || _open.IsKeystone) return;
+        if (_open == null) return;
+
+        // A boss that went down inside a keystone run. The run is one row by design - it is what
+        // somebody cuts out of the file - but without these its half hour is an unbroken line with
+        // nothing on it, and three of the four things that happened in it were bosses dying.
+        if (_open.IsKeystone)
+        {
+            _fields.Split(line);
+            if (!_fields.Flag(line, 5)) return;
+
+            _open.Kills.Add(new BossKill(
+                (int)Elapsed(LogTimestamp.SecondsOfDay(line, eventStart)).TotalSeconds,
+                _fields.Text(line, 2)));
+            return;
+        }
 
         _fields.Split(line);
         bool success = _fields.Flag(line, 5);
@@ -528,6 +542,12 @@ public sealed class CombatLogScanner
             ThreatSeconds = threat,
             EnemyHealth = Curve(segment.Left, (int)duration.TotalSeconds),
             Standing = Alive(roster, (int)duration.TotalSeconds),
+
+            // A keystone run collected one of these per boss as it went; a boss pull is its own
+            // single kill, and the end of the fight is the second it is certainly at.
+            Kills = segment.Kills.Count > 0
+                ? segment.Kills.ToArray()
+                : success ? new[] { new BossKill((int)duration.TotalSeconds, segment.Name) } : Array.Empty<BossKill>(),
             DamageLine = PerSecond(segment.Dealt, (int)duration.TotalSeconds),
             HealingLine = PerSecond(segment.Healed, (int)duration.TotalSeconds),
             Casts = segment.Casts.ToArray(),
@@ -1612,6 +1632,9 @@ public sealed class CombatLogScanner
 
         /// <summary>Enemy casts that went off or were cut short, in the order they happened.</summary>
         public List<CastRecord> Casts { get; } = new();
+
+        /// <summary>The bosses that went down inside this segment, which only a keystone run has more than one of.</summary>
+        public List<BossKill> Kills { get; } = new();
 
         /// <summary>
         /// Who the enemy swung at, second by second. A second in which it hit one or two people is

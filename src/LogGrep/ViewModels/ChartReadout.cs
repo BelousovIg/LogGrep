@@ -1,3 +1,5 @@
+using LogGrep.Models;
+
 namespace LogGrep.ViewModels;
 
 /// <summary>
@@ -14,7 +16,7 @@ namespace LogGrep.ViewModels;
 public static class ChartReadout
 {
     public static IReadOnlyList<string> At(IReadOnlyList<Trace>? traces, IReadOnlyList<int>? deaths,
-        int? kill, int second)
+        IReadOnlyList<BossKill>? kills, int second)
     {
         var said = new List<string> { "at " + Display.Clock(TimeSpan.FromSeconds(second)) };
 
@@ -27,7 +29,12 @@ public static class ChartReadout
         int died = deaths?.Count(d => Math.Abs(d - second) <= 1) ?? 0;
         if (died > 0) said.Add(died == 1 ? "somebody died here" : died + " died here");
 
-        if (kill is { } killed && Math.Abs(killed - second) <= 1) said.Add("the enemy died here");
+        // Named rather than "the enemy died here": inside a keystone run there are three of these on
+        // one chart, and which of them is under the pointer is the whole question.
+        foreach (var kill in kills ?? Array.Empty<BossKill>())
+        {
+            if (Math.Abs(kill.Second - second) <= 1) said.Add(kill.Name + " died here");
+        }
 
         return said;
     }

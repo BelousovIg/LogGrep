@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using LogGrep.Models;
 using LogGrep.ViewModels;
 
 namespace LogGrep.Controls;
@@ -41,8 +42,8 @@ public sealed class FightShape : FrameworkElement
         nameof(Deaths), typeof(IReadOnlyList<int>), typeof(FightShape),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
-    public static readonly DependencyProperty KillProperty = DependencyProperty.Register(
-        nameof(Kill), typeof(int?), typeof(FightShape),
+    public static readonly DependencyProperty KillsProperty = DependencyProperty.Register(
+        nameof(Kills), typeof(IReadOnlyList<BossKill>), typeof(FightShape),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public static readonly DependencyProperty FromProperty = DependencyProperty.Register(
@@ -93,11 +94,11 @@ public sealed class FightShape : FrameworkElement
         set => SetValue(DeathsProperty, value);
     }
 
-    /// <summary>The second the enemy went down, or nothing for an attempt that did not kill it.</summary>
-    public int? Kill
+    /// <summary>Every boss that went down in this attempt - one for a boss pull, several for a key.</summary>
+    public IReadOnlyList<BossKill>? Kills
     {
-        get => (int?)GetValue(KillProperty);
-        set => SetValue(KillProperty, value);
+        get => (IReadOnlyList<BossKill>?)GetValue(KillsProperty);
+        set => SetValue(KillsProperty, value);
     }
 
     protected override void OnRender(DrawingContext dc)
@@ -151,9 +152,12 @@ public sealed class FightShape : FrameworkElement
         // The kill, on top of everything else. A wipe and a kill are the same shape until the last
         // few seconds of them, and this is the one mark that says which of the two somebody is
         // looking at without them reading the lines first.
-        if (Kill is { } killed && seconds > 0)
+        if (seconds > 0)
         {
-            Star(dc, Math.Clamp(Math.Clamp(killed / seconds, 0, 1) * width, 7, width - 7), 8);
+            foreach (var kill in Kills ?? Array.Empty<BossKill>())
+            {
+                Star(dc, Math.Clamp(Math.Clamp(kill.Second / seconds, 0, 1) * width, 7, width - 7), 8);
+            }
         }
     }
 
@@ -183,7 +187,7 @@ public sealed class FightShape : FrameworkElement
 
         int at = (int)Math.Round(Math.Clamp(e.GetPosition(this).X / ActualWidth, 0, 1) * seconds);
 
-        ToolTip = string.Join(Environment.NewLine, ChartReadout.At(traces, Deaths, Kill, at));
+        ToolTip = string.Join(Environment.NewLine, ChartReadout.At(traces, Deaths, Kills, at));
     }
 
     /// <summary>

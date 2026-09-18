@@ -23,6 +23,9 @@ public sealed class TheShapeOfAnAttempt : Scenario
         Healer("Sunwell", Spec.HolyPriest),
         Damage("Nightblade", Spec.AssassinationRogue));
 
+    /// <summary>The same three, in a key. A run is one row holding however many bosses it got to.</summary>
+    private static CombatLogBuilder AParty() => ARaid();
+
     [Fact]
     public void The_enemy_leaves_a_line_of_how_far_down_it_went()
     {
@@ -70,7 +73,8 @@ public sealed class TheShapeOfAnAttempt : Scenario
 
         Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
 
-        Then.TheKillIsMarkedAt(2.Minutes());
+        Then.TheKillsAreMarkedAt(2.Minutes())
+            .TheKillsAreOf(Soulcoiler);
     }
 
     [Fact]
@@ -83,7 +87,41 @@ public sealed class TheShapeOfAnAttempt : Scenario
 
         Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
 
-        Then.TheKillIsMarkedAt(null);
+        Then.TheKillsAreMarkedAt();
+    }
+
+    [Fact]
+    public void A_key_marks_every_boss_that_went_down_inside_it()
+    {
+        // A keystone run is one row holding a whole dungeon - the game writes each boss inside it as
+        // its own encounter, and the run swallows all of them. Without these marks its half hour is
+        // an unbroken line with nothing on it.
+        var log = AParty().Keystone(Dungeon.TheRookery, level: 12, p => p
+            .Lasting(20.Minutes())
+            .At(5.Minutes()).Downs(Soulcoiler, lasting: 2.Minutes())
+            .At(12.Minutes()).Downs(Boss.EntombedSentinels, lasting: 3.Minutes())
+            .Kill());
+
+        Given.IOpenedLog(log).IOpenedPull(Dungeon.TheRookery, number: 1);
+
+        Then.TheKillsAreMarkedAt(7.Minutes(), 15.Minutes())
+            .TheKillsAreOf(Soulcoiler, Boss.EntombedSentinels);
+    }
+
+    [Fact]
+    public void A_boss_the_key_did_not_put_down_leaves_no_mark()
+    {
+        // Wiping on the third boss and leaving is the ordinary end of a key. The two that did go
+        // down are still marked; the one that did not is not.
+        var log = AParty().Keystone(Dungeon.TheRookery, level: 12, p => p
+            .Lasting(20.Minutes())
+            .At(5.Minutes()).Downs(Soulcoiler, lasting: 2.Minutes())
+            .At(12.Minutes()).Wiped(Boss.EntombedSentinels, lasting: 3.Minutes())
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Dungeon.TheRookery, number: 1);
+
+        Then.TheKillsAreOf(Soulcoiler);
     }
 
     [Fact]

@@ -564,9 +564,14 @@ public sealed class Verification
         return row.Cells[attempt - 1];
     }
 
-    /// <summary>The second the chart marks the enemy going down, or nothing for a wipe.</summary>
-    public void TheKillIsMarkedAt(TimeSpan? when)
-        => Assert.Equal(when is null ? null : (int?)when.Value.TotalSeconds, _page.Pull.Kill);
+    /// <summary>The seconds the chart marks a boss going down. Empty for an attempt that killed nothing.</summary>
+    public void TheKillsAreMarkedAt(params TimeSpan[] when)
+        => Assert.Equal(when.Select(w => (int)w.TotalSeconds).ToArray(),
+            _page.Pull.Kills.Select(k => k.Second).ToArray());
+
+    /// <summary>Which bosses those marks are of, which is the whole question inside a key.</summary>
+    public void TheKillsAreOf(params Boss[] bosses)
+        => Assert.Equal(bosses.Select(b => b.NameOf()).ToArray(), _page.Pull.Kills.Select(k => k.Name).ToArray());
 
     /// <summary>Which stretch of the attempt the numbers below the chart are about.</summary>
     public void TheAttemptIsReadOver(string expected) => Assert.Equal(expected, _page.Pull.WindowText);
