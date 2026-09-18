@@ -54,6 +54,15 @@
                             Command="{Binding ForwardCommand}"
                             ToolTip="Forward (mouse button 5)" />
 
+                    <!-- Lit only when a log on disk has grown past what was read out of it. The
+                         game writes all evening, so what is on screen goes stale while somebody is
+                         looking at it - and a button that is always available says nothing about
+                         whether pressing it would change anything. -->
+                    <Button Content="Refresh" MinWidth="86" Height="32" Margin="0,0,12,0"
+                            Click="OnRefreshLogs"
+                            IsEnabled="{Binding HasNewContent}"
+                            ToolTip="Read what has been added to the open logs since they were last read" />
+
                     <Button Content="Open log"
                             Style="{StaticResource PrimaryButton}"
                             Command="{Binding OpenCommand}" />

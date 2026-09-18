@@ -23,6 +23,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly ListCollectionView _encountersView;
     private readonly Dispatcher _dispatcher = Dispatcher.CurrentDispatcher;
     private readonly IFileSystem _fileSystem;
+    private bool _hasNewContent;
     private readonly LogExporter _exporter;
     private Reading _reading = Reading.Nothing;
     private CancellationTokenSource? _cancellation;
@@ -283,6 +284,69 @@ public sealed class MainViewModel : ObservableObject
     /// constructor, because reading a gigabyte is not something to start while a control tree is
     /// still being built.
     /// </summary>
+    /// <summary>
+    /// Whether any open log has grown since it was read.
+    ///
+    /// The game appends to a log all evening, so what is on screen goes stale while somebody is
+    /// looking at it. A size is enough to notice: a combat log is only ever appended to, so bigger
+    /// than what was read means there is more of it, and the same size means there is not.
+    /// </summary>
+    public bool HasNewContent
+    {
+        get => _hasNewContent;
+        private set
+        {
+            if (_hasNewContent == value) return;
+
+            _hasNewContent = value;
+            OnPropertyChanged(nameof(HasNewContent));
+        }
+    }
+
+    /// <summary>
+    /// Looks at the files rather than at what was read from them. Called on a clock by the window,
+    /// because nothing else will say so: a file growing raises no event anybody here is listening
+    /// for, and a watcher on a folder the game writes to every second would fire all evening.
+    /// </summary>
+    public void CheckForNewContent()
+    {
+        if (IsBusy) return;
+
+        foreach (var log in Logs)
+        {
+            long read = log.Source?.Size ?? 0;
+            if (read <= 0) continue;
+
+            try
+            {
+                if (_fileSystem.FileInfo.New(log.Path).Length > read)
+                {
+                    HasNewContent = true;
+                    return;
+                }
+            }
+            catch (IOException)
+            {
+                // The file is being written to, or has gone. Neither is an answer, and asking again
+                // in a few seconds costs nothing.
+            }
+        }
+
+        HasNewContent = false;
+    }
+
+    /// <summary>
+    /// Reads what has been added since. Every log is re-read, and every one of them resumes from
+    /// where it stopped, so this costs the new tail rather than the file.
+    /// </summary>
+    public Task RefreshAsync()
+    {
+        if (IsBusy || Logs.Count == 0) return Task.CompletedTask;
+
+        HasNewContent = false;
+        return ScanAsync();
+    }
+
     public Task RestoreAsync()
     {
         foreach (string path in _openLogs.Load())

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using System.Windows.Media;
 using LogGrep.Controls;
 using LogGrep.Interop;
@@ -11,11 +12,29 @@ namespace LogGrep;
 
 public partial class MainWindow : Window
 {
+    /// <summary>
+    /// How often the open logs are looked at to see whether they have grown.
+    ///
+    /// Five seconds, because the answer only has to arrive before somebody thinks to ask for it, and
+    /// the question is one file length per open log. A watcher on the folder would be cheaper to
+    /// wait on and far more expensive to serve: the game writes to it several times a second all
+    /// evening, and every one of those would wake this up.
+    /// </summary>
+    private static readonly TimeSpan Look = TimeSpan.FromSeconds(5);
+
+    private readonly DispatcherTimer _clock = new();
+
     public MainWindow()
     {
         InitializeComponent();
         Loaded += OnLoaded;
+
+        _clock.Interval = Look;
+        _clock.Tick += (_, _) => Model.CheckForNewContent();
     }
+
+    /// <summary>Reads whatever has been added to the open logs since they were last read.</summary>
+    private void OnRefreshLogs(object sender, RoutedEventArgs e) => _ = Model.RefreshAsync();
 
     private MainViewModel Model => (MainViewModel)DataContext;
 
@@ -39,6 +58,8 @@ public partial class MainWindow : Window
         // reading last time. Asking for one replaces neither - it is added to the other.
         if (path != null) Model.Load(path);
         else _ = Model.RestoreAsync();
+
+        _clock.Start();
     }
 
     /// <summary>Opens the settings, which is where a key and the folder everything lives in are set.</summary>

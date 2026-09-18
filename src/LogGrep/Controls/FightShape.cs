@@ -45,7 +45,7 @@ public sealed class FightShape : FrameworkElement
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnTracesChanged));
 
     public static readonly DependencyProperty DeathsProperty = DependencyProperty.Register(
-        nameof(Deaths), typeof(IReadOnlyList<int>), typeof(FightShape),
+        nameof(Deaths), typeof(IReadOnlyList<Death>), typeof(FightShape),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public static readonly DependencyProperty KillsProperty = DependencyProperty.Register(
@@ -97,10 +97,10 @@ public sealed class FightShape : FrameworkElement
         set => SetValue(TracesProperty, value);
     }
 
-    /// <summary>The seconds somebody went down, marked with a cross.</summary>
-    public IReadOnlyList<int>? Deaths
+    /// <summary>Who went down and when, each marked with a skull along the bottom.</summary>
+    public IReadOnlyList<Death>? Deaths
     {
-        get => (IReadOnlyList<int>?)GetValue(DeathsProperty);
+        get => (IReadOnlyList<Death>?)GetValue(DeathsProperty);
         set => SetValue(DeathsProperty, value);
     }
 
@@ -171,7 +171,7 @@ public sealed class FightShape : FrameworkElement
         var deaths = Deaths;
         if (deaths != null && seconds > 0)
         {
-            foreach (int at in deaths) Skull(dc, Math.Clamp(at / seconds, 0, 1) * width, height - 7);
+            foreach (var death in deaths) Skull(dc, Math.Clamp(death.Second / seconds, 0, 1) * width, height - 7);
         }
 
         foreach (var trace in Traces ?? Array.Empty<Trace>())

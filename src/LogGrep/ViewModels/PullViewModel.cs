@@ -208,9 +208,11 @@ public sealed class PullViewModel : ObservableObject
     /// </summary>
     public IReadOnlyList<Trace> Traces => _traces ??= BuildTraces();
 
-    /// <summary>The seconds somebody went down, which is where the other lines bend.</summary>
-    public IReadOnlyList<int> Deaths
-        => Shown.SelectMany(p => p.Deaths).Select(d => (int)d.At.TotalSeconds).OrderBy(s => s).ToArray();
+    /// <summary>Who went down and when, which is where the other lines bend.</summary>
+    public IReadOnlyList<Death> Deaths => Shown
+        .SelectMany(p => p.Deaths.Select(d => new Death((int)d.At.TotalSeconds, PlayerName.Character(p.Name))))
+        .OrderBy(d => d.Second)
+        .ToArray();
 
     /// <summary>Where each phase after the first began, as the scan read them off the boss.</summary>
     public IReadOnlyList<PhaseStart> Phases => Record.Phases;
@@ -297,6 +299,18 @@ public sealed class PullViewModel : ObservableObject
         {
             traces.Add(new Trace("healing", Color.FromRgb(0x8E, 0x9B, 0xE8), healing,
                 v => Display.Rate(v) + "/s", IsOn("healing", false), smooth: Rolling));
+        }
+
+        // What the group was taking, which is the other half of every question the other two raise:
+        // a damage line that falls while this one climbs is a raid being pushed off its rotation.
+        // Always summed from the roster - the scan keeps no group line for it, and a pet taking a
+        // hit is not something anybody is asked about.
+        var taken = Summed(shown, p => p.TakenLine, seconds);
+
+        if (taken.Any(v => v > 0))
+        {
+            traces.Add(new Trace("taken", Color.FromRgb(0xC9, 0x7B, 0xB0), taken,
+                v => Display.Rate(v) + "/s", IsOn("taken", false), smooth: Rolling));
         }
 
         return traces;

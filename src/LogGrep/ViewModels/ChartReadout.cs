@@ -15,7 +15,7 @@ namespace LogGrep.ViewModels;
 /// </summary>
 public static class ChartReadout
 {
-    public static IReadOnlyList<string> At(IReadOnlyList<Trace>? traces, IReadOnlyList<int>? deaths,
+    public static IReadOnlyList<string> At(IReadOnlyList<Trace>? traces, IReadOnlyList<Death>? deaths,
         IReadOnlyList<BossKill>? kills, int second, IReadOnlyList<PhaseStart>? phases = null)
     {
         var said = new List<string> { "at " + Display.Clock(TimeSpan.FromSeconds(second)) };
@@ -29,8 +29,10 @@ public static class ChartReadout
         }
 
         // A death is a mark rather than a line, and so is a kill, so neither has a switch to obey.
-        int died = deaths?.Count(d => Math.Abs(d - second) <= 1) ?? 0;
-        if (died > 0) said.Add(died == 1 ? "somebody died here" : died + " died here");
+        // Named, because "somebody died here" is the one thing the chart knows and will not say.
+        var died = deaths?.Where(d => Math.Abs(d.Second - second) <= 1).Select(d => d.Name).ToList();
+        if (died is { Count: 1 }) said.Add(died[0] + " died here");
+        else if (died is { Count: > 1 }) said.Add(died.Count + " died here: " + string.Join(", ", died));
 
         // Named rather than "the enemy died here": inside a keystone run there are three of these on
         // one chart, and which of them is under the pointer is the whole question.

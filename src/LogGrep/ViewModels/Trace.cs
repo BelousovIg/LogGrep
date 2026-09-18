@@ -124,3 +124,9 @@ public sealed class Trace : ObservableObject
         return double.IsNaN(value) ? string.Empty : Name + " " + Say(value);
     }
 }
+
+/// <summary>
+/// One person going down, and when. The name is carried because a chart that marks a death and then
+/// will not say whose is asking to be hovered and then squinted at.
+/// </summary>
+public readonly record struct Death(int Second, string Name);

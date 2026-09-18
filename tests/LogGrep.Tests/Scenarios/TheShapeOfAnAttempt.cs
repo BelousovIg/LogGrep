@@ -280,6 +280,27 @@ public sealed class TheShapeOfAnAttempt : Scenario
     }
 
     [Fact]
+    public void The_hover_names_whoever_went_down_there()
+    {
+        // "Somebody died here" is the one thing the chart knows and will not say. Two at once are
+        // counted and then both named, because which two is the whole question about a moment that
+        // took two people.
+        var log = ARaid().Pull(Soulcoiler, Difficulty.Mythic, p => p
+            .Lasting(2.Minutes())
+            .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
+            .At(30.Seconds()).Kills("Nightblade")
+            .At(1.Minutes()).Kills("Sunwell")
+            .At(1.Minutes()).Kills("Rockjaw")
+            .Wipe());
+
+        Given.IOpenedLog(log).IOpenedPull(Soulcoiler, number: 1);
+
+        Then.TheShapeSaysAt(30.Seconds(), "at 0:30", "boss 0% down", "standing 2 up", "Nightblade died here")
+            .TheShapeSaysAt(1.Minutes(), "at 1:00", "boss 0% down", "standing 0 up",
+                "2 died here: Rockjaw, Sunwell");
+    }
+
+    [Fact]
     public void A_line_switched_off_stops_answering_in_the_hover()
     {
         // Turning a switch off is somebody saying they are not asking about that line. A hover that

@@ -692,9 +692,9 @@ public sealed class Then
         return this;
     }
 
-    public Then TheShapeMarksDeathsAt(params int[] expected)
+    public Then TheShapeMarksDeaths(params string[] expected)
     {
-        _check.TheShapeMarksDeathsAt(expected);
+        _check.TheShapeMarksDeaths(expected);
         return this;
     }
 
