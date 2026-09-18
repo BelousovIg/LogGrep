@@ -70,6 +70,14 @@ public sealed class LogGrepPage
 
     public void MarkAsOurs(string name, bool ours) => Person(name).IsOurs = ours;
 
+    /// <summary>Adds another file to the ones already open, which re-reads all of them.</summary>
+    public void OpenAlso(CombatLogBuilder log)
+    {
+        string path = Folder + log.FileName;
+        _disk.AddFile(path, new MockFileData(log.Build()) { CreationTime = log.Created });
+        Pump(ViewModel.LoadAsync(new[] { path }));
+    }
+
     public void AnalyseEncounter(Boss boss) => ViewModel.Analyse(Of(boss));
 
     public void AnalyseChosen(Boss boss, params int[] numbers)

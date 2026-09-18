@@ -34,6 +34,8 @@ public sealed class TestMethods
 
     public void MarkAsOurs(string name, bool ours) => _page.MarkAsOurs(name, ours);
 
+    public void OpenAlso(CombatLogBuilder log) => _page.OpenAlso(log);
+
     public void AnalyseEncounter(Boss boss) => _page.AnalyseEncounter(boss);
 
     public void AnalyseChosen(Boss boss, int[] numbers) => _page.AnalyseChosen(boss, numbers);

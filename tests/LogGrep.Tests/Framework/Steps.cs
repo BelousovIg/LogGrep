@@ -156,6 +156,12 @@ public sealed class When
         return this;
     }
 
+    public When IOpenAnotherLog(CombatLogBuilder log)
+    {
+        _act.OpenAlso(log);
+        return this;
+    }
+
     public When IReopenTheApp()
     {
         _act.Reopen();

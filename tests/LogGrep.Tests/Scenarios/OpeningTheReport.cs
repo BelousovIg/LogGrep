@@ -23,11 +23,13 @@ public sealed class OpeningTheReport : Scenario
         Healer("Sunwell", Spec.HolyPriest),
         Damage("Nightblade", Spec.AssassinationRogue));
 
-    private static void APull(PullBuilder p) => p
+    private static void APull(PullBuilder p) => APullAt(p, Soulcoiler);
+
+    private static void APullAt(PullBuilder p, Boss boss) => p
         .Lasting(2.Minutes())
-        .At(0.Seconds()).Deals("Rockjaw", to: Soulcoiler, amount: 100_000)
+        .At(0.Seconds()).Deals("Rockjaw", to: boss, amount: 100_000)
         .At(2.Seconds()).BossSwingsAt("Rockjaw", 200_000)
-        .At(1.Minutes()).Deals("Nightblade", to: Soulcoiler, amount: 900_000)
+        .At(1.Minutes()).Deals("Nightblade", to: boss, amount: 900_000)
         .Wipe();
 
     [Fact]
@@ -80,10 +82,35 @@ public sealed class OpeningTheReport : Scenario
     }
 
     [Fact]
-    public void With_nothing_analysed_the_screen_says_so_rather_than_showing_an_empty_table()
+    public void Reading_a_log_points_the_report_at_the_fight_the_night_ended_on()
     {
-        Given.IOpenedLog(ARaid().Pulls(2, Soulcoiler, Difficulty.Mythic, APull));
+        // An empty report is a dead screen, and the question somebody opens the app with is about
+        // what they were just doing. Not every fight at once: a selection is what the baselines are
+        // drawn from, and all of them live inside one encounter.
+        var log = ARaid()
+            .Pulls(3, Boss.EntombedSentinels, Difficulty.Mythic, p => APullAt(p, Boss.EntombedSentinels))
+            .Pulls(4, Soulcoiler, Difficulty.Mythic, APull);
 
-        Then.TheReportIsOn("Nothing to analyse yet");
+        Given.IOpenedLog(log);
+
+        Then.TheReportIsOn("The Soulcoiler")
+            .TheReportMeasuresOver("measured over 4 attempts at The Soulcoiler");
+    }
+
+    [Fact]
+    public void A_report_somebody_pointed_somewhere_is_not_moved_by_the_next_reading()
+    {
+        var log = ARaid()
+            .Pulls(3, Boss.EntombedSentinels, Difficulty.Mythic, p => APullAt(p, Boss.EntombedSentinels))
+            .Pulls(4, Soulcoiler, Difficulty.Mythic, APull);
+
+        Given.IOpenedLog(log);
+
+        // Pointed at the earlier fight, then another log arrives and everything is read again.
+        When.IAnalyseTheEncounter(Boss.EntombedSentinels)
+            .IOpenAnotherLog(ARaid().Called("later.txt").On(CombatLogBuilder.Evening(2026, 9, 16))
+                .Pulls(2, Soulcoiler, Difficulty.Mythic, APull));
+
+        Then.TheReportIsOn("Entombed Sentinels");
     }
 }

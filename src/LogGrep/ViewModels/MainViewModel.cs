@@ -37,6 +37,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _isBusy;
     private bool _asSingleFile = true;
     private int _screen;
+    private string _wasOn = string.Empty;
 
     /// <summary>The real disk. Tests hand in a fake one instead.</summary>
     public MainViewModel() : this(new FileSystem())
@@ -296,7 +297,8 @@ public sealed class MainViewModel : ObservableObject
             _groups.Clear();
             Findings = Array.Empty<Finding>();
             _reading = Reading.Nothing;
-            RebuildPeople(Array.Empty<PullRecord>());
+            _wasOn = Analysis.Encounter?.Key ?? string.Empty;
+        RebuildPeople(Array.Empty<PullRecord>());
         Analysis.Forget();
             Status = "Open a log to start.";
             RaiseSelectionChanged();
@@ -350,6 +352,7 @@ public sealed class MainViewModel : ObservableObject
         _groups.Clear();
         Findings = Array.Empty<Finding>();
         _reading = Reading.Nothing;
+        _wasOn = Analysis.Encounter?.Key ?? string.Empty;
         RebuildPeople(Array.Empty<PullRecord>());
         Analysis.Forget();
 
@@ -400,6 +403,7 @@ public sealed class MainViewModel : ObservableObject
 
             Rebuild(reading.Pulls);
             BuildFindings(reading.Pulls);
+            PointTheReportSomewhere();
             Progress = 100;
             var elapsed = DateTime.UtcNow - started;
             Status = reading.IsEmpty
@@ -621,6 +625,41 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HasPeople));
         OnPropertyChanged(nameof(PeopleSummary));
         RaiseCommandStates();
+    }
+
+    /// <summary>
+    /// Gives the report something to be about as soon as there is anything: the fight the night
+    /// ended on, entire.
+    ///
+    /// Not every fight at once. A selection is what the baselines are drawn from, and every one of
+    /// them lives inside a single encounter - your best is your best on this boss, a mechanic is
+    /// compared with the group in this same attempt, a tank is measured in the seconds of this
+    /// fight. Pooling two bosses would measure a ten-minute one and a two-minute one with the same
+    /// ruler and quietly spoil all three axes. Showing every fight on one screen is worth doing,
+    /// and it means computing each separately and laying them out together, which is its own piece
+    /// of work rather than a default.
+    ///
+    /// A choice already made is never overridden: this is for the empty screen, not for taking the
+    /// wheel from somebody who has one.
+    /// </summary>
+    private void PointTheReportSomewhere()
+    {
+        if (Analysis.HasAnything || Encounters.Count == 0) return;
+
+        // Back where it was, when that fight is still here. Every row is rebuilt from the pulls on a
+        // re-read, so a report pointed at one of them ends up holding something detached - but the
+        // fight it was about is the same fight, and somebody who opened another log did not ask to
+        // be moved off it.
+        var again = _wasOn.Length == 0
+            ? null
+            : Encounters.FirstOrDefault(e => string.Equals(e.Key, _wasOn, StringComparison.Ordinal));
+
+        var where = again ?? Encounters
+            .Where(e => e.Pulls.Count > 0)
+            .OrderByDescending(e => e.Pulls.Max(p => p.Record.StartTime))
+            .FirstOrDefault();
+
+        if (where != null) Analysis.Show(Selection.Of(where), pull: null, player: string.Empty);
     }
 
     /// <summary>

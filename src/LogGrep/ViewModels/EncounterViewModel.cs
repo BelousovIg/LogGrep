@@ -26,8 +26,16 @@ public sealed class EncounterViewModel : ObservableObject
         DifficultyText = first.DifficultyText;
         KeystoneLevel = first.KeystoneLevel;
 
+        Key = first.GroupKey;
         _pullsView = new ListCollectionView(Pulls) { CustomSort = sorting.Pulls.Comparer };
     }
+
+    /// <summary>
+    /// What says two encounter rows are the same fight. Survives a re-read, where the rows
+    /// themselves do not: everything is rebuilt from the pulls, so a report pointed at one of them
+    /// has to be pointed at its replacement by something that outlives both.
+    /// </summary>
+    public string Key { get; }
 
     public string Name { get; }
 
